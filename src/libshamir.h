@@ -266,10 +266,11 @@ SHAMIR_ERROR is_valid_share(SHAMIR_SECRET *secret, SHAMIR_SHARE *share);
 SHAMIR_ERROR full_lagrange(unsigned int *x, unsigned int *xs,
     unsigned int length, uint8 *result, unsigned int result_length);
 
-int * add_polinomial(int *a, int *b, unsigned int length);
-int * substract_polinomial(int *a, int *b, unsigned int length);
-int * multiply_polinomial(int *a, int *b, unsigned int length);
-int * divide_polinomial(int *a, int *b, unsigned int length);
+int * add_polynomial(int *a, int *b, unsigned int length);
+int * substract_polynomial(int *a, int *b, unsigned int length);
+int * multiply_polynomial(int *a, int *b, unsigned int length_a, 
+    unsigned int length_b);
+int * divide_polynomial(int *a, int *b, unsigned int length);
 
-int f(int x, int *coefficients);
+int f(int x, int *coefficients, unsigned int coefficient_length);
 #endif
