@@ -16,3 +16,24 @@
 *.exe
 *.out
 *.app
+
+# autoconf specific
+Makefile.in
+aclocal.m4
+autom4te.cache/
+build/
+config.guess
+config.h.in
+config.h.in~
+config.sub
+configure
+depcomp
+install-sh
+ltmain.sh
+missing
+scripts/libtool.m4
+scripts/ltoptions.m4
+scripts/ltsugar.m4
+scripts/ltversion.m4
+scripts/lt~obsolete.m4
+test-driver
