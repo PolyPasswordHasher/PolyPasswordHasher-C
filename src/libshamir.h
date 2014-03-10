@@ -13,6 +13,9 @@
 #ifndef LIB_SHAMIR
 #define LIB_SHAMIR
 
+#include<stdio.h>
+#include<stdlib.h>
+
 /* basic datatype overriding */
 typedef unsigned char uint8; // because they shouldn't be treated as chars
 typedef unsigned char gf256;
@@ -136,7 +139,7 @@ static const gf256 _GF256_INV[256] =
 /* error coding */
 typedef enum{
   ERROR_OK=0,
-  ERROR_INCORRECT_SHARE
+  ERROR_INCORRECT_SHARE,
   ERROR_UNKNOWN
 }SHAMIR_ERROR;
 
@@ -261,12 +264,12 @@ SHAMIR_ERROR is_valid_share(SHAMIR_SECRET *secret, SHAMIR_SHARE *share);
 // internal functions
 // these functions are not mean to be used outside this library's scope
 SHAMIR_ERROR full_lagrange(unsigned int *x, unsigned int *xs,
-    unsigned int length, uint8 *result, unsigned_int result_length);
+    unsigned int length, uint8 *result, unsigned int result_length);
 
-(int *) add_polinomial(int *a, int *b, unsigned int length);
-(int *) substract_polinomial(int *a, int *b, unsigned int length);
-(int *) multiply_polinomial(int *a, int *b, unsigned int length);
-(int *) divide_polinomial(int *a, int *b, unsigned int length);
+int * add_polinomial(int *a, int *b, unsigned int length);
+int * substract_polinomial(int *a, int *b, unsigned int length);
+int * multiply_polinomial(int *a, int *b, unsigned int length);
+int * divide_polinomial(int *a, int *b, unsigned int length);
 
-int f(int x, int *coefficients, 
+int f(int x, int *coefficients);
 #endif
