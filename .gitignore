@@ -16,6 +16,7 @@
 *.exe
 *.out
 *.app
+polypasshash
 
 # autoconf specific
 Makefile.in
@@ -38,4 +39,6 @@ scripts/ltsugar.m4
 scripts/ltversion.m4
 scripts/lt~obsolete.m4
 test-driver
-.deps
+.deps/
+.lib/
+build-aux/
