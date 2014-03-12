@@ -51,7 +51,7 @@ binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_polypasshash_OBJECTS = polypasshash.$(OBJEXT)
 polypasshash_OBJECTS = $(am_polypasshash_OBJECTS)
-polypasshash_DEPENDENCIES = ../lib/libgfshare.la
+polypasshash_DEPENDENCIES = $(top_builddir)/lib/libgfshare.la
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__depfiles_maybe = depfiles
@@ -177,7 +177,7 @@ sharedstatedir = ${prefix}/com
 sysconfdir = ${prefix}/etc
 target_alias = 
 polypasshash_SOURCES = polypasshash.c 
-polypasshash_LDADD = ../lib/libgfshare.la
+polypasshash_LDADD = $(top_builddir)/lib/libgfshare.la
 all: all-am
 
 .SUFFIXES:

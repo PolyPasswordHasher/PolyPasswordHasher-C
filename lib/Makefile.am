@@ -1,4 +1,4 @@
-AM_CFLAGS = -I../include
+AM_CFLAGS = -I$(top_builddir)/include
 
 lib_LTLIBRARIES = libgfshare.la
 libgfshare_la_SOURCES = ../include/libgfshare.h libgfshare.c \
