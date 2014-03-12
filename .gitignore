@@ -26,6 +26,7 @@ config.guess
 config.h.in
 config.h.in~
 config.sub
+config.status
 configure
 depcomp
 install-sh
@@ -37,3 +38,4 @@ scripts/ltsugar.m4
 scripts/ltversion.m4
 scripts/lt~obsolete.m4
 test-driver
+.deps
