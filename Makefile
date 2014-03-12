@@ -180,7 +180,8 @@ sbindir = ${exec_prefix}/sbin
 sharedstatedir = ${prefix}/com
 sysconfdir = ${prefix}/etc
 target_alias = 
-SUBDIRS = src . tests
+AM_CFLAGS = -I$(srcdir)/include
+SUBDIRS = lib src . tests 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
