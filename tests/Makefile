@@ -35,7 +35,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = x86_64-unknown-linux-gnu
 host_triplet = x86_64-unknown-linux-gnu
-check_PROGRAMS = check_shamir$(EXEEXT)
+check_PROGRAMS = check_libgfshare$(EXEEXT)
 subdir = tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -45,9 +45,10 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
-am_check_shamir_OBJECTS = check_shamir-check_shamir.$(OBJEXT)
-check_shamir_OBJECTS = $(am_check_shamir_OBJECTS)
-check_shamir_DEPENDENCIES = $(top_builddir)/src/libshamir.la
+am_check_libgfshare_OBJECTS =  \
+	check_libgfshare-check_libgfshare.$(OBJEXT)
+check_libgfshare_OBJECTS = $(am_check_libgfshare_OBJECTS)
+check_libgfshare_DEPENDENCIES = $(top_builddir)/lib/libgfshare.la
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__depfiles_maybe = depfiles
@@ -59,8 +60,8 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(check_shamir_SOURCES)
-DIST_SOURCES = $(check_shamir_SOURCES)
+SOURCES = $(check_libgfshare_SOURCES)
+DIST_SOURCES = $(check_libgfshare_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -172,10 +173,14 @@ sbindir = ${exec_prefix}/sbin
 sharedstatedir = ${prefix}/com
 sysconfdir = ${prefix}/etc
 target_alias = 
-TESTS = check_shamir
-check_shamir_SOURCES = check_shamir.c $(top_builddir)/src/libshamir.h
-check_shamir_CFLAGS = 
-check_shamir_LDADD = $(top_builddir)/src/libshamir.la -lcheck
+AM_CFLAGS = -I$(top_builddir)/include
+TESTS = check_libgfshare
+check_libgfshare_SOURCES = check_libgfshare.c\
+													$(top_builddir)/include/libgfshare.h\
+												$(top_builddir)/include/libgfshare_tables.h
+
+check_libgfshare_CFLAGS =  -I../include
+check_libgfshare_LDADD = $(top_builddir)/lib/libgfshare.la -lcheck
 all: all-am
 
 .SUFFIXES:
@@ -216,9 +221,9 @@ clean-checkPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
-check_shamir$(EXEEXT): $(check_shamir_OBJECTS) $(check_shamir_DEPENDENCIES) 
-	@rm -f check_shamir$(EXEEXT)
-	$(LINK) $(check_shamir_LDFLAGS) $(check_shamir_OBJECTS) $(check_shamir_LDADD) $(LIBS)
+check_libgfshare$(EXEEXT): $(check_libgfshare_OBJECTS) $(check_libgfshare_DEPENDENCIES) 
+	@rm -f check_libgfshare$(EXEEXT)
+	$(LINK) $(check_libgfshare_LDFLAGS) $(check_libgfshare_OBJECTS) $(check_libgfshare_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -226,7 +231,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-include ./$(DEPDIR)/check_shamir-check_shamir.Po
+include ./$(DEPDIR)/check_libgfshare-check_libgfshare.Po
 
 .c.o:
 	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -249,19 +254,19 @@ include ./$(DEPDIR)/check_shamir-check_shamir.Po
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(LTCOMPILE) -c -o $@ $<
 
-check_shamir-check_shamir.o: check_shamir.c
-	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_shamir_CFLAGS) $(CFLAGS) -MT check_shamir-check_shamir.o -MD -MP -MF "$(DEPDIR)/check_shamir-check_shamir.Tpo" -c -o check_shamir-check_shamir.o `test -f 'check_shamir.c' || echo '$(srcdir)/'`check_shamir.c; \
-	then mv -f "$(DEPDIR)/check_shamir-check_shamir.Tpo" "$(DEPDIR)/check_shamir-check_shamir.Po"; else rm -f "$(DEPDIR)/check_shamir-check_shamir.Tpo"; exit 1; fi
-#	source='check_shamir.c' object='check_shamir-check_shamir.o' libtool=no \
+check_libgfshare-check_libgfshare.o: check_libgfshare.c
+	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libgfshare_CFLAGS) $(CFLAGS) -MT check_libgfshare-check_libgfshare.o -MD -MP -MF "$(DEPDIR)/check_libgfshare-check_libgfshare.Tpo" -c -o check_libgfshare-check_libgfshare.o `test -f 'check_libgfshare.c' || echo '$(srcdir)/'`check_libgfshare.c; \
+	then mv -f "$(DEPDIR)/check_libgfshare-check_libgfshare.Tpo" "$(DEPDIR)/check_libgfshare-check_libgfshare.Po"; else rm -f "$(DEPDIR)/check_libgfshare-check_libgfshare.Tpo"; exit 1; fi
+#	source='check_libgfshare.c' object='check_libgfshare-check_libgfshare.o' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_shamir_CFLAGS) $(CFLAGS) -c -o check_shamir-check_shamir.o `test -f 'check_shamir.c' || echo '$(srcdir)/'`check_shamir.c
+#	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libgfshare_CFLAGS) $(CFLAGS) -c -o check_libgfshare-check_libgfshare.o `test -f 'check_libgfshare.c' || echo '$(srcdir)/'`check_libgfshare.c
 
-check_shamir-check_shamir.obj: check_shamir.c
-	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_shamir_CFLAGS) $(CFLAGS) -MT check_shamir-check_shamir.obj -MD -MP -MF "$(DEPDIR)/check_shamir-check_shamir.Tpo" -c -o check_shamir-check_shamir.obj `if test -f 'check_shamir.c'; then $(CYGPATH_W) 'check_shamir.c'; else $(CYGPATH_W) '$(srcdir)/check_shamir.c'; fi`; \
-	then mv -f "$(DEPDIR)/check_shamir-check_shamir.Tpo" "$(DEPDIR)/check_shamir-check_shamir.Po"; else rm -f "$(DEPDIR)/check_shamir-check_shamir.Tpo"; exit 1; fi
-#	source='check_shamir.c' object='check_shamir-check_shamir.obj' libtool=no \
+check_libgfshare-check_libgfshare.obj: check_libgfshare.c
+	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libgfshare_CFLAGS) $(CFLAGS) -MT check_libgfshare-check_libgfshare.obj -MD -MP -MF "$(DEPDIR)/check_libgfshare-check_libgfshare.Tpo" -c -o check_libgfshare-check_libgfshare.obj `if test -f 'check_libgfshare.c'; then $(CYGPATH_W) 'check_libgfshare.c'; else $(CYGPATH_W) '$(srcdir)/check_libgfshare.c'; fi`; \
+	then mv -f "$(DEPDIR)/check_libgfshare-check_libgfshare.Tpo" "$(DEPDIR)/check_libgfshare-check_libgfshare.Po"; else rm -f "$(DEPDIR)/check_libgfshare-check_libgfshare.Tpo"; exit 1; fi
+#	source='check_libgfshare.c' object='check_libgfshare-check_libgfshare.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
-#	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_shamir_CFLAGS) $(CFLAGS) -c -o check_shamir-check_shamir.obj `if test -f 'check_shamir.c'; then $(CYGPATH_W) 'check_shamir.c'; else $(CYGPATH_W) '$(srcdir)/check_shamir.c'; fi`
+#	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libgfshare_CFLAGS) $(CFLAGS) -c -o check_libgfshare-check_libgfshare.obj `if test -f 'check_libgfshare.c'; then $(CYGPATH_W) 'check_libgfshare.c'; else $(CYGPATH_W) '$(srcdir)/check_libgfshare.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
