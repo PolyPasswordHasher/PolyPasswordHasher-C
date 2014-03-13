@@ -11,7 +11,6 @@
 #include"libgfshare.h"
 #include<stdlib.h>
 #include<strings.h>
-#include<stdio.h>
 
 START_TEST(generate_secrets)
 {
@@ -21,40 +20,76 @@ START_TEST(generate_secrets)
   unsigned char* share2 = malloc(512);
   unsigned char* share3 = malloc(512);
   unsigned char* recomb = malloc(512);
-  unsigned char* sharenrs = (unsigned char*)strdup("012");
-  gfshare_ctx *G;
-
-
-
+  unsigned char* sharenrs = (unsigned char*)strdup("0123");
+  gfshare_ctx *G; 
   
-  G = gfshare_ctx_init_enc( sharenrs, 3, 2, 512);
+  G = gfshare_ctx_init_enc( sharenrs, 4, 2, 512);
 
   gfshare_ctx_enc_setsecret(G, secret);
   gfshare_ctx_enc_getshare( G, 0, share1);
   gfshare_ctx_enc_getshare( G, 1, share2);
   gfshare_ctx_enc_getshare( G, 2, share3);
 
-  
-  for(i=0; i<512; i++){
-    printf("%hhu", share1[i]);
-  }
-
-  printf("\n");
   gfshare_ctx_free(G);
 
-  G = gfshare_ctx_init_dec( sharenrs, 3, 512);
+  G = gfshare_ctx_init_dec( sharenrs, 2, 512);
   gfshare_ctx_dec_giveshare( G, 0, share1);
   gfshare_ctx_dec_giveshare( G, 1, share2);
-  gfshare_ctx_dec_giveshare( G, 2, share3);
 
   sharenrs[2] = 0;
   gfshare_ctx_dec_newshares( G, sharenrs );
   gfshare_ctx_dec_extract( G, recomb);
-  for( i=0; i<strlen(secret); i++){
-    printf(" (%hhu,%hhu) ",secret[i],recomb[i]);
-  }
+  
+  ck_assert_str_eq(secret,recomb);
 }
 END_TEST
+
+
+START_TEST(generate_secrets_256_shares)
+{
+  int ok = 1, i;
+  unsigned char* secret = (unsigned char*)strdup("hello");
+  unsigned char* share1 = malloc(512);
+  unsigned char* share2 = malloc(512);
+  unsigned char* share3 = malloc(512);
+  unsigned char* recomb = malloc(512);
+  unsigned char* sharenrs = malloc(256);
+  unsigned char random_shares[3];
+  gfshare_ctx *G;
+
+  for(i=0;i<256;i++){
+    sharenrs[i] = (i+1)%255;
+  }
+
+  
+  G = gfshare_ctx_init_enc( sharenrs, 254, 2, 512);
+
+  gfshare_ctx_enc_setsecret(G, secret);
+  gfshare_ctx_enc_getshare( G, 0, share1);
+  gfshare_ctx_enc_getshare( G, 1, share2);
+  gfshare_ctx_enc_getshare( G, 2, share3);
+
+  gfshare_ctx_free(G);
+
+  G = gfshare_ctx_init_dec( sharenrs, 2, 512);
+  gfshare_ctx_dec_giveshare( G, 0, share1);
+  gfshare_ctx_dec_giveshare( G, 1, share2);
+  gfshare_ctx_dec_giveshare( G, 2, share3);
+
+  random_shares[0]=1;
+  random_shares[1]=2;
+  random_shares[2]=3;
+    
+  gfshare_ctx_dec_newshares( G, random_shares );
+  gfshare_ctx_dec_extract( G, recomb);
+
+  ck_assert_str_eq(recomb,secret);
+ 
+}
+END_TEST
+
+
+
 
 Suite * shamir_suite (void)
 {
@@ -62,15 +97,9 @@ Suite * shamir_suite (void)
 
   /* Core test case */
   TCase *tc_core = tcase_create ("core");
-  //tcase_add_checked_fixture (tc_core, setup, teardown);
   tcase_add_test (tc_core,generate_secrets);
+  tcase_add_test (tc_core,generate_secrets_256_shares);
   suite_add_tcase (s, tc_core);
-
-  /* Limits test case */
-  //TCase *tc_limits = tcase_create ("limits");
-  //tcase_add_test (tc_limits, test_money_create_neg);
-  //tcase_add_test (tc_limits, test_money_create_zero);
-  //suite_add_tcase (s, tc_limits);
 
   return s;
 }
