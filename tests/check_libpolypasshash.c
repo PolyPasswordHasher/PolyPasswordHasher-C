@@ -35,7 +35,7 @@ Suite * polypasshash_suite(void)
 int main (void)
 {
   int number_failed;
-  Suite *s = shamir_suite();
+  Suite *s =  polypasshash_suite();
   SRunner *sr = srunner_create (s);
   srunner_run_all (sr, CK_VERBOSE);
   number_failed = srunner_ntests_failed (sr);
