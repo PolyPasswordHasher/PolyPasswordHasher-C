@@ -9,6 +9,7 @@
  */
 #include<check.h>
 #include"libgfshare.h"
+#include"libpolypasshash.h"
 #include<stdlib.h>
 #include<strings.h>
 

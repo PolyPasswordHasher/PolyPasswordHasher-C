@@ -36,7 +36,7 @@
 
 
 /* Custom types */ 
-typedef unsigned char uint8
+typedef unsigned char uint8;
 
 /* enums */
 typedef enum{
@@ -54,50 +54,49 @@ typedef enum{
   PPH_ERROR_UNKNOWN,
 }PPH_ERROR;
 
-
 /* structure definitions */
 // this might sound like little overkill, but it will help us keep the code
 // tidier
 typedef struct _shamir_share{
-  uint8 *data,                  // the data to hold
-  uint8 share_number            // the share that corresponds to this data
+  uint8 *data;                  // the data to hold
+  uint8 share_number;           // the share that corresponds to this data
 }shamir_share;
 
 
 typedef struct _pph_entry{
-  uint8 share_number,           // the share number that belongs to this entry
-  uint8 salt[SALT_LENGTH],      // the salt buffer to use 
-  uint8 hashed_value[SHARE_LENGTH] // the hashed password of this value
+  uint8 share_number;           // the share number that belongs to this entry
+  uint8 salt[SALT_LENGTH];      // the salt buffer to use 
+  uint8 hashed_value[SHARE_LENGTH];// the hashed password of this value
 } pph_entry;
 
 
 typedef struct _pph_account{
-  unsigned char username[USERNAME_LENGTH], // obvious... this is
-  uint8 number_of_entries,                 // the entries for this user
-  pph_entry *entries                       // a pointer to entries of this acc
+  unsigned char username[USERNAME_LENGTH]; // obvious... this is
+  uint8 number_of_entries;                 // the entries for this user
+  pph_entry *entries;                      // a pointer to entries of this acc
 }pph_account;
 
 // I decided to keep this structure as a separate one for cleanliness and
 // easy refactoring. 
 typedef struct _pph_account_node{  // we will hold user data in a dynamic list
-  struct _pph_account_node* next,
-  pph_account account
+  struct _pph_account_node* next;
+  pph_account account;
 }pph_account_node;
 
 typedef struct _pph_context{
-  gfshare_ctx *share_context,   // this is a pointer to the libgfshare engine
-  uint8 threshold,              // the threshold set to the libgfshare engine
-  uint8 available_shares,       // this is the number of available shares
-  uint8 is_unlocked,            // this is a boolean flag indicating whether 
-                                //  the secret is known.
-  uint8 *AES_key,               // a randomly generated AES key of SHARE_LENGTH
-  uint8 *secret,                // secret data, this is sent by the user
-  uint8 partial_bytes,          // partial bytes, if 0, thresholdless is
-                                //   disabled
-  SHAMIR_SHARE* shares          // this will point to a malloc'ed array of 
-                                //  shares
-  pph_account_node* account_data// we will hold a reference to the account
-                                //  data in here
+  gfshare_ctx *share_context;    // this is a pointer to the libgfshare engine
+  uint8 threshold;               // the threshold set to the libgfshare engine
+  uint8 available_shares;        // this is the number of available shares
+  uint8 is_unlocked;             // this is a boolean flag indicating whether 
+                                 //  the secret is known.
+  uint8 *AES_key;                // a randomly generated AES key of SHARE_LENGTH
+  uint8 *secret;                 // secret data, this is sent by the user
+  uint8 partial_bytes;           // partial bytes, if 0, thresholdless is
+                                 //   disabled
+  shamir_share* shares;          // this will point to a malloc'ed array of 
+                                 //  shares
+  pph_account_node* account_data;// we will hold a reference to the account
+                                 //  data in here
 }pph_context;
 
 
