@@ -31,9 +31,11 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <openssl/aes.h>
+#include <string.h>
 
 /* Constant Declaration */
 #define SHARE_LENGTH 256                // the length of our share buffers
+#define DIGEST_LENGTH SHARE_LENGTH
 #define MAX_NUMBER_OF_SHARES 256        // the maximum number of shares
 #define USERNAME_LENGTH 128             // the maximum username length
 #define SALT_LENGTH 16                  // the length of the salt to be used
@@ -70,7 +72,7 @@ typedef struct _shamir_share{
 typedef struct _pph_entry{
   uint8 share_number;           // the share number that belongs to this entry
   uint8 salt[SALT_LENGTH];      // the salt buffer to use 
-  uint8 hashed_value[SHARE_LENGTH];// the hashed password of this value
+  uint8 hashed_value[DIGEST_LENGTH];// the hashed password of this value
 } pph_entry;
 
 
