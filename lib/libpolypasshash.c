@@ -114,7 +114,6 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
     share_numbers[i]=(unsigned char)i+1;
   }
   context->share_context = NULL;
-  printf("\n\t%hhu %d %d %d\n",share_numbers[0],MAX_NUMBER_OF_SHARES,context->threshold,MAX_NUMBER_OF_SHARES);
   context->share_context = gfshare_ctx_init_enc( share_numbers,
                                                  MAX_NUMBER_OF_SHARES-1,
                                                  context->threshold,
