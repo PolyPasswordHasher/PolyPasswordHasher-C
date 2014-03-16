@@ -41,7 +41,8 @@
 *                                 password storage
 *
 *     const uint8 *secret:        the secret data provided to scramble the
-*                                 shamir secret share instance
+*                                 shamir secret share instance. The resulting
+*                                 structure won't make a copy of this.
 * 
 *     unsigned int secret_length: the length of the secret to use, should be 
 *                                 less than SHARE_LENGTH by preference
@@ -67,8 +68,78 @@
 pph_context* pph_init_context(uint8 threshold, const uint8* secret,
                               unsigned int secret_length, uint8 partial_bytes){
   
-  // right now, we shouldn't be returning null
-  return NULL;
+  pph_context *context;
+  unsigned char share_numbers[MAX_NUMBER_OF_SHARES];//this is a specific
+                                                    //initialization constant.
+  unsigned int i;
+  //CHECK ARGUMENT SANITY
+  // secret
+  if(secret == NULL){
+    return NULL;
+  }
+  // threshold
+  if(threshold==0){
+    return NULL;
+  }
+  // secret length
+  if(secret_length == 0 || secret_length > PASSWORD_LENGTH){//TODO: do we need
+                                                            // another constant
+                                                            // ?
+    return NULL;
+  }
+
+  if(partial_bytes > DIGEST_LENGTH){// TODO:should we evaluate for half of this
+    return NULL;
+  }
+
+  //INITIALIZE DATA STRUCTURE
+  // malloc
+  context = malloc(sizeof(*context));
+  if(context == NULL){
+    return NULL;
+  }// TODO: evaluate if we should check for sub-allocation
+
+  // fill
+  context->threshold=threshold;
+  
+  context->secret = NULL; //cue the paranoid parrot meme...
+  context->secret = malloc(sizeof(uint8)*secret_length);
+  if(context->secret == NULL){
+    free(context);
+    return NULL;
+  }
+  memcpy(context->secret,secret,sizeof(uint8)*secret_length);
+
+  for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
+    share_numbers[i]=(unsigned char)i+1;
+  }
+  context->share_context = NULL;
+  printf("\n\t%hhu %d %d %d\n",share_numbers[0],MAX_NUMBER_OF_SHARES,context->threshold,MAX_NUMBER_OF_SHARES);
+  context->share_context = gfshare_ctx_init_enc( share_numbers,
+                                                 MAX_NUMBER_OF_SHARES-1,
+                                                 context->threshold,
+                                                 MAX_NUMBER_OF_SHARES);
+  if(context->share_context == NULL){
+    free(context);
+    return NULL;
+  }
+  gfshare_ctx_enc_setsecret(context->share_context, context->secret);
+  
+  context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
+
+  context->is_unlocked = 1; 
+
+  context->partial_bytes=partial_bytes;
+  if(partial_bytes !=0){
+    // should generate AES key
+  }else{
+    context->AES_key = NULL;
+  }
+
+  context->shares=NULL;
+  context->account_data=NULL;
+
+  return context;
 }
 
 
