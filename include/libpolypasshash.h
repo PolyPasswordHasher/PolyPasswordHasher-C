@@ -5,6 +5,7 @@
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use, copy,
+ *
  * modify, merge, publish, distribute, sublicense, and/or sell copies
  * of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
@@ -27,11 +28,14 @@
 #define LIBPOLYPASSHASH_H
 
 #include "libgfshare.h"
+#include <openssl/evp.h>
+#include <openssl/sha.h>
+#include <openssl/aes.h>
 
 /* Constant Declaration */
 #define SHARE_LENGTH 256                // the length of our share buffers
 #define MAX_NUMBER_OF_SHARES 256        // the maximum number of shares
-#define USERNAME_LENGTH 50              // the maximum username length
+#define USERNAME_LENGTH 128             // the maximum username length
 #define SALT_LENGTH 16                  // the length of the salt to be used
 
 

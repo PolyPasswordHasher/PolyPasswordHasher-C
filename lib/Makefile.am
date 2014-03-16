@@ -1,4 +1,5 @@
 AM_CFLAGS = -I$(top_builddir)/include
+AM_LDFLAGS = -lcrypto
 
 lib_LTLIBRARIES = libgfshare.la libpolypasshash.la
 libgfshare_la_SOURCES = $(top_builddir)/include/libgfshare.h libgfshare.c \
