@@ -13,22 +13,42 @@
 #include<stdlib.h>
 #include<strings.h>
 
-START_TEST(test_buildup)
+START_TEST(test_pph_init_context_wrong_threshold)
 {
 }
 END_TEST
 
 
+START_TEST(test_pph_init_context_wrong_secret_length)
+{
+}
+END_TEST
 
+
+START_TEST(test_pph_init_context_wrong_secret_pointer)
+{
+}
+END_TEST
+
+
+START_TEST(test_pph_init_context_no_partial_bytes)
+{
+}
+END_TEST
 
 Suite * polypasshash_suite(void)
 {
   Suite *s = suite_create ("buildup");
 
-  /* Core test case */
-  TCase *tc_core = tcase_create ("core");
-  tcase_add_test (tc_core,test_buildup);
-  suite_add_tcase (s, tc_core);
+  /* no partial bytes case */
+  TCase *tc_non_partial = tcase_create ("non-partial");
+  tcase_add_test (tc_non_partial,test_pph_init_context_wrong_threshold);
+  tcase_add_test (tc_non_partial,test_pph_init_context_wrong_secret_length);
+  tcase_add_test (tc_non_partial,test_pph_init_context_wrong_secret_pointer);
+  tcase_add_test (tc_non_partial,test_pph_init_context_no_partial_bytes);
+  suite_add_tcase (s, tc_non_partial);
+
+
 
   return s;
 }
