@@ -148,6 +148,41 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
 
 
 /*******************************************************************
+* NAME :            pph_destroy_conext
+*
+* DESCRIPTION :     Destroy an existing instance of pph_context, securely 
+*                   dstroying its resources.
+*
+* INPUTS :
+*   PARAMETERS:
+*     pph_context *context: the context to destroy
+*
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type:   PPH_ERROR     
+*                    value:                     when:
+*                   PPH_ERROR_OK                  the free process worked
+*
+*                   PPH_ERROR_UNKNOWN             if something weird happens    
+* PROCESS :
+*     Basically destroy pointers in the structure and then free the structure
+*     itself, doing sanity checks in between child and parent structure 
+*     destruction. 
+*
+* CHANGES :
+*     First revision, won't delete accounts perfectly
+*/
+PPH_ERROR pph_destroy_context(pph_context *context);
+                             
+
+
+/*******************************************************************
 * NAME :            pph_create_account
 *
 * DESCRIPTION :     given a context and some other data, create a user

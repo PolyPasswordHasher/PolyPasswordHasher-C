@@ -141,6 +141,79 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   return context;
 }
 
+/*******************************************************************
+* NAME :            pph_destroy_conext
+*
+* DESCRIPTION :     Destroy an existing instance of pph_context, securely 
+*                   dstroying its resources.
+*
+* INPUTS :
+*   PARAMETERS:
+*     pph_context *context: the context to destroy
+*
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type:   PPH_ERROR     
+*                    value:                     when:
+*                   PPH_ERROR_OK                  the free process worked
+*
+*                   PPH_ERROR_UNKNOWN             if something weird happens    
+*
+*                   PPH_BAD_PTR                   if the pointer given is null
+* PROCESS :
+*     Basically destroy pointers in the structure and then free the structure
+*     itself, doing sanity checks in between child and parent structure 
+*     destruction. 
+*
+* CHANGES :
+*     First revision, won't delete accounts. 
+*/
+PPH_ERROR pph_destroy_context(pph_context *context){
+  // do the first check
+  pph_account_node *current,*next;
+  PPH_ERROR error = PPH_ERROR_UNKNOWN;
+  if(context == NULL){
+    return PPH_BAD_PTR;
+  }
+  
+  // do child freeing.
+  if(context->AES_key != NULL){ // this is probably unnecessary as per the spec
+    free(context->AES_key);
+  }
+
+  if(context->secret !=NULL){
+    free(context->secret);
+  }
+
+  if(context->shares !=NULL){
+    free(context->shares);
+  }
+
+  if(context->account_data != NULL){
+    next = context->account_data;
+    while(next!=NULL){
+      current=next;
+      next=next->next;
+      free(current); //TODO: this should work, but test it....
+    }
+  }
+
+  gfshare_ctx_free(context->share_context);
+
+  // now it is safe to free everything
+  free(context);
+
+  error = PPH_ERROR_OK;
+
+  return error;
+}
+
 
 /*******************************************************************
 * NAME :            pph_create_account
