@@ -10,3 +10,5 @@ include_HEADERS = $(top_builddir)/include/libgfshare.h
 libpolypasshash_la_SOURCES = libpolypasshash.c\
 														 $(top_builddir)/include/libgfshare.h\
 														 $(top_builddir)/include/libpolypasshash.h
+libpolypasshash_la_LIBADD = $(top_builddir)/lib/libgfshare.la
+	
