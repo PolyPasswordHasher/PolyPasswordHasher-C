@@ -349,7 +349,7 @@ PPH_ERROR pph_check_log_in(pph_context *ctx, const char *username,
 * CHANGES :
 *     TODO: 
 */
-PPH_ERROR pph_uncock_password_data(pph_context *ctx, uint8 share_number,
+PPH_ERROR pph_unlock_password_data(pph_context *ctx, uint8 share_number,
                           const uint8 *usernames[], const uint8 *passwords[]){
 
   return PPH_ERROR_UNKNOWN;
