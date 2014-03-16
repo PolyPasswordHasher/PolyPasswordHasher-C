@@ -113,6 +113,38 @@ START_TEST(test_pph_init_context_no_partial_bytes)
 }
 END_TEST
 
+// We intend to use it to check the correct parsing of the context values
+START_TEST(test_create_account_context){
+  
+}
+END_TEST
+
+// this test is intended to check correct sanity check on the username field
+START_TEST(test_create_account_usernames){
+}
+END_TEST
+
+// this test is intended to check correct sanity checks on the password fields
+START_TEST(test_create_account_passwords){
+}
+END_TEST
+// this test is intended to check the correct sanity check on the sharenumber
+// field
+START_TEST(test_create_account_sharenumbers){
+}
+END_TEST
+// this test is intended to check that a correct account structure is 
+// producted (i.e. hash, etc.)
+START_TEST(test_create_account_entry_consistency){
+}
+END_TEST
+
+// this test is intended to check that the linked list is correctly created,
+// checks for correct number of entries and username collisions
+START_TEST(test_create_account_entry_list_consistency){
+}
+END_TEST
+
 Suite * polypasshash_suite(void)
 {
   Suite *s = suite_create ("buildup");
@@ -123,6 +155,13 @@ Suite * polypasshash_suite(void)
   tcase_add_test (tc_non_partial,test_pph_init_context_wrong_secret_length);
   tcase_add_test (tc_non_partial,test_pph_init_context_wrong_secret_pointer);
   tcase_add_test (tc_non_partial,test_pph_init_context_no_partial_bytes);
+  
+  tcase_add_test (tc_non_partial,test_create_account_context);
+  tcase_add_test (tc_non_partial,test_create_account_usernames);
+  tcase_add_test (tc_non_partial,test_create_account_passwords);
+  tcase_add_test (tc_non_partial,test_create_account_sharenumbers);
+  tcase_add_test (tc_non_partial,test_create_account_entry_consistency);
+  tcase_add_test (tc_non_partial,test_create_account_entry_list_consistency);
   suite_add_tcase (s, tc_non_partial);
 
 
