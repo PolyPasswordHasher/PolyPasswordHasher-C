@@ -37,7 +37,7 @@
 #define MAX_NUMBER_OF_SHARES 256        // the maximum number of shares
 #define USERNAME_LENGTH 128             // the maximum username length
 #define SALT_LENGTH 16                  // the length of the salt to be used
-#define PASSWORD_LENGTH 128isecretI     // I'm setting this as for the PHC
+#define PASSWORD_LENGTH 128             // I'm setting this as for the PHC
 
 /* Custom types */ 
 typedef unsigned char uint8;
