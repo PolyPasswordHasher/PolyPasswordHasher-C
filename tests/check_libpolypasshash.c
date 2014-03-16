@@ -63,7 +63,6 @@ START_TEST(test_pph_init_context_wrong_secret_length)
   ck_assert_msg(context == NULL,
       "the context returned upon a 0 length value should be NULL");
   
-  free(context); // TODO: we might need a special method for this.
 }
 END_TEST
 
@@ -94,6 +93,7 @@ START_TEST(test_pph_init_context_no_partial_bytes)
 {
   // a placeholder for the result.
   pph_context *context;
+  PPH_ERROR error;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
   uint8 *secret = "secretstring";// this is not necesarilly a string, but will
                                  // work for demonstration purposes
@@ -105,8 +105,11 @@ START_TEST(test_pph_init_context_no_partial_bytes)
   context = pph_init_context(threshold, secret, length, partial_bytes);
 
   ck_assert_msg(context != NULL, "this was a good initialization");
-      
-  free(context); // TODO: really, we should free in a custom method. :
+  
+  error = pph_destroy_context(context);
+
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "the free function didn't work properly");
 }
 END_TEST
 
