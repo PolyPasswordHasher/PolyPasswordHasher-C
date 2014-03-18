@@ -34,7 +34,7 @@
 #include <string.h>
 
 /* Constant Declaration */
-#define SHARE_LENGTH 256                // the length of our share buffers
+#define SHARE_LENGTH 256/8              // the length of our share buffers
 #define DIGEST_LENGTH SHARE_LENGTH
 #define MAX_NUMBER_OF_SHARES 256        // the maximum number of shares
 #define USERNAME_LENGTH 128             // the maximum username length
@@ -52,6 +52,7 @@ typedef enum{
   PPH_USERNAME_IS_TOO_LONG,
   PPH_PASSWORD_IS_TOO_LONG,
   PPH_ACCOUNT_IS_INVALID,
+  PPH_WRONG_SHARE_COUNT,
   // system or user is being brilliant. 
   PPH_NO_MEM,
   PPH_BAD_PTR,
@@ -73,11 +74,12 @@ typedef struct _pph_entry{
   uint8 share_number;           // the share number that belongs to this entry
   uint8 salt[SALT_LENGTH];      // the salt buffer to use 
   uint8 hashed_value[DIGEST_LENGTH];// the hashed password of this value
+  struct _pph_entry *next;
 } pph_entry;
 
 
 typedef struct _pph_account{
-  unsigned char username[USERNAME_LENGTH]; // obvious... this is
+  unsigned char username[USERNAME_LENGTH]; // the username...
   uint8 number_of_entries;                 // the entries for this user
   pph_entry *entries;                      // a pointer to entries of this acc
 }pph_account;
@@ -103,6 +105,8 @@ typedef struct _pph_context{
                                  //  shares
   pph_account_node* account_data;// we will hold a reference to the account
                                  //  data in here
+  uint8 next_entry;              // this allocates shares in a round-robin 
+                                 //  fashion
 }pph_context;
 
 
