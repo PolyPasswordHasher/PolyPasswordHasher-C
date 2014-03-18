@@ -32,6 +32,8 @@
 #include <openssl/sha.h>
 #include <openssl/aes.h>
 #include <string.h>
+#include <time.h> // for random seed generation, we could remove it in latter
+                  //  revisions 
 
 /* Constant Declaration */
 #define SHARE_LENGTH 256/8              // the length of our share buffers
@@ -317,6 +319,10 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx, uint8 share_number,
                           const uint8 *usernames[], const uint8 *passwords[]);
                                   
 
+
+// helper functions
+// This produces a salt string,
+void get_random_salt(unsigned int length, uint8 *dest);
 
 /* inline functions */
 // These are most possibly private helpers that aid in readibility 

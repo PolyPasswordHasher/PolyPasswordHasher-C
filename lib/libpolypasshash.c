@@ -298,7 +298,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   for(i=0;i<shares;i++){
     entry_node=malloc(sizeof(*entry_node));
     if(entry_node==NULL){
-      /* TODO, should properly get rid of the entry list */
+      // destroy the list we had to far... it's a shame if you ask me ...
+      _destroy_entry_list(entry_node);
       return PPH_NO_MEM;
     }
     // get a share number
@@ -311,6 +312,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // get a new share.
     gfshare_ctx_enc_getshare( ctx->share_context, entry_node->share_number,
         share_data);
+  
+    // get a salt for this entry
 
     // get the digest of the password TODO: we should prepend the salt
     _calculate_digest(resulting_hash, password);
@@ -332,7 +335,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   // allocate the account information 
   node=malloc(sizeof(*node));
   if(node==NULL){
-    // TODO free the entry array
+    // we should destroy the list we created now...
+    _destroy_entry_list(entry_node);
     return PPH_NO_MEM;
   }
   // fill username information
@@ -447,7 +451,17 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx, uint8 share_number,
  
 // This produces a salt string,
 void get_random_salt(unsigned int length, uint8 *dest){
+  static uint8 seed_is_created = 0;
+  unsigned int i;
 
+  if(!seed_is_created){
+    srand(time(NULL));
+    seed_is_created = 1;
+  }
+
+  for(i=0;i<length;i++){
+    dest[i] = rand();
+  }
 }
 
 
