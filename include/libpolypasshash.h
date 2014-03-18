@@ -321,7 +321,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx, uint8 share_number,
 
 
 // helper functions
-// This produces a salt string,
+// This produces a salt string, warning, this only generates a 
+// PRINTABLE salt
 void get_random_salt(unsigned int length, uint8 *dest);
 
 /* inline functions */

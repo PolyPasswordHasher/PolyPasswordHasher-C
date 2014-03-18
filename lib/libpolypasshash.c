@@ -263,6 +263,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   uint8 current_entry;
   uint8 share_data[SHARE_LENGTH];
   uint8 resulting_hash[DIGEST_LENGTH];
+  uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH];
   // SANITIZE INFORMATION
   //
   // check password length
@@ -313,10 +314,13 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     gfshare_ctx_enc_getshare( ctx->share_context, entry_node->share_number,
         share_data);
   
-    // get a salt for this entry
+    // get a salt for this entry, we are using sprintf, but we could use 
+    // memcpy in case this function requires it.
+    get_random_salt(SALT_LENGTH, entry_node->salt);
+    sprintf(salted_password,"%s%s",entry_node->salt, password);
 
-    // get the digest of the password TODO: we should prepend the salt
-    _calculate_digest(resulting_hash, password);
+    
+    _calculate_digest(resulting_hash, salted_password);
     
     // xor the whole thing, we do this in an unsigned int fashion imagining 
     // this is where usually where the processor aligns things and is, hence
@@ -324,8 +328,6 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     _xor_share_with_digest(entry_node->hashed_value, share_data,
         resulting_hash, DIGEST_LENGTH);
     
-    
-    // TODO: Store the salt
     
     // add the node to the list
     entry_node->next = last_entry;
@@ -460,7 +462,9 @@ void get_random_salt(unsigned int length, uint8 *dest){
   }
 
   for(i=0;i<length;i++){
-    dest[i] = rand();
+    // we do scaling for printable characters, this might not be the best idea
+    // in the world.
+    dest[i] = (rand()%96)+32;
   }
 }
 
