@@ -200,6 +200,8 @@ PPH_ERROR pph_destroy_context(pph_context *context){
     while(next!=NULL){
       current=next;
       next=next->next;
+      // free their entry list
+      _destroy_entry_list(current->account.entries);
       free(current); //TODO: this should work, but test it....
     }
   }

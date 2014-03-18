@@ -355,5 +355,17 @@ inline void _calculate_digest(uint8 *digest, const uint8 *password){
   EVP_MD_CTX_cleanup(&mctx);
 
 }
+
+// i will make a small method to free the entry lists for errors
+// in the generate user event and when destroying a context object
+inline void _destroy_entry_list(pph_entry *head){
+  pph_entry *last;
+  last=head;
+  while(head!=NULL){
+    head=head->next;
+    free(last);
+    last=head;
+  }
+} 
 #endif /* LIBPOLYPASSHASH_H */
 
