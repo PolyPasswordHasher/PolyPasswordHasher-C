@@ -192,7 +192,6 @@ START_TEST(test_create_account_passwords){
   error = pph_create_account(context, "ichooseverylongpasswords",
        password,1);
   
-  printf("\n%d\n",error);
   ck_assert_msg(error == PPH_PASSWORD_IS_TOO_LONG, 
       "We should've gotten PPH_PASSWORD_IS_TOO_LONG in the return value");
   
@@ -223,12 +222,15 @@ START_TEST(test_create_account_sharenumbers){
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
+  unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x','x',
+                                     'x','x','x','x','x','x','v','e','r','y',
+                                     's','e','c','u','r','e','\0'};
   // this is the calculated hash for the password without salt using 
   // an external tool
-  uint8 password_digest[] = { 0x6d, 0xdb, 0xb9, 0x1a, 0x63, 0xb8, 0x8b, 0xad,
-                              0x59, 0xb1, 0x08, 0xfa, 0x7a, 0x4b, 0x23, 0x61,
-                              0x55, 0xf5, 0xb1, 0xb1, 0xdd, 0x2d, 0xc9, 0x58,
-                              0x07, 0x98, 0x62, 0x4d, 0xcb, 0xc2, 0xdc, 0xee};
+  uint8 password_digest[DIGEST_LENGTH]; 
+                           
+                          
+                         
   unsigned int i;
   uint8 *digest_result;
   uint8 share_result[SHARE_LENGTH];
@@ -246,6 +248,12 @@ START_TEST(test_create_account_sharenumbers){
   
 
   ck_assert_str_eq(username,context->account_data->account.username);
+
+  // now lets check we can take the digest back from the death... I mean
+  // share
+  memcpy(salted_password,context->account_data->account.entries->salt,
+      SALT_LENGTH);
+  _calculate_digest(password_digest, salted_password);
   digest_result=context->account_data->account.entries->hashed_value;
 
   gfshare_ctx_enc_getshare(context->share_context, 1, share_result);

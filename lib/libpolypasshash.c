@@ -318,7 +318,6 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // memcpy in case this function requires it.
     get_random_salt(SALT_LENGTH, entry_node->salt);
     sprintf(salted_password,"%s%s",entry_node->salt, password);
-
     
     _calculate_digest(resulting_hash, salted_password);
     
