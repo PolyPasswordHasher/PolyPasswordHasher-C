@@ -202,7 +202,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
       next=next->next;
       // free their entry list
       _destroy_entry_list(current->account.entries);
-      free(current); //TODO: this should work, but test it....
+      free(current); 
     }
   }
 
@@ -285,6 +285,12 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   if(ctx == NULL){
     return PPH_BAD_PTR;
   }
+
+  // check if we are able to get shares from the context vault
+  if(ctx->is_unlocked != 1){
+    return PPH_CONTEXT_IS_LOCKED;
+  }
+
   // check non-existing username
   next = ctx->account_data;
   while(next!=NULL){
@@ -317,6 +323,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // get a salt for this entry, we are using sprintf, but we could use 
     // memcpy in case this function requires it.
     get_random_salt(SALT_LENGTH, entry_node->salt);
+    entry_node->salt[SALT_LENGTH-1]='\0';
     sprintf(salted_password,"%s%s",entry_node->salt, password);
     
     _calculate_digest(resulting_hash, salted_password);
@@ -326,7 +333,6 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // faster
     _xor_share_with_digest(entry_node->hashed_value, share_data,
         resulting_hash, DIGEST_LENGTH);
-    
     
     // add the node to the list
     entry_node->next = last_entry;
@@ -396,7 +402,87 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 */
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
                                                 const char *password){
+  pph_account_node *target = NULL; // this will, ideally, point to target 
+                                   //   username
+  uint8 share_data[SHARE_LENGTH];  // this is a buffer to store the current 
+                                   //  share
+  uint8 resulting_hash[DIGEST_LENGTH]; // this will hold our calculated hash
+  uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH]; // this is the buffer
+                                                      // we will use for hashing
+  uint8 xored_hash[SHARE_LENGTH];
+  uint8 sharenumber;
+  unsigned int i;
+
+  pph_account_node *search; // this will be used to iterate all the users 
+  // check for any improper pointers
+  if(ctx == NULL || username == NULL || password == NULL){
+    return PPH_BAD_PTR;
+  }
+
+  // if the length is too long for either field, return proper error, we
+  // are substracting the null character as it is not included in the check
+  if(strlen(username) > USERNAME_LENGTH-1){
+    return PPH_USERNAME_IS_TOO_LONG;
+  }
   
+  // do the same for the password
+  if(strlen(password) > PASSWORD_LENGTH-1){
+    return PPH_PASSWORD_IS_TOO_LONG;
+  }
+
+  // check if the context is locked and we lack partial bytes to check
+  if(ctx->is_unlocked != 1 && ctx->partial_bytes == 0){
+    return PPH_CONTEXT_IS_LOCKED;
+  }
+
+  // search for our user
+  search = ctx->account_data;
+  while(search!=NULL){
+    if(!strncmp(search->account.username,username,USERNAME_LENGTH)){
+      target = search;
+    }
+    search=search->next;
+  } 
+  if(target == NULL){ //i.e. we found no one
+    return PPH_ACCOUNT_IS_INVALID;
+  }
+
+  // if we reach here, we should have enough resources to provide a login
+  // functionality to the user.
+  
+  // first, check what type of account is this
+  // , for this, verify we can get a sharenumber out of this...
+  if(target->account.entries == NULL){
+    return PPH_ERROR_UNKNOWN; // this probably happens if data is inconsistent
+  }
+  sharenumber = target->account.entries->share_number;// we need only the first 
+                                             // share to do the checking
+  if(sharenumber == 0){ // non admin
+    return PPH_ERROR_UNKNOWN; // TODO: do something instead of breaking
+    // we should recheck if partial bytes are involved or use the AES key to 
+    // decrypt the result. 
+  }else{
+    // we do it the normal way for this. We have a valid sharenumber
+    //
+    // get the share
+    gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
+
+    // calculate the proposed digest with the salt.
+    sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+    _calculate_digest(resulting_hash, salted_password);
+    
+    // xor the thing back to normal
+    _xor_share_with_digest(xored_hash,target->account.entries->hashed_value,
+        share_data, DIGEST_LENGTH);
+
+    // compare, TODO: optimize this.
+    for(i=0;i<DIGEST_LENGTH;i++){
+      if(xored_hash[i] != resulting_hash[i]){
+        return PPH_ACCOUNT_IS_INVALID;
+      } 
+    }
+    return PPH_ERROR_OK; // this means, the login does match
+  } 
 
   return PPH_ERROR_UNKNOWN;
 }
@@ -464,7 +550,7 @@ void get_random_salt(unsigned int length, uint8 *dest){
   for(i=0;i<length;i++){
     // we do scaling for printable characters, this might not be the best idea
     // in the world.
-    dest[i] = (rand()%96)+32;
+    dest[i] = (rand()%95)+32;
   }
 }
 

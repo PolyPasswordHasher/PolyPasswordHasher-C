@@ -257,7 +257,7 @@ START_TEST(test_create_account_entry_consistency){
   // now lets check we can take the digest back from the death... I mean
   // share
   memcpy(salted_password,context->account_data->account.entries->salt,
-      SALT_LENGTH);
+      SALT_LENGTH-1);
   _calculate_digest(password_digest, salted_password);
   digest_result=context->account_data->account.entries->hashed_value;
 
@@ -275,6 +275,18 @@ START_TEST(test_create_account_entry_consistency){
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "We should've gotten an error since this account repeats");
   
+  // finally, check it returns the proper error code if the vault is locked
+  // still
+  context->is_unlocked = 0; // we simulate locking by setting the flag
+                            // manually,
+  
+  // we will check for the existing account error handler now...
+  error = pph_create_account(context, "someotherguy",
+      "came-here-asking-the-same-thing",1);
+
+  ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED, 
+      "We should've gotten an error now that the vault is locked");
+ 
   error = pph_destroy_context(context);
   
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -347,24 +359,188 @@ START_TEST(test_check_login_input_sanity){
   error=pph_check_login(context, username, too_big_password); 
   ck_assert_msg(error == PPH_PASSWORD_IS_TOO_LONG,
       "expected PASSWORD_IS_TOO_LONG");
-
+  
+  // finally, check it returns the proper error code if the vault is locked
+  // still
+  context->is_unlocked = 0; // we simulate locking by setting the flag
+                            // manually, remember, in this case
+                            // partial bytes is also 0, that's why it must
+                            // return such error.
+  error=pph_check_login(context,username,password);
+  ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED,
+     "expected CONTEXT_IS_LOCKED"); 
+  
+  pph_destroy_context(context);
 }
 END_TEST
 
 // This checks for a proper return code when asking for the wrong username
 START_TEST(test_check_login_wrong_username){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned char password[] = "i'mnothere";
+  unsigned char username[] = "nonexistentpassword";
+  unsigned char anotheruser[] = "0anotheruser";
+  unsigned int i;
+
+  // setup the context 
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  // check with an unitialized userlist first
+  error = pph_check_login(context, username, password);
+  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+      "expected ACCOUNT_IS_INVALID");
+
+  // add a single user and see how it behaves:
+  //
+  // 1) add a user
+  error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+  ck_assert_msg(error == PPH_ERROR_OK, " this shouldn't have broken the test");
+
+  // 2) ask for a user that's not here
+  error = pph_check_login(context, username, password);
+  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+      "expected ACCOUNT_IS_INVALID");
+  
+  
+  // lets add a whole bunch of users and check for an existing one again
+  // 
+  // 1) add a whole new bunch of users:
+  for(i=1;i<9;i++){
+    anotheruser[0] = i+48;
+    error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+    ck_assert_msg(error == PPH_ERROR_OK,
+        " this shouldn't have broken the test");
+  }
+
+
+  // 2) ask for a user that's not here
+  error = pph_check_login(context, username, password);
+  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+      "expected ACCOUNT_IS_INVALID");
+  
+  pph_destroy_context(context);
 }
 END_TEST
 
 
 // This checks for a proper return code when providing a wrong password 
 START_TEST(test_check_login_wrong_password){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned char password[] = "i'mnothere";
+  unsigned char username[] = "nonexistentpassword";
+  unsigned char anotheruser[] = "0anotheruser";
+  unsigned int i;
+
+  // setup the context 
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+
+  // add a single user and see how it behaves:
+  // 1) add a user
+  error = pph_create_account(context, username, "anotherpassword", 1);
+  ck_assert_msg(error == PPH_ERROR_OK, " this shouldn't have broken the test");
+
+  // 2) ask for it, providing wrong credentials
+  error = pph_check_login(context, username, password);
+  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+      "expected ACCOUNT_IS_INVALID");
+  
+  
+  // lets add a whole bunch of users and check for an existing one again
+  // 1) add a whole new bunch of users:
+  for(i=1;i<9;i++){
+    anotheruser[0] = i+48;
+    error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+    ck_assert_msg(error == PPH_ERROR_OK,
+        " this shouldn't have broken the test");
+  }
+
+
+  // 2) ask again, with the wrong password
+  error = pph_check_login(context, username, password);
+  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+      "expected ACCOUNT_IS_INVALID");
+  
+  pph_destroy_context(context);
 }
 END_TEST
 
 // This checks for a proper behavior when providing an existing username, 
 // first, as the first and only username, then after having many on the list
 START_TEST(test_check_login_proper_data){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned char password[] = "i'mnothere";
+  unsigned char username[] = "nonexistentpassword";
+  unsigned char anotheruser[] = "0anotheruser";
+  unsigned int i;
+
+  // setup the context 
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+
+  // add a single user and see how it behaves:
+  // 1) add a user
+  error = pph_create_account(context, username, password, 1);
+  ck_assert_msg(error == PPH_ERROR_OK, " this shouldn't have broken the test");
+
+  // 2) ask for it, providing correct credentials
+  error = pph_check_login(context, username, password);
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "expected OK");
+  
+  
+  // lets add a whole bunch of users and check for an existing one again
+  // 1) add a whole new bunch of users:
+  for(i=1;i<9;i++){
+    anotheruser[0] = i+48;
+    error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+    ck_assert_msg(error == PPH_ERROR_OK,
+        " this shouldn't have broken the test");
+  }
+
+
+  // 2) ask again, with the wrong password
+  error = pph_check_login(context, username, password);
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "expected ERROR_OK");
+  
+  pph_destroy_context(context);
 }
 END_TEST
 
