@@ -323,18 +323,10 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // xor the whole thing, we do this in an unsigned int fashion imagining 
     // this is where usually where the processor aligns things and is, hence
     // faster
-    xor_digest_pointer = (unsigned int*)resulting_hash;
-    xor_share_pointer = (unsigned int*)share_data;
-    printf("\n... %d\n",(DIGEST_LENGTH));
-    for(j=0;j<DIGEST_LENGTH/sizeof(*xor_share_pointer);j++){
-      *((unsigned int*)(entry_node->hashed_value)+j) = //them parentheses
-                                *(xor_share_pointer+j)^*(xor_digest_pointer+j);
-    }
-    puts("...");
-    //for(j=0;j<DIGEST_LENGTH;j++){
-      //entry_node->hashed_value[j] = resulting_hash[j];
-    //}
-    //entry_node->hashed_value[0] = resulting_hash[0];
+    _xor_share_with_digest(entry_node->hashed_value, share_data,
+        resulting_hash, DIGEST_LENGTH);
+    
+    
     // TODO: Store the salt
     
     // add the node to the list

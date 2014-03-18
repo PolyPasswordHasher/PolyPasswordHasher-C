@@ -317,5 +317,28 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx, uint8 share_number,
                           const uint8 *usernames[], const uint8 *passwords[]);
                                   
 
+
+/* inline functions */
+// These are most possibly private helpers that aid in readibility 
+// with the api functions
+inline void _xor_share_with_digest(uint8 *result, uint8 *share,
+     uint8 * digest,unsigned int length){
+  int i;
+  unsigned int *xor_digest_pointer;
+  unsigned int *xor_share_pointer;
+  unsigned int *xor_result_pointer;
+  // xor the whole thing, we do this in an unsigned int fashion imagining 
+  // this is where usually where the processor aligns things and is, hence
+  // faster
+  xor_digest_pointer = (unsigned int*)digest;
+  xor_share_pointer = (unsigned int*)share;
+  xor_result_pointer = (unsigned int*)result;
+  
+  for(i=0;i<length/sizeof(*xor_result_pointer);i++){
+      *(xor_result_pointer + i) = 
+        *(xor_share_pointer+i)^*(xor_digest_pointer +i);
+  }
+  return;
+}
 #endif /* LIBPOLYPASSHASH_H */
 
