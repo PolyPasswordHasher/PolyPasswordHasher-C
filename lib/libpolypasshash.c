@@ -117,7 +117,7 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   context->share_context = gfshare_ctx_init_enc( share_numbers,
                                                  MAX_NUMBER_OF_SHARES-1,
                                                  context->threshold,
-                                                 MAX_NUMBER_OF_SHARES);
+                                                 SHARE_LENGTH);
   if(context->share_context == NULL){
     free(context);
     return NULL;
@@ -134,7 +134,7 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   }else{
     context->AES_key = NULL;
   }
-
+  context->next_entry=1;
   context->shares=NULL;
   context->account_data=NULL;
 
@@ -254,8 +254,111 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
                         const uint8 *password, uint8 shares){
   EVP_MD_CTX mctx;
-   
-  return PPH_ERROR_UNKNOWN;
+  pph_account_node *node,*next;
+  unsigned int length;
+  unsigned int i,j;
+  unsigned int *xor_digest_pointer,*xor_share_pointer;
+  pph_entry *entry_node,*last_entry;
+  uint8 current_entry;
+  uint8 share_data[SHARE_LENGTH];
+  uint8 resulting_hash[DIGEST_LENGTH];
+  // SANITIZE INFORMATION
+  //
+  // check password length
+  length = strlen(password);
+  if(length > PASSWORD_LENGTH-1){
+    return PPH_PASSWORD_IS_TOO_LONG;
+  }
+  // check username length
+  length = strlen(username);
+  if(length > USERNAME_LENGTH-1){
+    return PPH_USERNAME_IS_TOO_LONG;
+  }
+  // check share numbers
+  if(shares>MAX_NUMBER_OF_SHARES){// we do not check for 0 because of the 
+                                  // the thresholdless accounts
+    return PPH_WRONG_SHARE_COUNT;
+  }
+  // check correct context pointer
+  if(ctx == NULL){
+    return PPH_BAD_PTR;
+  }
+  // check non-existing username
+  next = ctx->account_data;
+  while(next!=NULL){
+    node=next;
+    next=next->next;
+    if(!strcmp(node->account.username,username)){
+      return PPH_ACCOUNT_IS_INVALID;
+    }
+  }
+
+  last_entry = NULL;
+  for(i=0;i<shares;i++){
+    entry_node=malloc(sizeof(*entry_node));
+    if(entry_node==NULL){
+      /* TODO, should properly get rid of the entry list */
+      return PPH_NO_MEM;
+    }
+    // get a share number
+    entry_node->share_number = ctx->next_entry;
+    ctx->next_entry++;
+    if(ctx->next_entry==0){
+      ctx->next_entry++;
+    }
+
+    // get a new share.
+    gfshare_ctx_enc_getshare( ctx->share_context, entry_node->share_number,
+        share_data);
+
+    // get the digest of the password TODO: we should prepend the salt
+    EVP_MD_CTX_init(&mctx);
+    EVP_DigestInit_ex(&mctx, EVP_sha256(), NULL); //todo, we should make this
+                                                  // configurable through a
+                                                  // autoconf flag/define
+    EVP_DigestUpdate(&mctx, password, strlen(password));
+    EVP_DigestFinal_ex(&mctx,  resulting_hash, 0);
+    EVP_MD_CTX_cleanup(&mctx);
+
+    // xor the whole thing, we do this in an unsigned int fashion imagining 
+    // this is where usually where the processor aligns things and is, hence
+    // faster
+    xor_digest_pointer = (unsigned int*)resulting_hash;
+    xor_share_pointer = (unsigned int*)share_data;
+    printf("\n... %d\n",(DIGEST_LENGTH));
+    for(j=0;j<DIGEST_LENGTH/sizeof(*xor_share_pointer);j++){
+      *((unsigned int*)(entry_node->hashed_value)+j) = //them parentheses
+                                *(xor_share_pointer+j)^*(xor_digest_pointer+j);
+    }
+    puts("...");
+    //for(j=0;j<DIGEST_LENGTH;j++){
+      //entry_node->hashed_value[j] = resulting_hash[j];
+    //}
+    //entry_node->hashed_value[0] = resulting_hash[0];
+    // TODO: Store the salt
+    
+    // add the node to the list
+    entry_node->next = last_entry;
+    last_entry=entry_node;
+  }
+
+  // allocate the account information 
+  node=malloc(sizeof(*node));
+  if(node==NULL){
+    // TODO free the entry array
+    return PPH_NO_MEM;
+  }
+  // fill username information
+  strncpy(node->account.username,username,USERNAME_LENGTH);
+  node->account.number_of_entries = shares;
+  node->account.entries = entry_node; 
+
+  // append it to the context list.
+  node->next = ctx->account_data;
+  ctx->account_data = node;
+
+  // everything is set! 
+  return PPH_ERROR_OK;
 }
 
 
