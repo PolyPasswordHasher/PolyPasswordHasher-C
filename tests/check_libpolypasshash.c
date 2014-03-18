@@ -209,6 +209,11 @@ START_TEST(test_create_account_sharenumbers){
   // as for this version, sharenumbers cannot be wrong due to the nature
   // of the sharenumber variable, but I will leave this test stated in case
   // this ever changes...
+  }
+END_TEST
+// this test is intended to check that a correct account structure is 
+// producted (i.e. hash, etc.)
+START_TEST(test_create_account_entry_consistency){
   PPH_ERROR error;
 
   // a placeholder for the result.
@@ -276,11 +281,7 @@ START_TEST(test_create_account_sharenumbers){
       "the free function didn't work properly");
 
 
-}
-END_TEST
-// this test is intended to check that a correct account structure is 
-// producted (i.e. hash, etc.)
-START_TEST(test_create_account_entry_consistency){
+
 }
 END_TEST
 
