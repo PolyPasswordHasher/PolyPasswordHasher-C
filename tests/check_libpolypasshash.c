@@ -115,22 +115,141 @@ END_TEST
 
 // We intend to use it to check the correct parsing of the context values
 START_TEST(test_create_account_context){
+  PPH_ERROR error;
+
+  // sending bogus information to the create user function.
+  error = pph_create_account(NULL, "mr.user", "yessir,verysecure", 1);
+  
+  ck_assert_msg(error == PPH_BAD_PTR, 
+      "We should've gotten BAD_PTR in the return value");
   
 }
 END_TEST
 
 // this test is intended to check correct sanity check on the username field
 START_TEST(test_create_account_usernames){
+  pph_context *context;
+  PPH_ERROR error;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+  
+
+  unsigned char username[USERNAME_LENGTH+1];
+  unsigned int i;
+  for(i=0;i<USERNAME_LENGTH;i++){
+    username[i] = 'k'; // endless string
+  }
+  username[USERNAME_LENGTH] = '\0';
+
+  // initialize a correct context from scratch
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  
+  // sending bogus information to the create user function.
+  error = pph_create_account(context, username, "yessir,verysecure", 1);
+  
+  ck_assert_msg(error == PPH_USERNAME_IS_TOO_LONG, 
+      "We should've gotten USERNAME_IS_TOO_LONG in the return value");
+  // TODO: should check for existing usernames... in this test 
+  error = pph_destroy_context(context);
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "the free function didn't work properly after failing to add a user");
+
+
 }
 END_TEST
 
 // this test is intended to check correct sanity checks on the password fields
 START_TEST(test_create_account_passwords){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned char password[PASSWORD_LENGTH+1];
+  unsigned int i;
+ 
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  
+ for(i=0;i<PASSWORD_LENGTH;i++){
+    password[i] = 'k'; // endless string of k's
+  }
+  password[PASSWORD_LENGTH] = '\0';
+  // sending bogus information to the create user function.
+  error = pph_create_account(context, "ichooseverylongpasswords",
+       password,1);
+  
+  printf("\n%d\n",error);
+  ck_assert_msg(error == PPH_PASSWORD_IS_TOO_LONG, 
+      "We should've gotten PPH_PASSWORD_IS_TOO_LONG in the return value");
+  
+  error = pph_destroy_context(context);
+
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "the free function didn't work properly");
+
+
 }
 END_TEST
 // this test is intended to check the correct sanity check on the sharenumber
 // field
 START_TEST(test_create_account_sharenumbers){
+  // as for this version, sharenumbers cannot be wrong due to the nature
+  // of the sharenumber variable, but I will leave this test stated in case
+  // this ever changes...
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned char password[] = "verysecure";
+  unsigned char username[] = "atleastitry";
+  unsigned int i;
+ 
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  // sending bogus information to the create user function.
+  error = pph_create_account(context, username, password,1);
+  
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should've gotten PPH_ERROR_OK in the return value");
+  
+//  printf("------->%p",context->account_data);
+
+  ck_assert_str_eq(username,context->account_data->account.username);
+  puts("6ddbb91a63b88bad59b108fa7a4b236155f5b1b1dd2dc9580798624dcbc2dcee");
+  for(i=0;i<DIGEST_LENGTH;i++){
+    printf("%02x",context->account_data->account.entries->hashed_value[i]);
+  }
+
+  error = pph_destroy_context(context);
+
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "the free function didn't work properly");
+
+
 }
 END_TEST
 // this test is intended to check that a correct account structure is 
