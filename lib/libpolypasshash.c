@@ -445,8 +445,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx, uint8 share_number,
   return PPH_ERROR_UNKNOWN;
 }
  
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
+// This produces a salt string,
+void get_random_salt(unsigned int length, uint8 *dest){
+
+}
 
 
