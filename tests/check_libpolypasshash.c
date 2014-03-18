@@ -291,10 +291,63 @@ START_TEST(test_create_account_entry_list_consistency){
 }
 END_TEST
 
-
 // This test checks for the input of the check_login function, proper error 
 // codes should be returned. 
 START_TEST(test_check_login_input_sanity){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned char password[] = "i'mnothere";
+  unsigned char username[] = "nonexistentpassword";
+  unsigned char too_big_username[USERNAME_LENGTH+1];
+  unsigned char too_big_password[PASSWORD_LENGTH+1];
+  unsigned int i;
+
+  // lets send a null context pointer first
+  context=NULL;
+  error = pph_check_login(context, username, password);
+  ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
+
+  // we will send a wrong username pointer now
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  error = pph_check_login(context, NULL, password);
+  ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
+ 
+  // do the same for the password 
+  error = pph_check_login(context, username, NULL); 
+  ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
+  
+  // now lets create some insanely big usernames and passwords
+  for(i=0;i<USERNAME_LENGTH;i++){
+    too_big_username[i]='j'; // endless stream of j's, just like bono
+  }
+  too_big_username[i]='\0'; // null terminate our string
+  // and query for a login
+
+  error = pph_check_login(context, too_big_username, password);
+  ck_assert_msg(error == PPH_USERNAME_IS_TOO_LONG,
+      "expected USERNAME_IS_TOO_LONG");
+
+  // let's do the same with the password
+  for(i=0;i<USERNAME_LENGTH;i++){
+    too_big_password[i]='j'; // endless stream of j's
+  }
+  too_big_password[i]='\0'; // null terminate our string
+
+  error=pph_check_login(context, username, too_big_password); 
+  ck_assert_msg(error == PPH_PASSWORD_IS_TOO_LONG,
+      "expected PASSWORD_IS_TOO_LONG");
+
 }
 END_TEST
 
