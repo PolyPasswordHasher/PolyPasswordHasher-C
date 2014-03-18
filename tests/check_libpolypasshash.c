@@ -256,6 +256,12 @@ START_TEST(test_create_account_sharenumbers){
     ck_assert(password_digest[i]==digest_result[i]);
   }
 
+  // we will check for the existing account error handler now...
+  error = pph_create_account(context, username, password,1);
+
+  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+      "We should've gotten an error since this account repeats");
+  
   error = pph_destroy_context(context);
   
   ck_assert_msg(error == PPH_ERROR_OK, 
