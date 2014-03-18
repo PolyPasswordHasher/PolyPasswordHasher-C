@@ -55,6 +55,7 @@ typedef enum{
   PPH_PASSWORD_IS_TOO_LONG,
   PPH_ACCOUNT_IS_INVALID,
   PPH_WRONG_SHARE_COUNT,
+  PPH_CONTEXT_IS_LOCKED,
   // system or user is being brilliant. 
   PPH_NO_MEM,
   PPH_BAD_PTR,
