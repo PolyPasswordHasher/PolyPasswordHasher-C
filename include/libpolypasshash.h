@@ -340,5 +340,20 @@ inline void _xor_share_with_digest(uint8 *result, uint8 *share,
   }
   return;
 }
+
+// we will make an inline of the hash calculation, since it is done in many
+// places and looks too messy
+inline void _calculate_digest(uint8 *digest, const uint8 *password){
+  EVP_MD_CTX mctx;
+
+  EVP_MD_CTX_init(&mctx);
+  EVP_DigestInit_ex(&mctx, EVP_sha256(), NULL); //todo, we should make this
+                                                // configurable through a
+                                                // autoconf flag/define
+  EVP_DigestUpdate(&mctx, password, strlen(password));
+  EVP_DigestFinal_ex(&mctx,  digest, 0);
+  EVP_MD_CTX_cleanup(&mctx);
+
+}
 #endif /* LIBPOLYPASSHASH_H */
 

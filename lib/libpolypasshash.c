@@ -253,11 +253,10 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 */
 PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
                         const uint8 *password, uint8 shares){
-  EVP_MD_CTX mctx;
+  
   pph_account_node *node,*next;
   unsigned int length;
-  unsigned int i,j;
-  unsigned int *xor_digest_pointer,*xor_share_pointer;
+  unsigned int i;
   pph_entry *entry_node,*last_entry;
   uint8 current_entry;
   uint8 share_data[SHARE_LENGTH];
@@ -312,14 +311,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
         share_data);
 
     // get the digest of the password TODO: we should prepend the salt
-    EVP_MD_CTX_init(&mctx);
-    EVP_DigestInit_ex(&mctx, EVP_sha256(), NULL); //todo, we should make this
-                                                  // configurable through a
-                                                  // autoconf flag/define
-    EVP_DigestUpdate(&mctx, password, strlen(password));
-    EVP_DigestFinal_ex(&mctx,  resulting_hash, 0);
-    EVP_MD_CTX_cleanup(&mctx);
-
+    _calculate_digest(resulting_hash, password);
+    
     // xor the whole thing, we do this in an unsigned int fashion imagining 
     // this is where usually where the processor aligns things and is, hence
     // faster
