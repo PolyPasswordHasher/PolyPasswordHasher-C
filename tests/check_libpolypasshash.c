@@ -223,8 +223,16 @@ START_TEST(test_create_account_sharenumbers){
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
+  // this is the calculated hash for the password without salt using 
+  // an external tool
+  uint8 password_digest[] = { 0x6d, 0xdb, 0xb9, 0x1a, 0x63, 0xb8, 0x8b, 0xad,
+                              0x59, 0xb1, 0x08, 0xfa, 0x7a, 0x4b, 0x23, 0x61,
+                              0x55, 0xf5, 0xb1, 0xb1, 0xdd, 0x2d, 0xc9, 0x58,
+                              0x07, 0x98, 0x62, 0x4d, 0xcb, 0xc2, 0xdc, 0xee};
   unsigned int i;
- 
+  uint8 *digest_result;
+  uint8 share_result[SHARE_LENGTH];
+
   context = pph_init_context(threshold, secret, length, partial_bytes);
 
   ck_assert_msg(context != NULL,
@@ -236,16 +244,20 @@ START_TEST(test_create_account_sharenumbers){
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
   
-//  printf("------->%p",context->account_data);
 
   ck_assert_str_eq(username,context->account_data->account.username);
-  puts("6ddbb91a63b88bad59b108fa7a4b236155f5b1b1dd2dc9580798624dcbc2dcee");
+  digest_result=context->account_data->account.entries->hashed_value;
+
+  gfshare_ctx_enc_getshare(context->share_context, 1, share_result);
+  _xor_share_with_digest(digest_result, share_result, digest_result, 
+      DIGEST_LENGTH);
+
   for(i=0;i<DIGEST_LENGTH;i++){
-    printf("%02x",context->account_data->account.entries->hashed_value[i]);
+    ck_assert(password_digest[i]==digest_result[i]);
   }
 
   error = pph_destroy_context(context);
-
+  
   ck_assert_msg(error == PPH_ERROR_OK, 
       "the free function didn't work properly");
 
