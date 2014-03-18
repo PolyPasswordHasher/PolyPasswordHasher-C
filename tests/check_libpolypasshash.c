@@ -291,6 +291,31 @@ START_TEST(test_create_account_entry_list_consistency){
 }
 END_TEST
 
+
+// This test checks for the input of the check_login function, proper error 
+// codes should be returned. 
+START_TEST(test_check_login_input_sanity){
+}
+END_TEST
+
+// This checks for a proper return code when asking for the wrong username
+START_TEST(test_check_login_wrong_username){
+}
+END_TEST
+
+
+// This checks for a proper return code when providing a wrong password 
+START_TEST(test_check_login_wrong_password){
+}
+END_TEST
+
+// This checks for a proper behavior when providing an existing username, 
+// first, as the first and only username, then after having many on the list
+START_TEST(test_check_login_proper_data){
+}
+END_TEST
+
+
 Suite * polypasshash_suite(void)
 {
   Suite *s = suite_create ("buildup");
@@ -302,12 +327,19 @@ Suite * polypasshash_suite(void)
   tcase_add_test (tc_non_partial,test_pph_init_context_wrong_secret_pointer);
   tcase_add_test (tc_non_partial,test_pph_init_context_no_partial_bytes);
   
+  // creating an account 
   tcase_add_test (tc_non_partial,test_create_account_context);
   tcase_add_test (tc_non_partial,test_create_account_usernames);
   tcase_add_test (tc_non_partial,test_create_account_passwords);
   tcase_add_test (tc_non_partial,test_create_account_sharenumbers);
   tcase_add_test (tc_non_partial,test_create_account_entry_consistency);
   tcase_add_test (tc_non_partial,test_create_account_entry_list_consistency);
+
+  // checking for an existing account
+  tcase_add_test (tc_non_partial,test_check_login_input_sanity);
+  tcase_add_test (tc_non_partial,test_check_login_wrong_username);
+  tcase_add_test (tc_non_partial,test_check_login_wrong_password);
+  tcase_add_test (tc_non_partial,test_check_login_proper_data);
   suite_add_tcase (s, tc_non_partial);
 
 
