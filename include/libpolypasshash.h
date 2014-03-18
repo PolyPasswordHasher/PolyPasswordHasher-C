@@ -268,7 +268,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 * CHANGES :
 *     TODO: 
 */
-PPH_ERROR pph_check_log_in(pph_context *ctx, const char *username, 
+PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
                                                 const char *password);
 
 
