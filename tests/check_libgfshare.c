@@ -32,7 +32,6 @@ START_TEST(generate_secrets)
 
   gfshare_ctx_free(G);
 
-  //WARNING, the second argument is so sensitive that it cries if it doesnt
   //match the ctx_dec_giveshare, you will smash the stack like in the good
   //ol' times
   G = gfshare_ctx_init_dec( sharenrs, 3, 256);
@@ -56,9 +55,11 @@ START_TEST(generate_secrets_256_shares)
   unsigned char* share1 = malloc(256);
   unsigned char* share2 = malloc(256);
   unsigned char* share3 = malloc(256);
+  unsigned char* share4 = malloc(256);
+  unsigned char* share5 = malloc(256);
   unsigned char* recomb = malloc(256);
   unsigned char* sharenrs = malloc(256);
-  unsigned char random_shares[3];
+  unsigned char random_shares[11];
   gfshare_ctx *G;
 
   for(i=0;i<256;i++){
@@ -66,25 +67,33 @@ START_TEST(generate_secrets_256_shares)
   }
 
   
-  G = gfshare_ctx_init_enc( sharenrs, 254, 2, 256);
+  G = gfshare_ctx_init_enc( sharenrs, 254, 3, 256);
 
   gfshare_ctx_enc_setsecret(G, secret);
   gfshare_ctx_enc_getshare( G, 0, share1);
   gfshare_ctx_enc_getshare( G, 1, share2);
   gfshare_ctx_enc_getshare( G, 2, share3);
+  gfshare_ctx_enc_getshare( G, 3, share4);
+  gfshare_ctx_enc_getshare( G, 4, share5);
 
   gfshare_ctx_free(G);
-
-  G = gfshare_ctx_init_dec( sharenrs, 2, 256);
+  printf("%d",sharenrs[6]);
+  G = gfshare_ctx_init_dec( sharenrs, 11, 256);
   gfshare_ctx_dec_giveshare( G, 0, share1);
   gfshare_ctx_dec_giveshare( G, 1, share2);
-  gfshare_ctx_dec_giveshare( G, 2, share3);
+  //gfshare_ctx_dec_giveshare( G, 2, share3); we could give him these guys
+  //gfshare_ctx_dec_giveshare( G, 3, share4); but imagin we don't have them
+  gfshare_ctx_dec_giveshare( G, 4, share5);
 
-  random_shares[0]=1;
-  random_shares[1]=2;
-  random_shares[2]=3;
-    
-  gfshare_ctx_dec_newshares( G, random_shares );
+  for(i=0;i<256;i++){
+    sharenrs[i] = 0;//(i+1)%255;
+  }
+
+  sharenrs[0]=1;
+  sharenrs[1]=2;
+  sharenrs[4]=5; 
+  
+  gfshare_ctx_dec_newshares( G, sharenrs );
   gfshare_ctx_dec_extract( G, recomb);
 
   ck_assert_str_eq(recomb,secret);
