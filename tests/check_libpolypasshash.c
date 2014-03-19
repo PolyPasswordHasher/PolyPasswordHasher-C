@@ -609,7 +609,77 @@ START_TEST(test_pph_unlock_password_data_input_sanity){
 END_TEST
 
 START_TEST(test_pph_unlock_password_data_correct_thresholds){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned int i;
+  unsigned int username_count=5;
+  const uint8 *usernames[] = {"username1",
+                              "username12",
+                              "username1231",
+                              "username26",
+                              "username5",
+                            };
+  const uint8 *passwords[] = {"password1",
+                              "password12",
+                              "password1231",
+                              "password26",
+                              "password5"
+                              };
+
   
+  const uint8 *usernames_subset[] = { "username12",
+                                      "username26"};
+
+  const uint8 *password_subset[] = {"password12",
+                                    "password26"};
+
+  // setup the context 
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  for(i=0;i<username_count;i++){
+    pph_create_account(context,usernames[i],passwords[i],1);
+  }
+
+  // let's imagine it's all broken
+  context->is_unlocked = 0;
+  strcpy(context->secret,"thiswasnotthesecretstring");
+
+  // now give a correct full account information, we expect to have our secret
+  // back. 
+  error = pph_unlock_password_data(context, username_count, usernames,
+      passwords);
+  ck_assert_str_eq(secret, context->secret);
+
+  // let's imagine it's all broken (Again)
+  context->is_unlocked = 0;
+  strcpy(context->secret,"thiswasnotthesecretstring");
+
+  // now give a correct full account information, we expect to have our secret
+  // back. 
+  error = pph_unlock_password_data(context, 2, usernames_subset,
+      password_subset);
+  ck_assert_str_eq(secret, context->secret);
+
+  // and last but not least, create a superuser account and unlock it 
+  // by himself
+  pph_create_account(context,"ipicklocks","ipickpockets",3);
+  error = pph_unlock_password_data(context, 1 ,strdup("ipicklocks"),
+      strdup("ipickpockets"));
+  ck_assert_str_eq(secret, context->secret);
+ 
+  // clean up our mess
+  pph_destroy_context(context);
 }
 END_TEST
 
@@ -638,7 +708,7 @@ Suite * polypasshash_suite(void)
   tcase_add_test (tc_non_partial,test_check_login_wrong_username);
   tcase_add_test (tc_non_partial,test_check_login_wrong_password);
   tcase_add_test (tc_non_partial,test_check_login_proper_data);
-  suite_add_tcase (s, tc_non_partial);
+  //suite_add_tcase (s, tc_non_partial);
 
   /* vault unlocking (for both cases) */
   TCase *tc_unlock_shamir = tcase_create ("unlock_shamir");
