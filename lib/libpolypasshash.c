@@ -595,7 +595,60 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   return PPH_ERROR_UNKNOWN;
 }
+
+
+/*******************************************************************
+* NAME :          pph_store context
+*
+* DESCRIPTION :   store the information of the working context into a file. 
+*                 The status of the secret is lost in the process and the 
+*                 structure is set as such. After reloading the stucture, the
+*                 user should call pph_unlock_password_data with enough 
+*                 valid accounts.
+*
+* INPUTS :
+*   PARAMETERS:
+*     pph_context *ctx:              The context in which we are working
+*
+*     const unsigned char* filename: The filename of the datastore to use
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type: int PPH_ERROR     
+*           Values:                         When:
+*           PPH_ERROR_OK                      When the file was stored 
+*                                             succcessfully.
+*
+*           PPH_BAD_PTR                       When pointers are null or out
+*                                             of range
+*           
+*           PPH_FILE_ERR                      when the file selected is non-
+*                                             writable. 
+*
+*           PPH_ERROR_UNKNOWN                 anytime else
+*           
+* PROCESS :
+*     * Sanitize the data (unset flags, point secret to NULL)
+*     * open the selected file.
+*     * traverse the dynamic linked lists storing everything
+*     * close the fule, return appropriate error
+*
+* CHANGES :
+*     None as of this version
+*/
+PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
+  return PPH_ERROR_UNKNOWN;
+}
  
+
+
+
+
 // This produces a salt string,
 void get_random_salt(unsigned int length, uint8 *dest){
   static uint8 seed_is_created = 0;
