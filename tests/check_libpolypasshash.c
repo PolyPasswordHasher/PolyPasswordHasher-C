@@ -683,6 +683,148 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
 }
 END_TEST
 
+// test input sanity on the store function
+START_TEST(test_pph_store_context_input_sanity){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned int i;
+
+  error = pph_store_context(NULL,"pph.db");
+  ck_assert_msg(error == PPH_BAD_PTR, " expected BAD_PTR");
+
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  
+  error = pph_store_context(context, NULL);
+  ck_assert_msg(error == PPH_BAD_PTR, " expected BAD_PTR");
+
+  error = pph_store_context(context, "pph.db");
+  ck_assert_msg(error == PPH_ERROR_OK," expected ERROR_OK");
+
+}END_TEST
+
+// test input sanity on the store function
+START_TEST(test_pph_reload_context_input_sanity){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned int i;
+
+  context = pph_reload_context(NULL);
+  
+  ck_assert_msg(context == NULL, " expected to break with a null argument");
+
+  context = pph_reload_context("nonexistent_file");
+  
+  ck_assert_msg(context == NULL, " expected to break with a nonexistent file");
+
+  context = pph_reload_context("pph.db");
+  ck_assert_msg(context != NULL, " this should've produced a valid pointer");
+  ck_assert_msg(context->threshold == 2, " threshold didn't match the one set");
+  ck_assert_msg(context->partial_bytes == 0, "partial bytes don't match");
+  ck_assert_msg(context->secret == NULL, " didnt' store null for secret");
+  ck_assert_msg(context->is_unlocked == 0, " loaded a seemingly valid context");
+  
+  pph_destroy_context(context);
+
+}END_TEST
+
+START_TEST(test_pph_store_and_reload_with_users){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned int i;
+  unsigned int username_count=5;
+  const uint8 *usernames[] = {"username1",
+                              "username12",
+                              "username1231",
+                              "username26",
+                              "username5",
+                            };
+  const uint8 *passwords[] = {"password1",
+                              "password12",
+                              "password1231",
+                              "password26",
+                              "password5"
+                              };
+
+  
+  const uint8 *usernames_subset[] = { "username12",
+                                      "username26"};
+
+  const uint8 *password_subset[] = {"password12",
+                                    "password26"};
+
+  // setup the context 
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  for(i=0;i<username_count;i++){
+    pph_create_account(context,usernames[i],passwords[i],1);
+  }
+
+  // let's store our data!
+  error = pph_store_context(context,"pph.db");
+  ck_assert_msg(error == PPH_ERROR_OK, " couldn't store a ctx with users");
+
+
+  pph_destroy_context(context); // we will reload it now...
+
+  context = pph_reload_context("pph.db");
+  ck_assert_msg(context != NULL, " all is fine, so far...");
+  // now give a correct full account information, we expect to have our secret
+  // back. 
+  pph_account_node *user_nodes;
+  user_nodes = context->account_data;
+  error = pph_unlock_password_data(context, username_count, usernames,
+      passwords);
+  ck_assert_str_eq(secret, context->secret);
+
+  // clean up our mess
+  pph_destroy_context(context);
+
+  context = pph_reload_context("pph.db");
+  // if i ever get the gnome help from pressing f1 by mistake again i'm going
+  // to kill someone. 
+  ck_assert_msg(context != NULL, " loading broke");
+  // now give a correct full account information, we expect to have our secret
+  // back. 
+  error = pph_unlock_password_data(context, 2, usernames_subset,
+      password_subset);
+
+  ck_assert_str_eq(secret, context->secret);
+
+
+}
+END_TEST
+
+
+
 
 Suite * polypasshash_suite(void)
 {
@@ -716,6 +858,14 @@ Suite * polypasshash_suite(void)
   tcase_add_test (tc_unlock_shamir, 
       test_pph_unlock_password_data_correct_thresholds);
   suite_add_tcase (s, tc_unlock_shamir);
+
+  /* pph context persistency tests */
+  TCase *tc_store_context = tcase_create ("store_context");
+  tcase_add_test( tc_store_context, test_pph_store_context_input_sanity);
+  tcase_add_test( tc_store_context, test_pph_reload_context_input_sanity);
+  tcase_add_test( tc_store_context, test_pph_store_and_reload_with_users);
+  suite_add_tcase (s, tc_store_context);
+
   return s;
 }
 
