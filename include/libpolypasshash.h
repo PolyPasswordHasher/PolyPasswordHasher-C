@@ -281,13 +281,13 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *
 * INPUTS :
 *   PARAMETERS:
-*     pph_context *ctx:      The context in which we are working
+*     pph_context *ctx:             The context in which we are working
 *
-*     uint8 share_number:    The length of the username/password pair arrays
+*     unsigned int username_count:  The length of the username/password arrays
 *
-*     const char *usernames: The username attempts
+*     const char *usernames:        The username attempts
 *
-*     const char *passwords: The password attempts
+*     const char *passwords:        The password attempts
 *
 * OUTPUTS :
 *   PARAMETERS:
@@ -299,7 +299,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *   RETURN :
 *     Type: int PPH_ERROR     
 *           Values:                         When:
-*           PPH_ACCOUNT_IS_INVALID            We couln't recombine with the 
+*           PPH_ACCOUNT_IS_INVALID            We couldn't recombine with the 
 *                                             information given
 *           
 *           PPH_USERNAME_IS_TOO_LONG          The username/pw won't fit in the
@@ -316,7 +316,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 * CHANGES :
 *     TODO: 
 */
-PPH_ERROR pph_unlock_password_data(pph_context *ctx, uint8 share_number,
+PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
                           const uint8 *usernames[], const uint8 *passwords[]);
                                   
 
