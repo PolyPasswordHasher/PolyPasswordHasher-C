@@ -546,6 +546,64 @@ END_TEST
 
 // shamir recombination procedure test cases
 START_TEST(test_pph_unlock_password_data_input_sanity){
+  PPH_ERROR error;
+
+  // a placeholder for the result.
+  pph_context *context;
+  uint8 threshold = 2; // we have a correct threshold value for this testcase 
+  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
+                                 // work for demonstration purposes
+  unsigned int length = strlen(secret); // this is good and valid
+  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+                          // suite
+                          
+  unsigned int i;
+  unsigned int username_count=5;
+  const uint8 *usernames[] = {"username1",
+                              "username12",
+                              "username1231",
+                              "username26",
+                              "username5",
+                            };
+  const uint8 *passwords[] = {"password1",
+                              "password12",
+                              "password1231",
+                              "password26",
+                              "password5"
+                              };
+
+  // check for bad pointers at first
+  error = pph_unlock_password_data(NULL, username_count, usernames, passwords);
+  ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
+
+  // setup the context 
+  context = pph_init_context(threshold, secret, length, partial_bytes);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  // let's imagine it's all broken
+  context->is_unlocked = 0;
+  
+  // now give a wrongusername count, i.e. below the threshold.
+  error = pph_unlock_password_data(context, 0, usernames, passwords);
+  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+      " Expected ACCOUNT_IS_INVALID");
+
+  // do it again, more graphical... 
+  error = pph_unlock_password_data(context, threshold -1, usernames, passwords);
+  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+      " Expected ACCOUNT_IS_INVALID");
+
+  // let's check for NULL pointers on the username and password fields
+  error = pph_unlock_password_data(context, username_count, NULL, passwords);
+  ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
+
+ 
+  // let's check for NULL pointers on the username and password fields
+  error = pph_unlock_password_data(context, username_count, usernames, NULL);
+  ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
+
+  pph_destroy_context(context);
 
 }
 END_TEST
