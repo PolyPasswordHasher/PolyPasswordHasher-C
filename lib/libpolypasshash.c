@@ -205,9 +205,9 @@ PPH_ERROR pph_destroy_context(pph_context *context){
       free(current); 
     }
   }
-
-  gfshare_ctx_free(context->share_context);
-
+  if(context->share_context!=NULL){
+    gfshare_ctx_free(context->share_context);
+  }
   // now it is safe to free everything
   free(context);
 
@@ -636,13 +636,56 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 *     * Sanitize the data (unset flags, point secret to NULL)
 *     * open the selected file.
 *     * traverse the dynamic linked lists storing everything
-*     * close the fule, return appropriate error
+*     * close the file, return appropriate error
 *
 * CHANGES :
 *     None as of this version
 */
 PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
-  return PPH_ERROR_UNKNOWN;
+  FILE *fp;
+  pph_account_node *current_node;
+  pph_context context_to_store; // we use a hard copy so we can mess with it
+                                // without damaging the one from the user
+  pph_entry *current_entry;  
+
+
+  // sanitize the data
+  if(ctx == NULL || filename == NULL){
+    return PPH_BAD_PTR;
+  }
+  // open selected file
+  fp=fopen(filename,"wb");
+  if(fp==NULL){
+    return PPH_FILE_ERR;
+  }
+  
+  // persist the context first...
+  memcpy(&context_to_store,ctx,sizeof(*ctx));
+  // NULL out the pointers, we won't store that, not even the reference....
+  context_to_store.share_context = NULL;
+  context_to_store.AES_key = NULL;
+  context_to_store.secret = NULL;
+  context_to_store.shares = NULL;
+  context_to_store.account_data = NULL;
+  context_to_store.is_unlocked = 0; // by default, this is locked upon storage
+  fwrite(&context_to_store,sizeof(context_to_store),1,fp); 
+
+  // traverse the list
+  current_node = ctx->account_data;
+  while(current_node!=NULL){
+    // write current node...
+    fwrite(current_node,sizeof(current_node),1,fp);
+    current_entry = current_node->account.entries;
+    while(current_entry != NULL){
+      fwrite(current_entry,sizeof(*current_entry),1,fp);
+      current_entry = current_entry->next;
+    }
+    current_node = current_node->next;
+  }
+  // close the file, return appropriate error
+
+  fclose(fp);
+  return PPH_ERROR_OK;
 }
  
 
@@ -684,7 +727,50 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
 *     None as of this version
 */
 pph_context *pph_reload_context(const unsigned char *filename){
-  return NULL;
+
+  FILE *fp;
+  pph_context *loaded_context;
+  pph_account_node *accounts,*last,account_buffer;
+  pph_entry *entries, *last_entry, entry_buffer;
+  unsigned int i;
+
+  // sanitize data
+  if(filename == NULL){
+    return NULL;
+  }
+
+  // open selected file
+  fp= fopen(filename,"rb");
+  if(fp == NULL){
+    return NULL;
+  }
+  loaded_context = malloc(sizeof(*loaded_context));
+  
+  
+  if(loaded_context == NULL){
+    return NULL;
+  }
+  fread(loaded_context,sizeof(*loaded_context),1,fp);
+  
+  accounts = NULL;
+  while(fread(&account_buffer,sizeof(account_buffer),1,fp) != 0){
+    last = accounts;
+    accounts = malloc(sizeof(account_buffer));
+    memcpy(accounts,&account_buffer,sizeof(account_buffer));
+    last_entry = NULL;
+    for(i=0;i<account_buffer.account.number_of_entries;i++){
+      entries = malloc(sizeof(*entries));
+      fread(entries,sizeof(*entries),1,fp);
+      entries->next = last_entry;
+      last_entry = entries;
+    }
+    accounts->account.entries = entries;
+    accounts->next = last;
+    last = accounts; 
+  }
+  loaded_context->account_data = accounts;
+  fclose(fp);
+  return loaded_context;
 }
  
 
