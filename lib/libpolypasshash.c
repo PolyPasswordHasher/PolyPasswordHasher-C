@@ -598,7 +598,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 
 
 /*******************************************************************
-* NAME :          pph_store context
+* NAME :          pph_store_context
 *
 * DESCRIPTION :   store the information of the working context into a file. 
 *                 The status of the secret is lost in the process and the 
@@ -646,7 +646,47 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
 }
  
 
-
+/*******************************************************************
+* NAME :          pph_reload_context
+*
+* DESCRIPTION :   Reload a pph_context stored in a file, the secret is
+*                 unknown and the structure is locked by default.
+*                 pph_unlock_password _data should be called after this returns
+*                 a sucessfull pointer 
+*
+* INPUTS :
+*   PARAMETERS:
+*     const unsigned char* filename: The filename of the datastore to use
+*
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type: pph_context * 
+*
+*           Values:                         When:
+*            NULL                             The file is not loadable
+*                                             or data looks corrupted
+*           
+*            A valid pointer                  if everything went fine
+* 
+* PROCESS :
+*     * Sanitize the data (check the string is a good string) 
+*     * open the selected file.
+*     * Build a dynamic list by traversing the file's contents
+*     * close the file, return appropriate structure
+*
+* CHANGES :
+*     None as of this version
+*/
+pph_context *pph_reload_context(const unsigned char *filename){
+  return NULL;
+}
+ 
 
 
 // This produces a salt string,
