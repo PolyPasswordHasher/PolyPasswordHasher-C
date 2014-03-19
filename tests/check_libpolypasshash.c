@@ -544,6 +544,17 @@ START_TEST(test_check_login_proper_data){
 }
 END_TEST
 
+// shamir recombination procedure test cases
+START_TEST(test_pph_unlock_password_data_input_sanity){
+
+}
+END_TEST
+
+START_TEST(test_pph_unlock_password_data_correct_thresholds){
+  
+}
+END_TEST
+
 
 Suite * polypasshash_suite(void)
 {
@@ -571,8 +582,12 @@ Suite * polypasshash_suite(void)
   tcase_add_test (tc_non_partial,test_check_login_proper_data);
   suite_add_tcase (s, tc_non_partial);
 
-
-
+  /* vault unlocking (for both cases) */
+  TCase *tc_unlock_shamir = tcase_create ("unlock_shamir");
+  tcase_add_test (tc_unlock_shamir, test_pph_unlock_password_data_input_sanity);
+  tcase_add_test (tc_unlock_shamir, 
+      test_pph_unlock_password_data_correct_thresholds);
+  suite_add_tcase (s, tc_unlock_shamir);
   return s;
 }
 
