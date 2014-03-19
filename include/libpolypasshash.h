@@ -57,6 +57,7 @@ typedef enum{
   PPH_WRONG_SHARE_COUNT,
   PPH_CONTEXT_IS_LOCKED,
   // system or user is being brilliant. 
+  PPH_FILE_ERR,
   PPH_NO_MEM,
   PPH_BAD_PTR,
   PPH_PTR_IS_NULL,
@@ -100,7 +101,7 @@ typedef struct _pph_context{
   uint8 available_shares;        // this is the number of available shares
   uint8 is_unlocked;             // this is a boolean flag indicating whether 
                                  //  the secret is known.
-  uint8 *AES_key;                // a randomly generated AES key of SHARE_LENGTH
+  uint8 AES_key[DIGEST_LENGTH];  // a randomly generated AES key of SHARE_LENGTH
   uint8 *secret;                 // secret data, this is sent by the user
   uint8 partial_bytes;           // partial bytes, if 0, thresholdless is
                                  //   disabled
