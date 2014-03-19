@@ -708,7 +708,7 @@ Suite * polypasshash_suite(void)
   tcase_add_test (tc_non_partial,test_check_login_wrong_username);
   tcase_add_test (tc_non_partial,test_check_login_wrong_password);
   tcase_add_test (tc_non_partial,test_check_login_proper_data);
-  //suite_add_tcase (s, tc_non_partial);
+  suite_add_tcase (s, tc_non_partial);
 
   /* vault unlocking (for both cases) */
   TCase *tc_unlock_shamir = tcase_create ("unlock_shamir");
