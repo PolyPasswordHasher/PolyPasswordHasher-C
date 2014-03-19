@@ -101,7 +101,7 @@ typedef struct _pph_context{
   uint8 available_shares;        // this is the number of available shares
   uint8 is_unlocked;             // this is a boolean flag indicating whether 
                                  //  the secret is known.
-  uint8 AES_key[DIGEST_LENGTH];  // a randomly generated AES key of SHARE_LENGTH
+  uint8 *AES_key;                // a randomly generated AES key of SHARE_LENGTH
   uint8 *secret;                 // secret data, this is sent by the user
   uint8 partial_bytes;           // partial bytes, if 0, thresholdless is
                                  //   disabled
