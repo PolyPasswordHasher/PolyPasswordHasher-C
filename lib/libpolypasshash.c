@@ -103,13 +103,13 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   context->threshold=threshold;
   
   context->secret = NULL; //cue the paranoid parrot meme...
-  context->secret = malloc(sizeof(uint8)*secret_length);
+  context->secret = malloc(sizeof(uint8)*secret_length+1);
   if(context->secret == NULL){
     free(context);
     return NULL;
   }
   memcpy(context->secret,secret,sizeof(uint8)*secret_length);
-
+  context->secret[secret_length]='\0';
   for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
     share_numbers[i]=(unsigned char)i+1;
   }
@@ -319,13 +319,12 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // get a new share.
     gfshare_ctx_enc_getshare( ctx->share_context, entry_node->share_number,
         share_data);
-  
-    // get a salt for this entry, we are using sprintf, but we could use 
+   // get a salt for this entry, we are using sprintf, but we could use 
     // memcpy in case this function requires it.
     get_random_salt(SALT_LENGTH, entry_node->salt);
     entry_node->salt[SALT_LENGTH-1]='\0';
     sprintf(salted_password,"%s%s",entry_node->salt, password);
-    
+ 
     _calculate_digest(resulting_hash, salted_password);
     
     // xor the whole thing, we do this in an unsigned int fashion imagining 
@@ -496,13 +495,14 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *
 * INPUTS :
 *   PARAMETERS:
-*     pph_context *ctx:      The context in which we are working
+*     pph_context *ctx:             The context in which we are working
 *
-*     uint8 share_number:    The length of the username/password pair arrays
+*     unsigned int username_count:  The length of the username/password pair 
+*                                   arrays
 *
-*     const char *usernames: The username attempts
+*     const char *usernames:        The username attempts
 *
-*     const char *passwords: The password attempts
+*     const char *passwords:        The password attempts
 *
 * OUTPUTS :
 *   PARAMETERS:
@@ -514,7 +514,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *   RETURN :
 *     Type: int PPH_ERROR     
 *           Values:                         When:
-*           PPH_ACCOUNT_IS_INVALID            We couln't recombine with the 
+*           PPH_ACCOUNT_IS_INVALID            We couldn't recombine with the 
 *                                             information given
 *           
 *           PPH_USERNAME_IS_TOO_LONG          The username/pw won't fit in the
@@ -531,9 +531,68 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 * CHANGES :
 *     TODO: 
 */
-PPH_ERROR pph_unlock_password_data(pph_context *ctx, uint8 share_number,
+PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
                           const uint8 *usernames[], const uint8 *passwords[]){
+  
+  
+  uint8 share_numbers[MAX_NUMBER_OF_SHARES];
+  gfshare_ctx *G;
+  unsigned int i;
+  uint8 salted_password[USERNAME_LENGTH+SALT_LENGTH];
+  uint8 estimated_digest[DIGEST_LENGTH];
+  uint8 estimated_share[SHARE_LENGTH];
+  pph_entry *entry;
+  
+  pph_account_node *current_user;
+  
+  //sanitize the data.
+  if(ctx == NULL || usernames == NULL || passwords == NULL){
+    return PPH_BAD_PTR;
+  }
 
+  if(username_count < ctx->threshold){
+    return PPH_ACCOUNT_IS_INVALID;
+  }
+
+  // initialize the share numbers
+  for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
+    share_numbers[i] = 0;
+    //share_numbers[i] = (uint8)(i+1);
+  }
+  // do the reconstruction. 
+  G = gfshare_ctx_init_dec( share_numbers, MAX_NUMBER_OF_SHARES-1,
+     SHARE_LENGTH);
+
+  // traverse our possible users
+  current_user=ctx->account_data;
+  while(current_user!=NULL){
+    // check if our users lies inside this 
+    // TODO: do this faster
+    for(i = 0; i<username_count;i++){
+      if(!strcmp(usernames[i],current_user->account.username)){
+        // this is an existing user! 
+        // give all of it's calculated shares to libgfshare...
+        entry = current_user->account.entries;
+        while(entry!=NULL){
+          // calulate the share
+          sprintf(salted_password,"%s%s",entry->salt,passwords[i]);
+          _calculate_digest(estimated_digest,salted_password);
+          _xor_share_with_digest(estimated_share,entry->hashed_value,
+              estimated_digest,SHARE_LENGTH);
+         
+          // give share to recombine
+          share_numbers[entry->share_number] = entry->share_number+1;
+          gfshare_ctx_dec_giveshare(G, entry->share_number,estimated_share);
+
+          entry = entry->next;
+        } 
+      }
+    } 
+    current_user = current_user->next;
+  }
+  gfshare_ctx_dec_newshares(G, share_numbers);
+  gfshare_ctx_dec_extract(G, ctx->secret);
+  gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   return PPH_ERROR_UNKNOWN;
 }
  
