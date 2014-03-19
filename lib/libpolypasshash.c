@@ -538,6 +538,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   uint8 share_numbers[MAX_NUMBER_OF_SHARES];
   gfshare_ctx *G;
   unsigned int i;
+  uint8 secret[SHARE_LENGTH];
   uint8 salted_password[USERNAME_LENGTH+SALT_LENGTH];
   uint8 estimated_digest[DIGEST_LENGTH];
   uint8 estimated_share[SHARE_LENGTH];
@@ -591,7 +592,21 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     current_user = current_user->next;
   }
   gfshare_ctx_dec_newshares(G, share_numbers);
-  gfshare_ctx_dec_extract(G, ctx->secret);
+  if(ctx->secret == NULL){
+    gfshare_ctx_dec_extract(G, secret);
+    ctx->secret = strdup(secret);
+  }else{
+    gfshare_ctx_dec_extract(G,ctx->secret);
+  }
+  if(ctx->share_context == NULL){
+    for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
+      share_numbers[i]=(unsigned char)i+1;
+    }
+    ctx->share_context = gfshare_ctx_init_enc( share_numbers,
+                                                 MAX_NUMBER_OF_SHARES-1,
+                                                 ctx->threshold,
+                                                 SHARE_LENGTH);
+  }
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   return PPH_ERROR_UNKNOWN;
 }
@@ -674,7 +689,7 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   current_node = ctx->account_data;
   while(current_node!=NULL){
     // write current node...
-    fwrite(current_node,sizeof(current_node),1,fp);
+    fwrite(current_node,sizeof(*current_node),1,fp);
     current_entry = current_node->account.entries;
     while(current_entry != NULL){
       fwrite(current_entry,sizeof(*current_entry),1,fp);
