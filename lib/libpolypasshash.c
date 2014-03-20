@@ -788,7 +788,36 @@ pph_context *pph_reload_context(const unsigned char *filename){
   return loaded_context;
 }
  
+// this produces an AES key of the desired length when given a share context.
+uint8 *generate_AES_key_from_context(pph_context *ctx, unsigned int length){
+  uint8 *generated_key;
+  uint8 *share_buffer;
+  unsigned int i;
 
+  // better be safe
+  if(ctx == NULL || ctx->share_context == NULL || ctx->is_unlocked == NULL){
+    return NULL;
+  }
+
+  // aloccate our buffers
+  generated_key = calloc(sizeof(*generated_key),length);
+  if(generated_key == NULL){
+    return NULL;
+  }
+  share_buffer = malloc(sizeof(*share_buffer)*length);
+  if(share_buffer == NULL){
+    free(generated_key);
+    return NULL;
+  }
+
+  // traverse all the shares xoring each to produce an AES key...
+  for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
+    gfshare_ctx_enc_getshare(ctx->share_context, i, share_buffer);
+    _xor_share_with_digest(generated_key, share_buffer, generated_key, length);
+  }
+
+  return generated_key;
+}
 
 // This produces a salt string,
 void get_random_salt(unsigned int length, uint8 *dest){

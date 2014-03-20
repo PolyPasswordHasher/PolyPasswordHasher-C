@@ -413,6 +413,10 @@ pph_context *pph_reload_context(const unsigned char *filename);
 
 
 // helper functions
+
+// this produces an AES key of the desired length when given a share context.
+uint8 *generate_AES_key_from_context(pph_context *ctx, unsigned int length);
+
 // This produces a salt string, warning, this only generates a 
 // PRINTABLE salt
 void get_random_salt(unsigned int length, uint8 *dest);
