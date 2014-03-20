@@ -18,7 +18,7 @@
 START_TEST(test_pph_init_context_AES_key)
 { 
   pph_context *context; // the context to instantiate
-  uint8 threshold;      // the threshold of our data store
+  uint8 threshold = 2;  // the threshold of our data store
   unsigned char *secret = "secretstring";
 
   unsigned int length = strlen(secret);;
@@ -47,10 +47,9 @@ START_TEST(test_pph_destroy_context_AES_key)
                           // suite
                           
 
-  context = pph_init_context(threshold, NULL /*woops*/, length, partial_bytes);
+  context = pph_init_context(threshold, secret, length, partial_bytes);
 
-  ck_assert_msg(context == NULL,
-      "the context returned upon a wrong length value should be NULL");
+  ck_assert_msg(context != NULL, " shouldn't break here");
   ck_assert_msg(context->AES_key != NULL, " the key wasn't generated properly");
 
   error = pph_destroy_context(context);
@@ -287,7 +286,9 @@ START_TEST(test_pph_unlock_password_data){
   
   // backup the key...
   memcpy(key_backup,context->AES_key,DIGEST_LENGTH);
-  
+  // store the accounts
+  // TODO: store the accounts 
+  //
   // let's pretend all is broken
   context->is_unlocked =0;
   context->AES_key = NULL;
@@ -317,7 +318,7 @@ START_TEST(test_pph_unlock_password_data){
   // back. 
   error = pph_unlock_password_data(context, username_count, usernames,
       passwords);
-  ck_assert(error = PPH_ERROR_OK);
+  ck_assert(error == PPH_ERROR_OK);
   ck_assert_msg(context->secret !=NULL, " didnt allocate the secret!");
   ck_assert_str_eq(secret, context->secret);
   ck_assert(context->AES_key != NULL);

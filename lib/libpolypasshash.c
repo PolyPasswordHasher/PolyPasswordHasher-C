@@ -129,11 +129,13 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   context->is_unlocked = 1; 
 
   context->partial_bytes=partial_bytes;
-  if(partial_bytes !=0){
+  if(partial_bytes!=NULL){
     // should generate AES key
   }else{
-    context->AES_key = NULL;
+    // should do something special?
   }
+
+  context->AES_key = generate_AES_key_from_context(context, DIGEST_LENGTH); 
   context->next_entry=1;
   context->shares=NULL;
   context->account_data=NULL;
@@ -319,7 +321,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // get a new share.
     gfshare_ctx_enc_getshare( ctx->share_context, entry_node->share_number,
         share_data);
-   // get a salt for this entry, we are using sprintf, but we could use 
+
+    // get a salt for this entry, we are using sprintf, but we could use 
     // memcpy in case this function requires it.
     get_random_salt(SALT_LENGTH, entry_node->salt);
     entry_node->salt[SALT_LENGTH-1]='\0';
@@ -594,6 +597,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_dec_newshares(G, share_numbers);
   if(ctx->secret == NULL){
     gfshare_ctx_dec_extract(G, secret);
+    puts(secret);
     ctx->secret = strdup(secret);
   }else{
     gfshare_ctx_dec_extract(G,ctx->secret);
@@ -608,7 +612,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
                                                  SHARE_LENGTH);
   }
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
-  return PPH_ERROR_UNKNOWN;
+  ctx->AES_key = generate_AES_key_from_context(ctx, DIGEST_LENGTH);
+  return PPH_ERROR_OK;
 }
 
 
