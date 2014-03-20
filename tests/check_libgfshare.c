@@ -77,7 +77,7 @@ START_TEST(generate_secrets_256_shares)
   gfshare_ctx_enc_getshare( G, 4, share5);
 
   gfshare_ctx_free(G);
-  printf("%d",sharenrs[6]);
+
   G = gfshare_ctx_init_dec( sharenrs, 11, 256);
   gfshare_ctx_dec_giveshare( G, 0, share1);
   gfshare_ctx_dec_giveshare( G, 1, share2);
@@ -101,6 +101,46 @@ START_TEST(generate_secrets_256_shares)
 }
 END_TEST
 
+START_TEST(generate_secrets_same_recomb)
+{
+  int ok = 1, i;
+  unsigned char* secret = calloc(256,1);
+  unsigned char* share1 = malloc(256);
+  unsigned char* share2 = malloc(256);
+  unsigned char* share3 = malloc(256);
+  unsigned char* share4 = malloc(256);
+  unsigned char* share5 = malloc(256);
+  unsigned char* recomb = malloc(256);
+  unsigned char* sharenrs = malloc(256);
+  unsigned char random_shares[11];
+  gfshare_ctx *G;
+
+  for(i=0;i<256;i++){
+    sharenrs[i] = (i+1)%255;
+  }
+
+  sprintf(secret,"%s","hello");
+  
+  G = gfshare_ctx_init_enc( sharenrs, 254, 3, 256);
+
+  gfshare_ctx_enc_setsecret(G, secret);
+  gfshare_ctx_enc_getshare( G, 0, share1);
+  gfshare_ctx_enc_getshare( G, 1, share2);
+  gfshare_ctx_enc_getshare( G, 2, share3);
+  gfshare_ctx_enc_getshare( G, 3, share4);
+  gfshare_ctx_enc_getshare( G, 4, share5);
+
+  gfshare_ctx_free(G);
+  G = gfshare_ctx_init_enc( sharenrs, 254, 3, 256); 
+  gfshare_ctx_enc_setsecret(G, secret);
+  gfshare_ctx_enc_getshare( G, 0, recomb);
+
+  for(i=0;i<256;i++){
+    ck_assert(share1[i] == recomb[i]);
+  }
+}
+END_TEST
+
 
 
 
@@ -112,6 +152,7 @@ Suite * shamir_suite (void)
   TCase *tc_core = tcase_create ("core");
   tcase_add_test (tc_core,generate_secrets);
   tcase_add_test (tc_core,generate_secrets_256_shares);
+  tcase_add_test (tc_core,generate_secrets_same_recomb);
   suite_add_tcase (s, tc_core);
 
   return s;
