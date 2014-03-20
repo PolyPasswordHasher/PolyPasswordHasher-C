@@ -214,10 +214,10 @@ START_TEST(test_check_login_thresholdless){
   // lets add a whole bunch of users and check for an existing one again
   // 1) add a whole new bunch of users:
   for(i=1;i<9;i++){
-    anotheruser[0] = i+48;
     error = pph_create_account(context, anotheruser, "anotherpassword", 1);
     ck_assert_msg(error == PPH_ERROR_OK,
         " this shouldn't have broken the test");
+    anotheruser[0] = i+48;
   }
 
 

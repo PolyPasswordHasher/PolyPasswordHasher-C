@@ -266,6 +266,10 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   uint8 share_data[SHARE_LENGTH];
   uint8 resulting_hash[DIGEST_LENGTH];
   uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH];
+  // openssl encryption contexts
+  EVP_CIPHER_CTX en_ctx;
+  size_t c_len;
+  
   // SANITIZE INFORMATION
   //
   // check password length
@@ -289,7 +293,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   }
 
   // check if we are able to get shares from the context vault
-  if(ctx->is_unlocked != 1){
+  if(ctx->is_unlocked != 1 || ctx->AES_key == NULL){
     return PPH_CONTEXT_IS_LOCKED;
   }
 
@@ -308,7 +312,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     entry_node=malloc(sizeof(*entry_node));
     if(entry_node==NULL){
       // destroy the list we had to far... it's a shame if you ask me ...
-      _destroy_entry_list(entry_node);
+      _destroy_entry_list(entry_node); //FIXME: this will not work...
       return PPH_NO_MEM;
     }
     // get a share number
@@ -339,6 +343,35 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // add the node to the list
     entry_node->next = last_entry;
     last_entry=entry_node;
+  }
+  if(shares == 0){
+    // i.e this is a thresholdless account. 
+    entry_node = malloc(sizeof(*entry_node));
+    if(entry_node==NULL){
+      return PPH_NO_MEM;
+    }
+    entry_node->share_number = 0;
+    
+    // generate the digest
+    get_random_salt(SALT_LENGTH, entry_node->salt);
+    entry_node->salt[SALT_LENGTH-1] = '\0';
+    sprintf(salted_password,"%s%s",entry_node->salt,password);
+    _calculate_digest(resulting_hash,salted_password); 
+
+    // encrypt the digest, since we are using a fixed block, we shouldn't call
+    // encrypt final...
+    EVP_CIPHER_CTX_init(&en_ctx);
+    EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_cbc(), NULL, ctx->AES_key, NULL);
+    EVP_EncryptUpdate(&en_ctx, entry_node->hashed_value, &c_len, resulting_hash, 
+      DIGEST_LENGTH);
+    EVP_CIPHER_CTX_cleanup(&en_ctx);
+
+    /* update ciphertext with the final remaining bytes */
+    //EVP_EncryptFinal_ex(&en_ctx, ciphertext+c_len, &f_len);
+
+
+
+
   }
 
   // allocate the account information 
@@ -414,6 +447,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   uint8 xored_hash[SHARE_LENGTH];
   uint8 sharenumber;
   unsigned int i;
+  // openSSL managers.
+  EVP_CIPHER_CTX de_ctx;
+  size_t p_len;
 
   pph_account_node *search; // this will be used to iterate all the users 
   // check for any improper pointers
@@ -459,10 +495,33 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   }
   sharenumber = target->account.entries->share_number;// we need only the first 
                                              // share to do the checking
-  if(sharenumber == 0){ // non admin
-    return PPH_ERROR_UNKNOWN; // TODO: do something instead of breaking
-    // we should recheck if partial bytes are involved or use the AES key to 
-    // decrypt the result. 
+  if(sharenumber == 0){ // thresholdless case.
+    if(ctx->AES_key != NULL && ctx->is_unlocked == 1){
+      // we should:
+      //
+      // 1) calculate the expected hash...
+      EVP_CIPHER_CTX_init(&de_ctx);
+      EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_cbc(), NULL, ctx->AES_key, NULL);
+      EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len,
+          target->account.entries->hashed_value, DIGEST_LENGTH);
+      EVP_CIPHER_CTX_cleanup(&de_ctx);
+      
+      // 2) calculate the proposed digest with the salt.
+      sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+      _calculate_digest(resulting_hash, salted_password);
+      
+      
+      // 3) compare the hashes....
+      for(i=0;i<DIGEST_LENGTH;i++){
+        //printf("(%02x,%02x)",resulting_hash[i],xored_hash[i]);
+        if(resulting_hash[i]!=xored_hash[i]){
+          return PPH_ACCOUNT_IS_INVALID;    
+        }
+      }
+
+      return PPH_ERROR_OK;
+    }
+    return PPH_ACCOUNT_IS_INVALID;
   }else{
     // we do it the normal way for this. We have a valid sharenumber
     //
