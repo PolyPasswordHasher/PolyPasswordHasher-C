@@ -103,7 +103,7 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   context->threshold=threshold;
   
   context->secret = NULL; //cue the paranoid parrot meme...
-  context->secret = malloc(sizeof(uint8)*secret_length+1);
+  context->secret = calloc(sizeof(context->secret),SHARE_LENGTH);
   if(context->secret == NULL){
     free(context);
     return NULL;
@@ -633,21 +633,23 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     // TODO: do this faster
     for(i = 0; i<username_count;i++){
       if(!strcmp(usernames[i],current_user->account.username)){
-        // this is an existing user! 
+        // this is an existing user and counts towards the threshold
         // give all of it's calculated shares to libgfshare...
         entry = current_user->account.entries;
-        while(entry!=NULL){
-          // calulate the share
-          sprintf(salted_password,"%s%s",entry->salt,passwords[i]);
-          _calculate_digest(estimated_digest,salted_password);
-          _xor_share_with_digest(estimated_share,entry->hashed_value,
-              estimated_digest,SHARE_LENGTH);
+        if(!entry->share_number == 0){
+          while(entry!=NULL){
+            // calulate the share
+            sprintf(salted_password,"%s%s",entry->salt,passwords[i]);
+            _calculate_digest(estimated_digest,salted_password);
+            _xor_share_with_digest(estimated_share,entry->hashed_value,
+                estimated_digest,SHARE_LENGTH);
          
-          // give share to recombine
-          share_numbers[entry->share_number] = entry->share_number+1;
-          gfshare_ctx_dec_giveshare(G, entry->share_number,estimated_share);
+            // give share to recombine
+            share_numbers[entry->share_number] = entry->share_number+1;
+            gfshare_ctx_dec_giveshare(G, entry->share_number,estimated_share);
 
-          entry = entry->next;
+            entry = entry->next;
+          }
         } 
       }
     } 
@@ -656,8 +658,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_dec_newshares(G, share_numbers);
   if(ctx->secret == NULL){
     gfshare_ctx_dec_extract(G, secret);
-    puts(secret);
-    ctx->secret = strdup(secret);
+    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH);
+    memcpy(ctx->secret,secret,strlen(secret));
   }else{
     gfshare_ctx_dec_extract(G,ctx->secret);
   }
@@ -665,12 +667,14 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
       share_numbers[i]=(unsigned char)i+1;
     }
+    puts(ctx->secret);
     ctx->share_context = gfshare_ctx_init_enc( share_numbers,
                                                  MAX_NUMBER_OF_SHARES-1,
                                                  ctx->threshold,
                                                  SHARE_LENGTH);
   }
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
+  ctx->is_unlocked = 1;
   ctx->AES_key = generate_AES_key_from_context(ctx, DIGEST_LENGTH);
   return PPH_ERROR_OK;
 }
@@ -868,18 +872,19 @@ uint8 *generate_AES_key_from_context(pph_context *ctx, unsigned int length){
   if(generated_key == NULL){
     return NULL;
   }
-  share_buffer = malloc(sizeof(*share_buffer)*length);
+  share_buffer = calloc(sizeof(*share_buffer),length);
   if(share_buffer == NULL){
     free(generated_key);
     return NULL;
   }
 
   // traverse all the shares xoring each to produce an AES key...
-  for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
-    gfshare_ctx_enc_getshare(ctx->share_context, i, share_buffer);
-    _xor_share_with_digest(generated_key, share_buffer, generated_key, length);
-  }
-
+  //for(i=0;i<MAX_NUMBER_OF_SHARES-1;i++){
+  //  gfshare_ctx_enc_getshare(ctx->share_context, i, share_buffer);
+  //  _xor_share_with_digest(generated_key, share_buffer, generated_key, length);
+  //}
+  EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), NULL, ctx->secret, 
+      strlen(ctx->secret), 1, generated_key, NULL);
   return generated_key;
 }
 
