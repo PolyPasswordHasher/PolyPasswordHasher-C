@@ -38,7 +38,7 @@
 /* Constant Declaration */
 #define SHARE_LENGTH 256/8              // the length of our share buffers
 #define DIGEST_LENGTH SHARE_LENGTH
-#define MAX_NUMBER_OF_SHARES 256        // the maximum number of shares
+#define MAX_NUMBER_OF_SHARES 255        // the maximum number of shares
 #define USERNAME_LENGTH 128             // the maximum username length
 #define SALT_LENGTH 17                  // the length of the salt to be used
 #define PASSWORD_LENGTH 128             // I'm setting this as for the PHC
