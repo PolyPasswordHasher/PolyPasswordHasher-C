@@ -815,7 +815,7 @@ START_TEST(test_pph_store_and_reload_with_users){
   // now give a correct full account information, we expect to have our secret
   // back. 
   error = pph_unlock_password_data(context, 2, usernames_subset,
-      password_subset);
+        password_subset);
 
   ck_assert_str_eq(secret, context->secret);
 
