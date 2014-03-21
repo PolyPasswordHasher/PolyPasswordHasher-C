@@ -430,6 +430,10 @@ inline void _xor_share_with_digest(uint8 *result, uint8 *share,
   unsigned int *xor_digest_pointer;
   unsigned int *xor_share_pointer;
   unsigned int *xor_result_pointer;
+  int aligned_length = length/sizeof(*xor_result_pointer);
+  int char_aligned_length = aligned_length * sizeof(*xor_result_pointer);
+  int char_aligned_offset = length%sizeof(*xor_result_pointer);
+
   // xor the whole thing, we do this in an unsigned int fashion imagining 
   // this is where usually where the processor aligns things and is, hence
   // faster
@@ -437,9 +441,14 @@ inline void _xor_share_with_digest(uint8 *result, uint8 *share,
   xor_share_pointer = (unsigned int*)share;
   xor_result_pointer = (unsigned int*)result;
   
-  for(i=0;i<length/sizeof(*xor_result_pointer);i++){
+  for(i=0;i<aligned_length;i++){
       *(xor_result_pointer + i) = 
         *(xor_share_pointer+i)^*(xor_digest_pointer +i);
+  }
+  
+  // xor the rest, if we have a number that's not divisible by a word.
+  for(i = char_aligned_length; i<char_aligned_length+char_aligned_offset;i++){
+    *(result+i) = *(share+i) ^ *(digest+i); 
   }
   return;
 }
