@@ -1,8 +1,10 @@
 AM_CFLAGS = -I$(top_builddir)/include
 
-TESTS = check_libgfshare check_libpolypasshash check_libpph_thresholdless
+TESTS = check_libgfshare check_libpolypasshash check_libpph_thresholdless\
+				check_libpph_partialbytes
 check_PROGRAMS = check_libgfshare check_libpolypasshash\
-								 check_libpph_thresholdless
+								 check_libpph_thresholdless check_libpph_partialbytes
+
 check_libgfshare_SOURCES = check_libgfshare.c\
 													$(top_builddir)/include/libgfshare.h\
 												$(top_builddir)/include/libgfshare_tables.h
@@ -23,5 +25,14 @@ check_libpph_thresholdless_SOURCES = check_libpph_thresholdless.c\
 
 check_libpph_thresholdless_CFLAGS= @CHECK_CFLAGS@ -I$(top_builddir)/include
 check_libpph_thresholdless_LDADD = $(top_builddir)/lib/libgfshare.la\
+																	 $(top_builddir)/lib/libpolypasshash.la\
+																	 @CHECK_LIBS@
+
+check_libpph_partialbytes_SOURCES= check_libpph_partialbytes.c\
+																$(top_builddir)/include/libgfshare.h\
+																$(top_builddir)/include/libpolypasshash.h
+
+check_libpph_partialbytes_CFLAGS= @CHECK_CFLAGS@ -I$(top_builddir)/include
+check_libpph_partialbytes_LDADD = $(top_builddir)/lib/libgfshare.la\
 																	 $(top_builddir)/lib/libpolypasshash.la\
 																	 @CHECK_LIBS@

@@ -37,7 +37,8 @@ build_triplet = @build@
 host_triplet = @host@
 check_PROGRAMS = check_libgfshare$(EXEEXT) \
 	check_libpolypasshash$(EXEEXT) \
-	check_libpph_thresholdless$(EXEEXT)
+	check_libpph_thresholdless$(EXEEXT) \
+	check_libpph_partialbytes$(EXEEXT)
 subdir = tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -55,6 +56,13 @@ am_check_libpolypasshash_OBJECTS =  \
 	check_libpolypasshash-check_libpolypasshash.$(OBJEXT)
 check_libpolypasshash_OBJECTS = $(am_check_libpolypasshash_OBJECTS)
 check_libpolypasshash_DEPENDENCIES =  \
+	$(top_builddir)/lib/libgfshare.la \
+	$(top_builddir)/lib/libpolypasshash.la
+am_check_libpph_partialbytes_OBJECTS =  \
+	check_libpph_partialbytes-check_libpph_partialbytes.$(OBJEXT)
+check_libpph_partialbytes_OBJECTS =  \
+	$(am_check_libpph_partialbytes_OBJECTS)
+check_libpph_partialbytes_DEPENDENCIES =  \
 	$(top_builddir)/lib/libgfshare.la \
 	$(top_builddir)/lib/libpolypasshash.la
 am_check_libpph_thresholdless_OBJECTS = check_libpph_thresholdless-check_libpph_thresholdless.$(OBJEXT)
@@ -75,9 +83,11 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(check_libgfshare_SOURCES) $(check_libpolypasshash_SOURCES) \
+	$(check_libpph_partialbytes_SOURCES) \
 	$(check_libpph_thresholdless_SOURCES)
 DIST_SOURCES = $(check_libgfshare_SOURCES) \
 	$(check_libpolypasshash_SOURCES) \
+	$(check_libpph_partialbytes_SOURCES) \
 	$(check_libpph_thresholdless_SOURCES)
 ETAGS = etags
 CTAGS = ctags
@@ -191,7 +201,9 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 AM_CFLAGS = -I$(top_builddir)/include
-TESTS = check_libgfshare check_libpolypasshash check_libpph_thresholdless
+TESTS = check_libgfshare check_libpolypasshash check_libpph_thresholdless\
+				check_libpph_partialbytes
+
 check_libgfshare_SOURCES = check_libgfshare.c\
 													$(top_builddir)/include/libgfshare.h\
 												$(top_builddir)/include/libgfshare_tables.h
@@ -213,6 +225,15 @@ check_libpph_thresholdless_SOURCES = check_libpph_thresholdless.c\
 
 check_libpph_thresholdless_CFLAGS = @CHECK_CFLAGS@ -I$(top_builddir)/include
 check_libpph_thresholdless_LDADD = $(top_builddir)/lib/libgfshare.la\
+																	 $(top_builddir)/lib/libpolypasshash.la\
+																	 @CHECK_LIBS@
+
+check_libpph_partialbytes_SOURCES = check_libpph_partialbytes.c\
+																$(top_builddir)/include/libgfshare.h\
+																$(top_builddir)/include/libpolypasshash.h
+
+check_libpph_partialbytes_CFLAGS = @CHECK_CFLAGS@ -I$(top_builddir)/include
+check_libpph_partialbytes_LDADD = $(top_builddir)/lib/libgfshare.la\
 																	 $(top_builddir)/lib/libpolypasshash.la\
 																	 @CHECK_LIBS@
 
@@ -262,6 +283,9 @@ check_libgfshare$(EXEEXT): $(check_libgfshare_OBJECTS) $(check_libgfshare_DEPEND
 check_libpolypasshash$(EXEEXT): $(check_libpolypasshash_OBJECTS) $(check_libpolypasshash_DEPENDENCIES) 
 	@rm -f check_libpolypasshash$(EXEEXT)
 	$(LINK) $(check_libpolypasshash_LDFLAGS) $(check_libpolypasshash_OBJECTS) $(check_libpolypasshash_LDADD) $(LIBS)
+check_libpph_partialbytes$(EXEEXT): $(check_libpph_partialbytes_OBJECTS) $(check_libpph_partialbytes_DEPENDENCIES) 
+	@rm -f check_libpph_partialbytes$(EXEEXT)
+	$(LINK) $(check_libpph_partialbytes_LDFLAGS) $(check_libpph_partialbytes_OBJECTS) $(check_libpph_partialbytes_LDADD) $(LIBS)
 check_libpph_thresholdless$(EXEEXT): $(check_libpph_thresholdless_OBJECTS) $(check_libpph_thresholdless_DEPENDENCIES) 
 	@rm -f check_libpph_thresholdless$(EXEEXT)
 	$(LINK) $(check_libpph_thresholdless_LDFLAGS) $(check_libpph_thresholdless_OBJECTS) $(check_libpph_thresholdless_LDADD) $(LIBS)
@@ -274,6 +298,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_libgfshare-check_libgfshare.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_libpolypasshash-check_libpolypasshash.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_libpph_thresholdless-check_libpph_thresholdless.Po@am__quote@
 
 .c.o:
@@ -324,6 +349,20 @@ check_libpolypasshash-check_libpolypasshash.obj: check_libpolypasshash.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='check_libpolypasshash.c' object='check_libpolypasshash-check_libpolypasshash.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libpolypasshash_CFLAGS) $(CFLAGS) -c -o check_libpolypasshash-check_libpolypasshash.obj `if test -f 'check_libpolypasshash.c'; then $(CYGPATH_W) 'check_libpolypasshash.c'; else $(CYGPATH_W) '$(srcdir)/check_libpolypasshash.c'; fi`
+
+check_libpph_partialbytes-check_libpph_partialbytes.o: check_libpph_partialbytes.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libpph_partialbytes_CFLAGS) $(CFLAGS) -MT check_libpph_partialbytes-check_libpph_partialbytes.o -MD -MP -MF "$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Tpo" -c -o check_libpph_partialbytes-check_libpph_partialbytes.o `test -f 'check_libpph_partialbytes.c' || echo '$(srcdir)/'`check_libpph_partialbytes.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Tpo" "$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Po"; else rm -f "$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='check_libpph_partialbytes.c' object='check_libpph_partialbytes-check_libpph_partialbytes.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libpph_partialbytes_CFLAGS) $(CFLAGS) -c -o check_libpph_partialbytes-check_libpph_partialbytes.o `test -f 'check_libpph_partialbytes.c' || echo '$(srcdir)/'`check_libpph_partialbytes.c
+
+check_libpph_partialbytes-check_libpph_partialbytes.obj: check_libpph_partialbytes.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libpph_partialbytes_CFLAGS) $(CFLAGS) -MT check_libpph_partialbytes-check_libpph_partialbytes.obj -MD -MP -MF "$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Tpo" -c -o check_libpph_partialbytes-check_libpph_partialbytes.obj `if test -f 'check_libpph_partialbytes.c'; then $(CYGPATH_W) 'check_libpph_partialbytes.c'; else $(CYGPATH_W) '$(srcdir)/check_libpph_partialbytes.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Tpo" "$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Po"; else rm -f "$(DEPDIR)/check_libpph_partialbytes-check_libpph_partialbytes.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='check_libpph_partialbytes.c' object='check_libpph_partialbytes-check_libpph_partialbytes.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libpph_partialbytes_CFLAGS) $(CFLAGS) -c -o check_libpph_partialbytes-check_libpph_partialbytes.obj `if test -f 'check_libpph_partialbytes.c'; then $(CYGPATH_W) 'check_libpph_partialbytes.c'; else $(CYGPATH_W) '$(srcdir)/check_libpph_partialbytes.c'; fi`
 
 check_libpph_thresholdless-check_libpph_thresholdless.o: check_libpph_thresholdless.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_libpph_thresholdless_CFLAGS) $(CFLAGS) -MT check_libpph_thresholdless-check_libpph_thresholdless.o -MD -MP -MF "$(DEPDIR)/check_libpph_thresholdless-check_libpph_thresholdless.Tpo" -c -o check_libpph_thresholdless-check_libpph_thresholdless.o `test -f 'check_libpph_thresholdless.c' || echo '$(srcdir)/'`check_libpph_thresholdless.c; \
