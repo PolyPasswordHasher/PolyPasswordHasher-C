@@ -329,10 +329,6 @@ START_TEST(test_pph_unlock_password_data){
   ck_assert_msg(context->secret !=NULL, " didnt allocate the secret!");
   ck_assert_str_eq(secret, context->secret);
   ck_assert(context->AES_key != NULL);
-  for(i=0;i<DIGEST_LENGTH;i++){
-    printf("(%02x,%02x)",key_backup[i],context->AES_key[i]);
-    //ck_assert(key_backup[i] == context->AES_key[i]);
-  }
 
 
   // let's imagine it's all broken (Again)
