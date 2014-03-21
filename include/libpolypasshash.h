@@ -462,7 +462,7 @@ inline void _calculate_digest(uint8 *digest, const uint8 *password){
   EVP_DigestInit_ex(&mctx, EVP_sha256(), NULL); //todo, we should make this
                                                 // configurable through a
                                                 // autoconf flag/define
-  EVP_DigestUpdate(&mctx, password, strlen(password));
+  EVP_DigestUpdate(&mctx, password, SALT_LENGTH+ strlen(password+SALT_LENGTH));
   EVP_DigestFinal_ex(&mctx,  digest, 0);
   EVP_MD_CTX_cleanup(&mctx);
 

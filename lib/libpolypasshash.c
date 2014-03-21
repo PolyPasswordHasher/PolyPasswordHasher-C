@@ -337,9 +337,9 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // get a salt for this entry, we are using sprintf, but we could use 
     // memcpy in case this function requires it.
     get_random_salt(SALT_LENGTH, entry_node->salt);
-    entry_node->salt[SALT_LENGTH-1]='\0';
-    sprintf(salted_password,"%s%s",entry_node->salt, password);
- 
+    memcpy(salted_password,entry_node->salt,SALT_LENGTH);
+    memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); //FIXME: use a pw length parameter
+    //sprintf(salted_password,"%s%s",entry_node->salt, password);
     _calculate_digest(entry_node->hashed_value, salted_password);
     
     // xor the whole thing, we do this in an unsigned int fashion imagining 
@@ -362,8 +362,9 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     
     // generate the digest
     get_random_salt(SALT_LENGTH, entry_node->salt);
-    entry_node->salt[SALT_LENGTH-1] = '\0';
-    sprintf(salted_password,"%s%s",entry_node->salt,password);
+    memcpy(salted_password,entry_node->salt,SALT_LENGTH);
+    memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); //FIXME: use a pw length parameter
+    //sprintf(salted_password,"%s%s",entry_node->salt,password);
     _calculate_digest(resulting_hash,salted_password); 
 
     // encrypt the digest
@@ -512,9 +513,11 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
    // partial bytes check
    // we should:
    // 1) calculate the proposed digest
-   sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+   memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
+   memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); //FIXME: use a pw length parameter
+   // sprintf(salted_password,"%s%s",target->account.entries->salt,password);
    _calculate_digest(resulting_hash, salted_password);
-
+   
    // 2) only compare the bytes that are not obscured.
    for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
     if(resulting_hash[i]!=target->account.entries->hashed_value[i]){
@@ -544,7 +547,11 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
 
         // 2) calculate the proposed digest with the salt.
-        sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+        //sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+        memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
+        memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); 
+                      //FIXME: use a pw length parameter
+        
         _calculate_digest(resulting_hash, salted_password);
 
         
@@ -567,7 +574,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
 
       // calculate the proposed digest with the salt.
-      sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+      //sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+      memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
+      memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); //FIXME: use a pw length parameter
       _calculate_digest(resulting_hash, salted_password);
 
       // xor the thing back to normal
@@ -682,7 +691,10 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
         if(!entry->share_number == 0){
           while(entry!=NULL){
             // calulate the share
-            sprintf(salted_password,"%s%s",entry->salt,passwords[i]);
+            memcpy(salted_password,entry->salt,SALT_LENGTH);
+            memcpy(salted_password+SALT_LENGTH, passwords[i],
+                strlen(passwords[i])+1); //FIXME: use a pw length parameter
+            //sprintf(salted_password,"%s%s",entry->salt,passwords[i]);
             _calculate_digest(estimated_digest,salted_password);
             _xor_share_with_digest(estimated_share,entry->hashed_value,
                 estimated_digest,SHARE_LENGTH);
