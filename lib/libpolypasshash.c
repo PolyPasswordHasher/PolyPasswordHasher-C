@@ -102,8 +102,13 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   // fill
   context->threshold=threshold;
   
+  // initialize the partial bytes offset, this will be used to limit the
+  // length of the shares, and the length of the digest to xor/encrypt
+  context->partial_bytes=partial_bytes;
+ 
+  // FIXME: secret should be a randomly generated stream of bytes.
   context->secret = NULL; //cue the paranoid parrot meme...
-  context->secret = calloc(sizeof(context->secret),SHARE_LENGTH);
+  context->secret = calloc(sizeof(context->secret),SHARE_LENGTH-partial_bytes);
   if(context->secret == NULL){
     free(context);
     return NULL;
@@ -113,33 +118,36 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
     share_numbers[i]=(unsigned char)i+1;
   }
+
+  // Update the share context, the size of the shares is reduced by the number
+  // or partial bytes.
   context->share_context = NULL;
   context->share_context = gfshare_ctx_init_enc( share_numbers,
                                                  MAX_NUMBER_OF_SHARES-1,
                                                  context->threshold,
-                                                 SHARE_LENGTH);
+                                                 SHARE_LENGTH-partial_bytes);
   if(context->share_context == NULL){
     free(context);
     return NULL;
   }
   gfshare_ctx_enc_setsecret(context->share_context, context->secret);
   
-  context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
 
+  context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
+  
+  // since this is a new context, it should be unlocked
   context->is_unlocked = 1; 
 
-  context->partial_bytes=partial_bytes;
-  if(partial_bytes!=NULL){
-    // should generate AES key
-  }else{
-    // should do something special?
-  }
-
+  // FIXME, the AES key should be, actually, the secret. 
   context->AES_key = generate_AES_key_from_context(context, DIGEST_LENGTH); 
+  
+
+  // initialize the rest
   context->next_entry=1;
   context->shares=NULL;
   context->account_data=NULL;
 
+  // finish.
   return context;
 }
 
@@ -268,7 +276,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH];
   // openssl encryption contexts
   EVP_CIPHER_CTX en_ctx;
-  size_t c_len;
+  size_t c_len,f_len;
   
   // SANITIZE INFORMATION
   //
@@ -332,13 +340,13 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     entry_node->salt[SALT_LENGTH-1]='\0';
     sprintf(salted_password,"%s%s",entry_node->salt, password);
  
-    _calculate_digest(resulting_hash, salted_password);
+    _calculate_digest(entry_node->hashed_value, salted_password);
     
     // xor the whole thing, we do this in an unsigned int fashion imagining 
     // this is where usually where the processor aligns things and is, hence
     // faster
     _xor_share_with_digest(entry_node->hashed_value, share_data,
-        resulting_hash, DIGEST_LENGTH);
+        entry_node->hashed_value, DIGEST_LENGTH-ctx->partial_bytes);
     
     // add the node to the list
     entry_node->next = last_entry;
@@ -358,16 +366,21 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     sprintf(salted_password,"%s%s",entry_node->salt,password);
     _calculate_digest(resulting_hash,salted_password); 
 
-    // encrypt the digest, since we are using a fixed block, we shouldn't call
-    // encrypt final...
+    // encrypt the digest
     EVP_CIPHER_CTX_init(&en_ctx);
-    EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_cbc(), NULL, ctx->AES_key, NULL);
+    EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
     EVP_EncryptUpdate(&en_ctx, entry_node->hashed_value, &c_len, resulting_hash, 
-      DIGEST_LENGTH);
+      DIGEST_LENGTH-ctx->partial_bytes);
+    /* update ciphertext with the final remaining bytes */
+    EVP_EncryptFinal_ex(&en_ctx, entry_node->hashed_value+c_len, &f_len);
     EVP_CIPHER_CTX_cleanup(&en_ctx);
 
-    /* update ciphertext with the final remaining bytes */
-    //EVP_EncryptFinal_ex(&en_ctx, ciphertext+c_len, &f_len);
+    // append the unencrypted bytes
+    for(i=c_len+f_len;i<DIGEST_LENGTH;i++){
+      entry_node->hashed_value[i] = resulting_hash[i]; //
+    }
+
+    //
     entry_node->next=NULL;
     shares++;
 
@@ -449,7 +462,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   unsigned int i;
   // openSSL managers.
   EVP_CIPHER_CTX de_ctx;
-  size_t p_len;
+  size_t p_len,f_len;
 
   pph_account_node *search; // this will be used to iterate all the users 
   // check for any improper pointers
@@ -495,55 +508,86 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   }
   sharenumber = target->account.entries->share_number;// we need only the first 
                                              // share to do the checking
-  if(sharenumber == 0){ // thresholdless case.
-    if(ctx->AES_key != NULL && ctx->is_unlocked == 1){
-      // we should:
-      //
-      // 1) calculate the expected hash...
-      EVP_CIPHER_CTX_init(&de_ctx);
-      EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_cbc(), NULL, ctx->AES_key, NULL);
-      EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len,
-          target->account.entries->hashed_value, DIGEST_LENGTH);
-      EVP_CIPHER_CTX_cleanup(&de_ctx);
-      
-      // 2) calculate the proposed digest with the salt.
-      sprintf(salted_password,"%s%s",target->account.entries->salt,password);
-      _calculate_digest(resulting_hash, salted_password);
-      
-      
-      // 3) compare the hashes....
-      for(i=0;i<DIGEST_LENGTH;i++){
-        if(resulting_hash[i]!=xored_hash[i]){
-          return PPH_ACCOUNT_IS_INVALID;    
+  if(ctx->is_unlocked != 1){
+   // partial bytes check
+   // we should:
+   // 1) calculate the proposed digest
+   sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+   _calculate_digest(resulting_hash, salted_password);
+
+   // 2) only compare the bytes that are not obscured.
+   for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
+    if(resulting_hash[i]!=target->account.entries->hashed_value[i]){
+      return PPH_ACCOUNT_IS_INVALID;
+    }
+   }
+   return PPH_ERROR_OK;
+  }
+  else{ 
+    if(sharenumber == 0){ // thresholdless case.
+      if(ctx->AES_key != NULL && ctx->is_unlocked == 1){
+        // we should:
+        //
+        // 1) calculate the expected hash...
+        EVP_CIPHER_CTX_init(&de_ctx);
+        EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
+        EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len,
+            target->account.entries->hashed_value,
+            DIGEST_LENGTH-ctx->partial_bytes);
+        EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
+        EVP_CIPHER_CTX_cleanup(&de_ctx);
+        // append the unencrypted bytes
+        for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
+          xored_hash[i] = target->account.entries->hashed_value[i]; //
         }
+
+
+
+        // 2) calculate the proposed digest with the salt.
+        sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+        _calculate_digest(resulting_hash, salted_password);
+
+        
+        // 3) compare the hashes....
+        for(i=0;i<DIGEST_LENGTH;i++){// we check the whole hash, we don't expect
+          // partial bytes to modify the end result
+          if(resulting_hash[i]!=xored_hash[i]){
+            return PPH_ACCOUNT_IS_INVALID;    
+          }
+        }
+
+        return PPH_ERROR_OK;
       }
 
-      return PPH_ERROR_OK;
-    }
-    return PPH_ACCOUNT_IS_INVALID;
-  }else{
-    // we do it the normal way for this. We have a valid sharenumber
-    //
-    // get the share
-    gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
+      return PPH_ACCOUNT_IS_INVALID;
+    }else{
+      // we do it the normal way for this. We have a valid sharenumber
+      //
+      // get the share
+      gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
 
-    // calculate the proposed digest with the salt.
-    sprintf(salted_password,"%s%s",target->account.entries->salt,password);
-    _calculate_digest(resulting_hash, salted_password);
-    
-    // xor the thing back to normal
-    _xor_share_with_digest(xored_hash,target->account.entries->hashed_value,
-        share_data, DIGEST_LENGTH);
+      // calculate the proposed digest with the salt.
+      sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+      _calculate_digest(resulting_hash, salted_password);
 
-    // compare, TODO: optimize this.
-    for(i=0;i<DIGEST_LENGTH;i++){
-      if(xored_hash[i] != resulting_hash[i]){
-        return PPH_ACCOUNT_IS_INVALID;
-      } 
-    }
-    return PPH_ERROR_OK; // this means, the login does match
-  } 
+      // xor the thing back to normal
+      _xor_share_with_digest(xored_hash,target->account.entries->hashed_value,
+          share_data, DIGEST_LENGTH-ctx->partial_bytes);
+      // append the unobscured bytes
+      for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
+        xored_hash[i] = target->account.entries->hashed_value[i]; //
+      }
 
+
+      // compare, TODO: optimize this.
+      for(i=0;i<DIGEST_LENGTH;i++){
+        if(xored_hash[i] != resulting_hash[i]){
+          return PPH_ACCOUNT_IS_INVALID;
+        } 
+      }
+      return PPH_ERROR_OK; // this means, the login does match
+    } 
+  }
   return PPH_ERROR_UNKNOWN;
 }
 
@@ -623,7 +667,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   }
   // do the reconstruction. 
   G = gfshare_ctx_init_dec( share_numbers, MAX_NUMBER_OF_SHARES-1,
-     SHARE_LENGTH);
+     SHARE_LENGTH-ctx->partial_bytes);
 
   // traverse our possible users
   current_user=ctx->account_data;
@@ -667,9 +711,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
       share_numbers[i]=(unsigned char)i+1;
     }
     ctx->share_context = gfshare_ctx_init_enc( share_numbers,
-                                                 MAX_NUMBER_OF_SHARES-1,
-                                                 ctx->threshold,
-                                                 SHARE_LENGTH);
+                                               MAX_NUMBER_OF_SHARES-1,
+                                               ctx->threshold,
+                                               SHARE_LENGTH-ctx->partial_bytes);
   }
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   ctx->is_unlocked = 1;
