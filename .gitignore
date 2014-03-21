@@ -22,7 +22,6 @@ polypasshash
 check_libgfshare
 
 # autoconf specific
-Makefile.in
 aclocal.m4
 autom4te.cache/
 build/
