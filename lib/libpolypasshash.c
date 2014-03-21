@@ -369,7 +369,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     /* update ciphertext with the final remaining bytes */
     //EVP_EncryptFinal_ex(&en_ctx, ciphertext+c_len, &f_len);
 
-
+    shares++;
 
 
   }
@@ -513,7 +513,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       
       // 3) compare the hashes....
       for(i=0;i<DIGEST_LENGTH;i++){
-        //printf("(%02x,%02x)",resulting_hash[i],xored_hash[i]);
         if(resulting_hash[i]!=xored_hash[i]){
           return PPH_ACCOUNT_IS_INVALID;    
         }
@@ -863,7 +862,7 @@ uint8 *generate_AES_key_from_context(pph_context *ctx, unsigned int length){
   unsigned int i;
 
   // better be safe
-  if(ctx == NULL || ctx->share_context == NULL || ctx->is_unlocked == NULL){
+  if(ctx == NULL || ctx->share_context == NULL || ctx->is_unlocked == 0){
     return NULL;
   }
 
