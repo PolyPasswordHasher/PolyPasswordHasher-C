@@ -932,19 +932,12 @@ uint8 *generate_AES_key_from_context(pph_context *ctx, unsigned int length){
 
 // This produces a salt string,
 void get_random_salt(unsigned int length, uint8 *dest){
-  static uint8 seed_is_created = 0;
   unsigned int i;
+  FILE *fp;
 
-  if(!seed_is_created){
-    srand(time(NULL));
-    seed_is_created = 1;
-  }
-
-  for(i=0;i<length;i++){
-    // we do scaling for printable characters, this might not be the best idea
-    // in the world.
-    dest[i] = (rand()%95)+32;
-  }
+  fp = fopen("/dev/urandom","rb");
+  fread(dest,sizeof(uint8),length,fp);
+  fclose(fp);
 }
 
 
