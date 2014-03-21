@@ -368,7 +368,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 
     /* update ciphertext with the final remaining bytes */
     //EVP_EncryptFinal_ex(&en_ctx, ciphertext+c_len, &f_len);
-
+    entry_node->next=NULL;
     shares++;
 
 
@@ -666,7 +666,6 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
       share_numbers[i]=(unsigned char)i+1;
     }
-    puts(ctx->secret);
     ctx->share_context = gfshare_ctx_init_enc( share_numbers,
                                                  MAX_NUMBER_OF_SHARES-1,
                                                  ctx->threshold,
