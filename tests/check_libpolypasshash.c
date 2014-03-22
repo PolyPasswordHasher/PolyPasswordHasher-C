@@ -60,7 +60,8 @@ START_TEST(test_create_account_context){
   PPH_ERROR error;
 
   // sending bogus information to the create user function.
-  error = pph_create_account(NULL, "mr.user", "yessir,verysecure", 1);
+  error = pph_create_account(NULL, "mr.user", strlen("mr.user"), 
+      "yessir,verysecure", strlen("yessir,verysecure"), 1);
   
   ck_assert_msg(error == PPH_BAD_PTR, 
       "We should've gotten BAD_PTR in the return value");
@@ -88,7 +89,8 @@ START_TEST(test_create_account_usernames){
   context = pph_init_context(threshold,partial_bytes);
   
   // sending bogus information to the create user function.
-  error = pph_create_account(context, username, "yessir,verysecure", 1);
+  error = pph_create_account(context, username, strlen(username),
+      "yessir,verysecure", strlen("yessir,verysecure"), 1);
   
   ck_assert_msg(error == PPH_USERNAME_IS_TOO_LONG, 
       "We should've gotten USERNAME_IS_TOO_LONG in the return value");
@@ -126,7 +128,7 @@ START_TEST(test_create_account_passwords){
   password[PASSWORD_LENGTH] = '\0';
   // sending bogus information to the create user function.
   error = pph_create_account(context, "ichooseverylongpasswords",
-       password,1);
+      strlen("ichooseverylongpasswords"),password,strlen(password),1);
   
   ck_assert_msg(error == PPH_PASSWORD_IS_TOO_LONG, 
       "We should've gotten PPH_PASSWORD_IS_TOO_LONG in the return value");
@@ -179,19 +181,23 @@ START_TEST(test_create_account_entry_consistency){
       "this was a good initialization, go tell someone");
   
   // sending bogus information to the create user function.
-  error = pph_create_account(context, username, password,1);
+  error = pph_create_account(context, username,strlen(username),
+      password,strlen(password),1);
   
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
   
-
+  context->account_data->account.username[strlen(username)]='\0'; // this makes
+                                                                  // it easy
+                                                                  // to cmp
   ck_assert_str_eq(username,context->account_data->account.username);
 
   // now lets check we can take the digest back from the death... I mean
   // share
   memcpy(salted_password,context->account_data->account.entries->salt,
       SALT_LENGTH);
-  _calculate_digest(password_digest, salted_password);
+  _calculate_digest(password_digest, salted_password, 
+      SALT_LENGTH + strlen(password));
   digest_result=context->account_data->account.entries->hashed_value;
 
   gfshare_ctx_enc_getshare(context->share_context, 1, share_result);
@@ -203,7 +209,8 @@ START_TEST(test_create_account_entry_consistency){
   }
 
   // we will check for the existing account error handler now...
-  error = pph_create_account(context, username, password,1);
+  error = pph_create_account(context, username, strlen(username),
+      password, strlen(password),1);
 
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "We should've gotten an error since this account repeats");
@@ -214,8 +221,9 @@ START_TEST(test_create_account_entry_consistency){
                             // manually,
   
   // we will check for the existing account error handler now...
-  error = pph_create_account(context, "someotherguy",
-      "came-here-asking-the-same-thing",1);
+  error = pph_create_account(context, "someotherguy", strlen("someotherguy"),
+    "came-here-asking-the-same-thing",strlen("came-here-asking-the-same-thing")
+    ,1);
 
   ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED, 
       "We should've gotten an error now that the vault is locked");
@@ -255,18 +263,19 @@ START_TEST(test_check_login_input_sanity){
 
   // lets send a null context pointer first
   context=NULL;
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username,strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
 
   // we will send a wrong username pointer now
   context = pph_init_context(threshold, partial_bytes);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
-  error = pph_check_login(context, NULL, password);
+  error = pph_check_login(context, NULL, 0, password, 0);
   ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
  
   // do the same for the password 
-  error = pph_check_login(context, username, NULL); 
+  error = pph_check_login(context, username, 0, NULL, 0); 
   ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
   
   // now lets create some insanely big usernames and passwords
@@ -276,7 +285,8 @@ START_TEST(test_check_login_input_sanity){
   too_big_username[i]='\0'; // null terminate our string
   // and query for a login
 
-  error = pph_check_login(context, too_big_username, password);
+  error = pph_check_login(context, too_big_username, strlen(too_big_username),
+      password, strlen(password));
   ck_assert_msg(error == PPH_USERNAME_IS_TOO_LONG,
       "expected USERNAME_IS_TOO_LONG");
 
@@ -286,7 +296,8 @@ START_TEST(test_check_login_input_sanity){
   }
   too_big_password[i]='\0'; // null terminate our string
 
-  error=pph_check_login(context, username, too_big_password); 
+  error=pph_check_login(context, username, strlen(username),
+      too_big_password, strlen(too_big_password)); 
   ck_assert_msg(error == PPH_PASSWORD_IS_TOO_LONG,
       "expected PASSWORD_IS_TOO_LONG");
   
@@ -296,7 +307,8 @@ START_TEST(test_check_login_input_sanity){
                             // manually, remember, in this case
                             // partial bytes is also 0, that's why it must
                             // return such error.
-  error=pph_check_login(context,username,password);
+  error=pph_check_login(context,username,strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED,
      "expected CONTEXT_IS_LOCKED"); 
   
@@ -325,18 +337,21 @@ START_TEST(test_check_login_wrong_username){
       "this was a good initialization, go tell someone");
   
   // check with an unitialized userlist first
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "expected ACCOUNT_IS_INVALID");
 
   // add a single user and see how it behaves:
   //
   // 1) add a user
-  error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+  error = pph_create_account(context, anotheruser, strlen(anotheruser),
+      "anotherpassword", strlen("anotherpassword"), 1);
   ck_assert_msg(error == PPH_ERROR_OK, " this shouldn't have broken the test");
 
   // 2) ask for a user that's not here
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "expected ACCOUNT_IS_INVALID");
   
@@ -346,14 +361,16 @@ START_TEST(test_check_login_wrong_username){
   // 1) add a whole new bunch of users:
   for(i=1;i<9;i++){
     anotheruser[0] = i+48;
-    error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+    error = pph_create_account(context, anotheruser, strlen(anotheruser),
+        "anotherpassword",strlen("anotherpassword"), 1);
     ck_assert_msg(error == PPH_ERROR_OK,
         " this shouldn't have broken the test");
   }
 
 
   // 2) ask for a user that's not here
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "expected ACCOUNT_IS_INVALID");
   
@@ -385,11 +402,13 @@ START_TEST(test_check_login_wrong_password){
 
   // add a single user and see how it behaves:
   // 1) add a user
-  error = pph_create_account(context, username, "anotherpassword", 1);
+  error = pph_create_account(context, username, strlen(username),
+      "anotherpassword", strlen("anotherpassword"), 1);
   ck_assert_msg(error == PPH_ERROR_OK, " this shouldn't have broken the test");
 
   // 2) ask for it, providing wrong credentials
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password, 
+      strlen(password));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "expected ACCOUNT_IS_INVALID");
   
@@ -398,14 +417,16 @@ START_TEST(test_check_login_wrong_password){
   // 1) add a whole new bunch of users:
   for(i=1;i<9;i++){
     anotheruser[0] = i+48;
-    error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+    error = pph_create_account(context, anotheruser, strlen(anotheruser),
+        "anotherpassword", strlen("anotherpassword"), 1);
     ck_assert_msg(error == PPH_ERROR_OK,
         " this shouldn't have broken the test");
   }
 
 
   // 2) ask again, with the wrong password
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "expected ACCOUNT_IS_INVALID");
   
@@ -437,11 +458,13 @@ START_TEST(test_check_login_proper_data){
 
   // add a single user and see how it behaves:
   // 1) add a user
-  error = pph_create_account(context, username, password, 1);
+  error = pph_create_account(context, username, strlen(username), password,
+     strlen(password), 1);
   ck_assert_msg(error == PPH_ERROR_OK, " this shouldn't have broken the test");
 
   // 2) ask for it, providing correct credentials
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_ERROR_OK, 
       "expected OK");
   
@@ -450,14 +473,16 @@ START_TEST(test_check_login_proper_data){
   // 1) add a whole new bunch of users:
   for(i=1;i<9;i++){
     anotheruser[0] = i+48;
-    error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+    error = pph_create_account(context, anotheruser, strlen(anotheruser),
+        "anotherpassword", strlen("anotherpassword"), 1);
     ck_assert_msg(error == PPH_ERROR_OK,
         " this shouldn't have broken the test");
   }
 
 
   // 2) ask again, with the wrong password
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_ERROR_OK, 
       "expected ERROR_OK");
   
@@ -568,7 +593,8 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
   memcpy(secret,context->secret,DIGEST_LENGTH);
 
   for(i=0;i<username_count;i++){
-    pph_create_account(context,usernames[i],passwords[i],1);
+    pph_create_account(context,usernames[i], strlen(usernames[i]), passwords[i],
+          strlen(passwords[i]),1);
   }
 
   // let's imagine it's all broken
@@ -598,7 +624,8 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
 
   // and last but not least, create a superuser account and unlock it 
   // by himself
-  pph_create_account(context,"ipicklocks","ipickpockets",3);
+  pph_create_account(context,"ipicklocks", strlen("ipicklocks"),"ipickpockets",
+      strlen("ipickpockets"), 3);
   error = pph_unlock_password_data(context, 1 ,strdup("ipicklocks"),
       strdup("ipickpockets"));
   
@@ -705,7 +732,8 @@ START_TEST(test_pph_store_and_reload_with_users){
       "this was a good initialization, go tell someone");
   
   for(i=0;i<username_count;i++){
-    pph_create_account(context,usernames[i],passwords[i],1);
+    pph_create_account(context,usernames[i], strlen(usernames[i]),passwords[i],
+          strlen(passwords[i]),1);
   }
   
   // backup our secret

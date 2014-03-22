@@ -81,7 +81,8 @@ START_TEST(test_pph_create_accounts)
       "this was a good initialization, go tell someone");
   
   // sending bogus information to the create user function.
-  error = pph_create_account(context, username, password,0); // THL account. 
+  error = pph_create_account(context, username, strlen(username), password,
+      strlen(password), 0); // THL account. 
   
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
@@ -90,7 +91,8 @@ START_TEST(test_pph_create_accounts)
   ck_assert_str_eq(username,context->account_data->account.username);
 
   // now lets check there are colissions between thl and non thl accounts
-  error = pph_create_account(context, username, password,1);
+  error = pph_create_account(context, username, strlen(username), password,
+      strlen(password), 1);
 
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "We should've gotten an error since this account repeats");
@@ -101,8 +103,9 @@ START_TEST(test_pph_create_accounts)
                             // manually,
   context->AES_key = NULL;
   // we will check for the existing account error handler now...
-  error = pph_create_account(context, "someotherguy",
-      "came-here-asking-the-same-thing",0);
+  error = pph_create_account(context, "someotherguy", strlen("someotherguy"),
+   "came-here-asking-the-same-thing",strlen("came-here-asking-the-same-thing"),
+   0);
 
   ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED, 
       "We should've gotten an error now that the vault is locked");
@@ -143,7 +146,8 @@ START_TEST(test_create_account_mixed_accounts){
       "this was a good initialization, go tell someone");
   
   // sending bogus information to the create user function.
-  error = pph_create_account(context, username, password,0); // THL account. 
+  error = pph_create_account(context, username, strlen(username), password,
+      strlen(password), 0); // THL account. 
   
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
@@ -152,10 +156,12 @@ START_TEST(test_create_account_mixed_accounts){
   
   // now let's create a bunch of accounts with thresholds this time
 
-  error = pph_create_account(context, "johhnyjoe", "passwording",1);
+  error = pph_create_account(context, "johhnyjoe", strlen("johhnyjoe"),
+      "passwording", strlen("passwording"),1);
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
-  error = pph_create_account(context, "richardWalkins", "i'm-unreliable",5);
+  error = pph_create_account(context, "richardWalkins", strlen("richardWalkins"),
+      "i'm-unreliable",strlen("i'm-unreliable"),5);
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
   
@@ -188,11 +194,13 @@ START_TEST(test_check_login_thresholdless){
 
   // add a single user and see how it behaves:
   // 1) add a user
-  error = pph_create_account(context, username, password, 0);
+  error = pph_create_account(context, username, strlen(username), password,
+     strlen(password), 0);
   ck_assert_msg(error == PPH_ERROR_OK, " this shouldn't have broken the test");
 
   // 2) ask for it, providing correct credentials
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_ERROR_OK, 
       "expected OK");
   
@@ -200,7 +208,8 @@ START_TEST(test_check_login_thresholdless){
   // lets add a whole bunch of users and check for an existing one again
   // 1) add a whole new bunch of users:
   for(i=1;i<9;i++){
-    error = pph_create_account(context, anotheruser, "anotherpassword", 1);
+    error = pph_create_account(context, anotheruser, strlen(anotheruser),
+        "anotherpassword", strlen("anotherpassword"), 1);
     ck_assert_msg(error == PPH_ERROR_OK,
         " this shouldn't have broken the test");
     anotheruser[0] = i+48;
@@ -208,16 +217,19 @@ START_TEST(test_check_login_thresholdless){
 
 
   // 2) ask again, in a sea of admins :(
-  error = pph_check_login(context, username, password);
+  error = pph_check_login(context, username, strlen(username), password,
+      strlen(password));
   ck_assert_msg(error == PPH_ERROR_OK, 
       "expected ERROR_OK");
   
   // 3) ask one more time, mistyping our passwords
-  error = pph_check_login(context, username, "i'mnotthere");
+  error = pph_check_login(context, username, strlen(username), "i'mnotthere",
+      strlen("i'mnotthere"));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, " how did we get in!?");
 
   // 4) check if thresholdfull accounts can login (they should)
-  error = pph_check_login(context, "0anotheruser", "anotherpassword");
+  error = pph_check_login(context, "0anotheruser", strlen("0anotheruser"),
+      "anotherpassword", strlen("anotherpassword"));
   ck_assert_msg(error == PPH_ERROR_OK,
       " we should've been able to login as admin");
 
@@ -268,7 +280,8 @@ START_TEST(test_pph_partial_verification_and_unlock){
   // store the accounts
   //
   for(i=0;i<username_count;i++){
-    error = pph_create_account(context, usernames[i], passwords[i],1);
+    error = pph_create_account(context, usernames[i], strlen(usernames[i]),
+        passwords[i], strlen(passwords[i]),1);
     ck_assert(error == PPH_ERROR_OK);
   }
   //
@@ -280,11 +293,13 @@ START_TEST(test_pph_partial_verification_and_unlock){
   context->share_context= NULL;
 
   // now try to login properly with partial verification
-  error = pph_check_login(context, usernames[0], passwords[0]);
+  error = pph_check_login(context, usernames[0], strlen(usernames[0]), 
+        passwords[0], strlen(passwords[0]));
   ck_assert(error == PPH_ERROR_OK);
 
   // now let's see if we can try to login with a wrong password
-  error = pph_check_login(context, usernames[0], "wrongpass");
+  error = pph_check_login(context, usernames[0], strlen(usernames[0]),
+        "wrongpass", strlen("wrongpass"));
   ck_assert(error == PPH_ACCOUNT_IS_INVALID);
 
   // now give a wrongusername count, i.e. below the threshold.
@@ -332,7 +347,8 @@ START_TEST(test_pph_partial_verification_and_unlock){
 
   // for the sake of it, let's login with a correct account after the
   // secret was refubrished
-  error = pph_check_login(context, usernames_subset[0], password_subset[0]);
+  error = pph_check_login(context, usernames_subset[0], 
+      strlen(usernames_subset[0]),password_subset[0], strlen(password_subset[0]));
   ck_assert(error == PPH_ERROR_OK);
 
   pph_destroy_context(context);
