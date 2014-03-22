@@ -107,8 +107,6 @@ typedef struct _pph_context{
   uint8 *secret;                 // secret data, this is sent by the user
   uint8 partial_bytes;           // partial bytes, if 0, thresholdless is
                                  //   disabled
-  shamir_share* shares;          // this will point to a malloc'ed array of 
-                                 //  shares
   pph_account_node* account_data;// we will hold a reference to the account
                                  //  data in here
   uint8 next_entry;              // this allocates shares in a round-robin 

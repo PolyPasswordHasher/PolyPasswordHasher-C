@@ -114,7 +114,6 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 
   // initialize the rest
   context->next_entry=1;
-  context->shares=NULL;
   context->account_data=NULL;
 
 
@@ -192,9 +191,6 @@ PPH_ERROR pph_destroy_context(pph_context *context){
     free(context->secret);
   }
 
-  if(context->shares !=NULL){
-    free(context->shares);
-  }
 
   if(context->account_data != NULL){
     next = context->account_data;
@@ -843,7 +839,6 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   context_to_store.share_context = NULL;
   context_to_store.AES_key = NULL;
   context_to_store.secret = NULL;
-  context_to_store.shares = NULL;
   context_to_store.account_data = NULL;
   context_to_store.is_unlocked = 0; // by default, this is locked upon storage
   fwrite(&context_to_store,sizeof(context_to_store),1,fp); 
