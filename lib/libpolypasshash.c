@@ -40,15 +40,9 @@
 *     uint8 threshold:            he decided threshold for this specific
 *                                 password storage
 *
-*     const uint8 *secret:        the secret data provided to scramble the
-*                                 shamir secret share instance. The resulting
-*                                 structure won't make a copy of this.
-* 
-*     unsigned int secret_length: the length of the secret to use, should be 
-*                                 less than SHARE_LENGTH by preference
-*
-*      uint8 partial_bytes:       in case partial verification wants to be 
-*                                 disabled, a 0 will do
+*      uint8 partial_bytes:       The number of hashed-bytes to leak in order to
+*                                 perform partial verification. In case partial
+*                                 verification wants to be disabled, set to 0.
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -60,31 +54,25 @@
 *     Type:   pph_context         the resulting context or NULL if something 
 *                                 fails
 * PROCESS :
-*     TODO: THIS
+*   1) verify parameters are well formed
+*   2) allocate data structures
+*   3) generate a custom random secret
+*   4) initialize the rest of the values
+*   5) initialize the secret generator.
+*   7) return 
 *
 * CHANGES :
-*     TODO: 
+*     21/04/2014: secret is no longer a parameter
 */
-pph_context* pph_init_context(uint8 threshold, const uint8* secret,
-                              unsigned int secret_length, uint8 partial_bytes){
-  
+pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
+
   pph_context *context;
   unsigned char share_numbers[MAX_NUMBER_OF_SHARES];//this is a specific
                                                     //initialization constant.
   unsigned int i;
-  //CHECK ARGUMENT SANITY
-  // secret
-  if(secret == NULL){
-    return NULL;
-  }
+  // 1) CHECK ARGUMENT SANITY
   // threshold
   if(threshold==0){
-    return NULL;
-  }
-  // secret length
-  if(secret_length == 0 || secret_length > PASSWORD_LENGTH){//TODO: do we need
-                                                            // another constant
-                                                            // ?
     return NULL;
   }
 
@@ -92,8 +80,8 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
     return NULL;
   }
 
-  //INITIALIZE DATA STRUCTURE
-  // malloc
+  // 2)INITIALIZE DATA STRUCTURE
+  
   context = malloc(sizeof(*context));
   if(context == NULL){
     return NULL;
@@ -105,16 +93,33 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
   // initialize the partial bytes offset, this will be used to limit the
   // length of the shares, and the length of the digest to xor/encrypt
   context->partial_bytes=partial_bytes;
- 
-  // FIXME: secret should be a randomly generated stream of bytes.
+
+  // 3) generate random secret! 
   context->secret = NULL; //cue the paranoid parrot meme...
-  context->secret = calloc(sizeof(context->secret),SHARE_LENGTH-partial_bytes);
+  context->secret = malloc(sizeof(context->secret)*SHARE_LENGTH-partial_bytes);
   if(context->secret == NULL){
     free(context);
     return NULL;
   }
-  memcpy(context->secret,secret,sizeof(uint8)*secret_length);
-  context->secret[secret_length]='\0';
+  get_random_salt(SHARE_LENGTH-partial_bytes, context->secret);
+  // 4) Initialize the rest of the values
+  context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
+
+  // since this is a new context, it should be unlocked
+  context->is_unlocked = 1; 
+
+  // FIXME, the AES key should be, actually, the secret. 
+  //context->AES_key = generate_AES_key_from_context(context, DIGEST_LENGTH); 
+  context->AES_key = context->secret;
+
+  // initialize the rest
+  context->next_entry=1;
+  context->shares=NULL;
+  context->account_data=NULL;
+
+
+
+  // 5) Initialize share context
   for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
     share_numbers[i]=(unsigned char)i+1;
   }
@@ -127,27 +132,13 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
                                                  context->threshold,
                                                  SHARE_LENGTH-partial_bytes);
   if(context->share_context == NULL){
+    free(context->secret);
     free(context);
     return NULL;
   }
   gfshare_ctx_enc_setsecret(context->share_context, context->secret);
   
-
-  context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
-  
-  // since this is a new context, it should be unlocked
-  context->is_unlocked = 1; 
-
-  // FIXME, the AES key should be, actually, the secret. 
-  context->AES_key = generate_AES_key_from_context(context, DIGEST_LENGTH); 
-  
-
-  // initialize the rest
-  context->next_entry=1;
-  context->shares=NULL;
-  context->account_data=NULL;
-
-  // finish.
+  // finish, return our product
   return context;
 }
 
@@ -193,9 +184,9 @@ PPH_ERROR pph_destroy_context(pph_context *context){
   }
   
   // do child freeing.
-  if(context->AES_key != NULL){ // this is probably unnecessary as per the spec
-    free(context->AES_key);
-  }
+  //if(context->AES_key != NULL){ // this is probably unnecessary as per the spec
+    //free(context->AES_key);
+  //}
 
   if(context->secret !=NULL){
     free(context->secret);
@@ -713,8 +704,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_dec_newshares(G, share_numbers);
   if(ctx->secret == NULL){
     gfshare_ctx_dec_extract(G, secret);
-    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH);
-    memcpy(ctx->secret,secret,strlen(secret));
+    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH-ctx->partial_bytes);
+    memcpy(ctx->secret,secret,SHARE_LENGTH-ctx->partial_bytes);
   }else{
     gfshare_ctx_dec_extract(G,ctx->secret);
   }
@@ -729,7 +720,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   }
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   ctx->is_unlocked = 1;
-  ctx->AES_key = generate_AES_key_from_context(ctx, DIGEST_LENGTH);
+  //ctx->AES_key = generate_AES_key_from_context(ctx, DIGEST_LENGTH);
+  //
+  ctx->AES_key = ctx->secret;
   return PPH_ERROR_OK;
 }
 

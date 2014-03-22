@@ -127,14 +127,9 @@ typedef struct _pph_context{
 *     uint8 threshold:            he decided threshold for this specific
 *                                 password storage
 *
-*     const uint8 *secret:        the secret data provided to scramble the
-*                                 shamir secret share instance
-* 
-*     unsigned int secret_length: the length of the secret to use, should be 
-*                                 less than SHARE_LENGTH by preference
-*
-*      uint8 partial_bytes:       in case partial verification wants to be 
-*                                 disabled, a 0 will do
+*      uint8 partial_bytes:       The number of hashed-bytes to leak in order to
+*                                 perform partial verification. In case partial
+*                                 verification wants to be disabled, set to 0.
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -146,13 +141,17 @@ typedef struct _pph_context{
 *     Type:   pph_context         the resulting context or NULL if something 
 *                                 fails
 * PROCESS :
-*     TODO: THIS
+*   1) verify parameters are well formed
+*   2) allocate data structures
+*   3) generate a custom random secret
+*   4) initialize the rest of the values
+*   5) initialize the secret generator.
+*   7) return 
 *
 * CHANGES :
-*     TODO: 
+*     21/04/2014: secret is no longer a parameter
 */
-pph_context* pph_init_context(uint8 threshold, const uint8* secret,
-                              unsigned int secret_length, uint8 partial_bytes);
+pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes);
 
 
 /*******************************************************************
