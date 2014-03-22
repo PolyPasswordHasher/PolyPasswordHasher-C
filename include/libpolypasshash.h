@@ -68,12 +68,6 @@ typedef enum{
 /* structure definitions */
 // this might sound like little overkill, but it will help us keep the code
 // tidier
-typedef struct _shamir_share{
-  uint8 *data;                  // the data to hold
-  uint8 share_number;           // the share that corresponds to this data
-}shamir_share;
-
-
 typedef struct _pph_entry{
   uint8 share_number;           // the share number that belongs to this entry
   uint8 salt[SALT_LENGTH];      // the salt buffer to use 
