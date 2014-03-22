@@ -167,7 +167,7 @@ pph_context* pph_init_context(uint8 threshold, const uint8* secret,
 *
 * OUTPUTS :
 *   PARAMETERS:
-*     None
+*     pph_context *context: the context to free/destroy.    
 *     
 *   GLOBALS :
 *     None
