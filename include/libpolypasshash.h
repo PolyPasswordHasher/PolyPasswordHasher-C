@@ -84,6 +84,8 @@ typedef struct _pph_entry{
 
 typedef struct _pph_account{
   unsigned char username[USERNAME_LENGTH]; // the username...
+  unsigned int username_length;
+  unsigned int password_length;
   uint8 number_of_entries;                 // the entries for this user
   pph_entry *entries;                      // a pointer to entries of this acc
 }pph_account;
@@ -198,15 +200,24 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 *
 * INPUTS :
 *   PARAMETERS:
-*     pph_context *ctx:      This is the context in which the account wiil be 
-*                            created
+*     pph_context *ctx:                   This is the context in which the
+*                                         account wiil be created
 *     
-*     const uint8 *username: This is the desired username for the new entry
+*     const uint8 *username:              This is the desired username for the
+*                                         new entry
 *
-*     const uint8 *password: This is the password for the new entry
+*     const unsigned int username_length: the length of the username field,
+*                                         this value should not exceed 
+*                                         USERNAME_LENGTH.
 *
-*     uint8 shares:          This is the shares we decide to allocate to this
-*                            new account. 
+*     const uint8 *password:              This is the password for the new entry
+*
+*     const unsgned int password_length:  The length of the password field, this
+*                                         value should not exceed 
+*                                         PASSWORD_LENGTH
+*
+*     uint8 shares:                       This is the amount of shares we decide 
+*                                         to allocate to this new account. 
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -216,17 +227,40 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 *   
 *   RETURN :
 *     Type: int PPH_ERROR     
-*           Values:        When:
-*           TODO: THIS              
-*           
+*           Values:                       When:
+*             PPH_ERROR_OK                 The credentials provided are correct
+*             
+*             PPH_BAD_PTR                  One of the fields is unallocated
+*
+*             PPH_ERROR_UNKNOWN            When something unexpected happens.
+*
+*             PPH_NO_MEM                   If malloc, calloc fails.
+*
+*             PPH_USERNAME_IS_TOO_LONG     When that happens
+*
+*             PPH_PASSWORD_IS_TOO_LONG     The same thing
+*
+*             PPH_CONTEXT_IS_LOCKED        When the context is locked and, hence
+*                                          he cannot create accounts
+*
+*             PPH_ACCOUNT_IS_INVALID       If the username provided already 
+*                                          exists
+*
 * PROCESS :
-*     TODO: THIS
+*     1) Check for data sanity, and return errors
+*     2) Check the type of account requested
+*     3) Allocate a share/digest entry for the accound
+*     4) Initialize the account data with the information provided
+*     5) Update the context information regarding the new account
+*     6) return
 *
 * CHANGES :
-*     TODO: 
+*   Added support for different length accounts
 */
 PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
-                        const uint8 *password, uint8 shares);
+                        const unsigned int username_length, 
+                        const uint8 *password, 
+                        const unsigned int password_length, uint8 shares);
 
 
 /*******************************************************************
@@ -241,7 +275,11 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *
 *     const char *username: The username attempt
 *
+*     unsigned int username_length: The length of the username field
+*
 *     const char *password: The password attempt
+*
+*     unsigned int password_length: the length of the password field
 *
 * OUTPUTS :
 *   PARAMETERS:
@@ -264,13 +302,19 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *           PPH_ERROR_UNKNOWN                 anytime else
 *           
 * PROCESS :
-*     TODO: THIS
+*     1) Sanitize data and return errors
+*     2) try to find username in the context
+*     3) if found, decide how to verify his information based on the status
+*         of the context (thresholdless, partial verif, etc.)
+*     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
-*     TODO: 
+*  (21/04/2014): Added support for non-null-terminated usernames and passwords.
 */
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
-                                                const char *password);
+                          unsigned int username_length, const char *password,
+                          unsigned int password_length);
+
 
 
 /*******************************************************************
@@ -454,14 +498,15 @@ inline void _xor_share_with_digest(uint8 *result, uint8 *share,
 
 // we will make an inline of the hash calculation, since it is done in many
 // places and looks too messy
-inline void _calculate_digest(uint8 *digest, const uint8 *password){
+inline void _calculate_digest(uint8 *digest, const uint8 *password,
+    unsigned int length){
   EVP_MD_CTX mctx;
 
   EVP_MD_CTX_init(&mctx);
   EVP_DigestInit_ex(&mctx, EVP_sha256(), NULL); //todo, we should make this
                                                 // configurable through a
                                                 // autoconf flag/define
-  EVP_DigestUpdate(&mctx, password, SALT_LENGTH+ strlen(password+SALT_LENGTH));
+  EVP_DigestUpdate(&mctx, password, length);
   EVP_DigestFinal_ex(&mctx,  digest, 0);
   EVP_MD_CTX_cleanup(&mctx);
 

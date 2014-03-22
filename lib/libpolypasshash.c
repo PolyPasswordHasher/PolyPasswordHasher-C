@@ -217,7 +217,6 @@ PPH_ERROR pph_destroy_context(pph_context *context){
   return error;
 }
 
-
 /*******************************************************************
 * NAME :            pph_create_account
 *
@@ -227,15 +226,24 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 *
 * INPUTS :
 *   PARAMETERS:
-*     pph_context *ctx:      This is the context in which the account wiil be 
-*                            created
+*     pph_context *ctx:                   This is the context in which the
+*                                         account wiil be created
 *     
-*     const uint8 *username: This is the desired username for the new entry
+*     const uint8 *username:              This is the desired username for the
+*                                         new entry
 *
-*     const uint8 *password: This is the password for the new entry
+*     const unsigned int username_length: the length of the username field,
+*                                         this value should not exceed 
+*                                         USERNAME_LENGTH.
 *
-*     uint8 shares:          This is the shares we decide to allocate to this
-*                            new account. 
+*     const uint8 *password:              This is the password for the new entry
+*
+*     const unsgned int password_length:  The length of the password field, this
+*                                         value should not exceed 
+*                                         PASSWORD_LENGTH
+*
+*     uint8 shares:                       This is the amount of shares we decide 
+*                                         to allocate to this new account. 
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -245,18 +253,41 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 *   
 *   RETURN :
 *     Type: int PPH_ERROR     
-*           Values:        When:
-*           TODO: THIS              
-*           
+*           Values:                       When:
+*             PPH_ERROR_OK                 The credentials provided are correct
+*             
+*             PPH_BAD_PTR                  One of the fields is unallocated
+*
+*             PPH_ERROR_UNKNOWN            When something unexpected happens.
+*
+*             PPH_NO_MEM                   If malloc, calloc fails.
+*
+*             PPH_USERNAME_IS_TOO_LONG     When that happens
+*
+*             PPH_PASSWORD_IS_TOO_LONG     The same thing
+*
+*             PPH_CONTEXT_IS_LOCKED        When the context is locked and, hence
+*                                          he cannot create accounts
+*
+*             PPH_ACCOUNT_IS_INVALID       If the username provided already 
+*                                          exists
+*
+*
 * PROCESS :
-*     TODO: THIS
+*     1) Check for data sanity, and return errors
+*     2) Check the type of account requested
+*     3) Allocate a share/digest entry for the accound
+*     4) Initialize the account data with the information provided
+*     5) Update the context information regarding the new account
+*     6) return
 *
 * CHANGES :
-*     TODO: 
+*   Added support for different length accounts
 */
 PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
-                        const uint8 *password, uint8 shares){
-  
+                        const unsigned int username_length, 
+                        const uint8 *password, 
+                        const unsigned int password_length, uint8 shares){
   pph_account_node *node,*next;
   unsigned int length;
   unsigned int i;
@@ -269,16 +300,14 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   EVP_CIPHER_CTX en_ctx;
   size_t c_len,f_len;
   
-  // SANITIZE INFORMATION
+  // 1) SANITIZE INFORMATION
   //
   // check password length
-  length = strlen(password);
-  if(length > PASSWORD_LENGTH-1){
+  if(password_length > PASSWORD_LENGTH-1){
     return PPH_PASSWORD_IS_TOO_LONG;
   }
   // check username length
-  length = strlen(username);
-  if(length > USERNAME_LENGTH-1){
+  if(username_length > USERNAME_LENGTH-1){
     return PPH_USERNAME_IS_TOO_LONG;
   }
   // check share numbers
@@ -301,7 +330,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   while(next!=NULL){
     node=next;
     next=next->next;
-    if(!strcmp(node->account.username,username)){
+    if(!memcmp(node->account.username,username,username_length)){
       return PPH_ACCOUNT_IS_INVALID;
     }
   }
@@ -329,9 +358,10 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // memcpy in case this function requires it.
     get_random_salt(SALT_LENGTH, entry_node->salt);
     memcpy(salted_password,entry_node->salt,SALT_LENGTH);
-    memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); //FIXME: use a pw length parameter
+    memcpy(salted_password+SALT_LENGTH, password, password_length);
     //sprintf(salted_password,"%s%s",entry_node->salt, password);
-    _calculate_digest(entry_node->hashed_value, salted_password);
+    _calculate_digest(entry_node->hashed_value, salted_password,
+        SALT_LENGTH + password_length);
     
     // xor the whole thing, we do this in an unsigned int fashion imagining 
     // this is where usually where the processor aligns things and is, hence
@@ -354,9 +384,10 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // generate the digest
     get_random_salt(SALT_LENGTH, entry_node->salt);
     memcpy(salted_password,entry_node->salt,SALT_LENGTH);
-    memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); //FIXME: use a pw length parameter
+    memcpy(salted_password+SALT_LENGTH, password, password_length); //FIXME: use a pw length parameter
     //sprintf(salted_password,"%s%s",entry_node->salt,password);
-    _calculate_digest(resulting_hash,salted_password); 
+    _calculate_digest(resulting_hash,salted_password, 
+        SALT_LENGTH + password_length); 
 
     // encrypt the digest
     EVP_CIPHER_CTX_init(&en_ctx);
@@ -387,9 +418,11 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     return PPH_NO_MEM;
   }
   // fill username information
-  strncpy(node->account.username,username,USERNAME_LENGTH);
+  memcpy(node->account.username,username,username_length);
   node->account.number_of_entries = shares;
-  node->account.entries = entry_node; 
+  node->account.username_length = username_length;
+  node->account.password_length = password_length;
+  node->account.entries = entry_node;
 
   // append it to the context list.
   node->next = ctx->account_data;
@@ -412,7 +445,11 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *
 *     const char *username: The username attempt
 *
+*     unsigned int username_length: The length of the username field
+*
 *     const char *password: The password attempt
+*
+*     unsigned int password_length: the length of the password field
 *
 * OUTPUTS :
 *   PARAMETERS:
@@ -435,13 +472,19 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *           PPH_ERROR_UNKNOWN                 anytime else
 *           
 * PROCESS :
-*     TODO: THIS
+*     1) Sanitize data and return errors
+*     2) try to find username in the context
+*     3) if found, decide how to verify his information based on the status
+*         of the context (thresholdless, partial verif, etc.)
+*     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
-*     TODO: 
+*  (21/04/2014): Added support for non-null-terminated usernames and passwords.
 */
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
-                                                const char *password){
+                          unsigned int username_length, const char *password,
+                          unsigned int password_length){
+
   pph_account_node *target = NULL; // this will, ideally, point to target 
                                    //   username
   uint8 share_data[SHARE_LENGTH];  // this is a buffer to store the current 
@@ -464,12 +507,12 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
   // if the length is too long for either field, return proper error, we
   // are substracting the null character as it is not included in the check
-  if(strlen(username) > USERNAME_LENGTH-1){
+  if(username_length > USERNAME_LENGTH-1){
     return PPH_USERNAME_IS_TOO_LONG;
   }
   
   // do the same for the password
-  if(strlen(password) > PASSWORD_LENGTH-1){
+  if(password_length > PASSWORD_LENGTH-1){
     return PPH_PASSWORD_IS_TOO_LONG;
   }
 
@@ -481,7 +524,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // search for our user
   search = ctx->account_data;
   while(search!=NULL){
-    if(!strncmp(search->account.username,username,USERNAME_LENGTH)){
+    if(!memcmp(search->account.username,username,username_length)){
       target = search;
     }
     search=search->next;
@@ -505,9 +548,11 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
    // we should:
    // 1) calculate the proposed digest
    memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
-   memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); //FIXME: use a pw length parameter
+   memcpy(salted_password+SALT_LENGTH, password,
+       target->account.password_length); 
    // sprintf(salted_password,"%s%s",target->account.entries->salt,password);
-   _calculate_digest(resulting_hash, salted_password);
+   _calculate_digest(resulting_hash, salted_password, 
+       SALT_LENGTH + password_length);
    
    // 2) only compare the bytes that are not obscured.
    for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
@@ -540,10 +585,10 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
         // 2) calculate the proposed digest with the salt.
         //sprintf(salted_password,"%s%s",target->account.entries->salt,password);
         memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
-        memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); 
-                      //FIXME: use a pw length parameter
+        memcpy(salted_password+SALT_LENGTH, password, password_length); 
         
-        _calculate_digest(resulting_hash, salted_password);
+        _calculate_digest(resulting_hash, salted_password, 
+            SALT_LENGTH + password_length);
 
         
         // 3) compare the hashes....
@@ -567,8 +612,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       // calculate the proposed digest with the salt.
       //sprintf(salted_password,"%s%s",target->account.entries->salt,password);
       memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
-      memcpy(salted_password+SALT_LENGTH, password, strlen(password)+1); //FIXME: use a pw length parameter
-      _calculate_digest(resulting_hash, salted_password);
+      memcpy(salted_password+SALT_LENGTH, password, password_length); 
+      _calculate_digest(resulting_hash, salted_password, 
+          SALT_LENGTH + password_length);
 
       // xor the thing back to normal
       _xor_share_with_digest(xored_hash,target->account.entries->hashed_value,
@@ -675,7 +721,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     // check if our users lies inside this 
     // TODO: do this faster
     for(i = 0; i<username_count;i++){
-      if(!strcmp(usernames[i],current_user->account.username)){
+      if(!memcmp(usernames[i],current_user->account.username,
+            current_user->account.username_length)){
         // this is an existing user and counts towards the threshold
         // give all of it's calculated shares to libgfshare...
         entry = current_user->account.entries;
@@ -684,11 +731,12 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
             // calulate the share
             memcpy(salted_password,entry->salt,SALT_LENGTH);
             memcpy(salted_password+SALT_LENGTH, passwords[i],
-                strlen(passwords[i])+1); //FIXME: use a pw length parameter
+                current_user->account.password_length);
             //sprintf(salted_password,"%s%s",entry->salt,passwords[i]);
-            _calculate_digest(estimated_digest,salted_password);
+            _calculate_digest(estimated_digest,salted_password,
+                SALT_LENGTH + current_user->account.password_length);
             _xor_share_with_digest(estimated_share,entry->hashed_value,
-                estimated_digest,SHARE_LENGTH);
+                estimated_digest,SHARE_LENGTH-ctx->partial_bytes);
          
             // give share to recombine
             share_numbers[entry->share_number] = entry->share_number+1;
