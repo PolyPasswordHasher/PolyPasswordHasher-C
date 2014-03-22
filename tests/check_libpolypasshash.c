@@ -22,69 +22,14 @@ START_TEST(test_pph_init_context_wrong_threshold)
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 0; // this is, obviously, the only wrong threshold value
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret);
+                              
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
-                          // suite
                           
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold, partial_bytes);
 
   ck_assert_msg(context == NULL,
       "the context returned upon a wrong threshold value should be NULL");
   
-}
-END_TEST
-
-// the only possble method we have to discern whether the lentgth for the pass-
-// word is wrong, is through the defined constant PASSWORD-LENGTH and 0, we 
-// will expect to get a NULL with both checks (if bigger than or shorter than)
-START_TEST(test_pph_init_context_wrong_secret_length)
-{
-  // a placeholder for the result.
-  pph_context *context;
-  uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = PASSWORD_LENGTH+1; //wooops
-  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
-                          // suite
-                          
-  context = pph_init_context(threshold, secret, length, partial_bytes);
-
-  ck_assert_msg(context == NULL,
-      "the context returned upon a wrong length value should be NULL");
-  
-  
-  length = 0;
-    
-  context = pph_init_context(threshold, secret, length, partial_bytes);
-  
-  ck_assert_msg(context == NULL,
-      "the context returned upon a 0 length value should be NULL");
-  
-}
-END_TEST
-
-// in this case, we mistakenly give a wrong pointer for the secret message
-// we should get an unitialized context.
-START_TEST(test_pph_init_context_wrong_secret_pointer)
-{
-  // a placeholder for the result.
-  pph_context *context;
-  uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
-  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
-                          // suite
-                          
-
-  context = pph_init_context(threshold, NULL /*woops*/, length, partial_bytes);
-
-  ck_assert_msg(context == NULL,
-      "the context returned upon a wrong length value should be NULL");
- 
 }
 END_TEST
 
@@ -95,14 +40,11 @@ START_TEST(test_pph_init_context_no_partial_bytes)
   pph_context *context;
   PPH_ERROR error;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold,partial_bytes);
 
   ck_assert_msg(context != NULL, "this was a good initialization");
   
@@ -131,9 +73,6 @@ START_TEST(test_create_account_usernames){
   pph_context *context;
   PPH_ERROR error;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
   
@@ -146,7 +85,7 @@ START_TEST(test_create_account_usernames){
   username[USERNAME_LENGTH] = '\0';
 
   // initialize a correct context from scratch
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold,partial_bytes);
   
   // sending bogus information to the create user function.
   error = pph_create_account(context, username, "yessir,verysecure", 1);
@@ -169,16 +108,13 @@ START_TEST(test_create_account_passwords){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
   unsigned char password[PASSWORD_LENGTH+1];
   unsigned int i;
  
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold, partial_bytes);
 
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
@@ -219,17 +155,14 @@ START_TEST(test_create_account_entry_consistency){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
   unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x','x',
-                                     'x','x','x','x','x','x','v','e','r','y',
-                                     's','e','c','u','r','e','\0'};
+                                     'x','x','x','x','x','x','x','v','e','r',
+                                     'y','s','e','c','u','r','e','\0'};
   // this is the calculated hash for the password without salt using 
   // an external tool
   uint8 password_digest[DIGEST_LENGTH]; 
@@ -240,7 +173,7 @@ START_TEST(test_create_account_entry_consistency){
   uint8 *digest_result;
   uint8 share_result[SHARE_LENGTH];
 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold, partial_bytes);
 
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
@@ -257,7 +190,7 @@ START_TEST(test_create_account_entry_consistency){
   // now lets check we can take the digest back from the death... I mean
   // share
   memcpy(salted_password,context->account_data->account.entries->salt,
-      SALT_LENGTH-1);
+      SALT_LENGTH);
   _calculate_digest(password_digest, salted_password);
   digest_result=context->account_data->account.entries->hashed_value;
 
@@ -311,9 +244,6 @@ START_TEST(test_check_login_input_sanity){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
@@ -329,7 +259,7 @@ START_TEST(test_check_login_input_sanity){
   ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
 
   // we will send a wrong username pointer now
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold, partial_bytes);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   error = pph_check_login(context, NULL, password);
@@ -381,9 +311,6 @@ START_TEST(test_check_login_wrong_username){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
@@ -393,7 +320,7 @@ START_TEST(test_check_login_wrong_username){
   unsigned int i;
 
   // setup the context 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold,partial_bytes);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -442,9 +369,6 @@ START_TEST(test_check_login_wrong_password){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
@@ -454,7 +378,7 @@ START_TEST(test_check_login_wrong_password){
   unsigned int i;
 
   // setup the context 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold,partial_bytes);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -497,9 +421,6 @@ START_TEST(test_check_login_proper_data){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
@@ -509,7 +430,7 @@ START_TEST(test_check_login_proper_data){
   unsigned int i;
 
   // setup the context 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold,partial_bytes);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -551,9 +472,6 @@ START_TEST(test_pph_unlock_password_data_input_sanity){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
@@ -577,7 +495,7 @@ START_TEST(test_pph_unlock_password_data_input_sanity){
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold, partial_bytes);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -614,14 +532,13 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
   unsigned int i;
   unsigned int username_count=5;
+  uint8 secret[DIGEST_LENGTH];
+
   const uint8 *usernames[] = {"username1",
                               "username12",
                               "username1231",
@@ -643,10 +560,13 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
                                     "password26"};
 
   // setup the context 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold,partial_bytes);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
+  //backup the secret
+  memcpy(secret,context->secret,DIGEST_LENGTH);
+
   for(i=0;i<username_count;i++){
     pph_create_account(context,usernames[i],passwords[i],1);
   }
@@ -659,7 +579,9 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
   // back. 
   error = pph_unlock_password_data(context, username_count, usernames,
       passwords);
-  ck_assert_str_eq(secret, context->secret);
+  for(i=0;i<DIGEST_LENGTH;i++){
+    ck_assert(secret[i] ==  context->secret[i]);
+  }
 
   // let's imagine it's all broken (Again)
   context->is_unlocked = 0;
@@ -669,15 +591,22 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
   // back. 
   error = pph_unlock_password_data(context, 2, usernames_subset,
       password_subset);
-  ck_assert_str_eq(secret, context->secret);
+  for(i=0;i<DIGEST_LENGTH;i++){
+    ck_assert(secret[i] ==  context->secret[i]);
+  }
+
 
   // and last but not least, create a superuser account and unlock it 
   // by himself
   pph_create_account(context,"ipicklocks","ipickpockets",3);
   error = pph_unlock_password_data(context, 1 ,strdup("ipicklocks"),
       strdup("ipickpockets"));
-  ck_assert_str_eq(secret, context->secret);
- 
+  
+  for(i=0;i<DIGEST_LENGTH;i++){
+    ck_assert(secret[i] ==  context->secret[i]);
+  }
+
+
   // clean up our mess
   pph_destroy_context(context);
 }
@@ -690,9 +619,6 @@ START_TEST(test_pph_store_context_input_sanity){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
@@ -701,7 +627,7 @@ START_TEST(test_pph_store_context_input_sanity){
   error = pph_store_context(NULL,"pph.db");
   ck_assert_msg(error == PPH_BAD_PTR, " expected BAD_PTR");
 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold, partial_bytes);
   
   error = pph_store_context(context, NULL);
   ck_assert_msg(error == PPH_BAD_PTR, " expected BAD_PTR");
@@ -718,9 +644,6 @@ START_TEST(test_pph_reload_context_input_sanity){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
@@ -751,12 +674,9 @@ START_TEST(test_pph_store_and_reload_with_users){
   // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
-  uint8 *secret = "secretstring";// this is not necesarilly a string, but will
-                                 // work for demonstration purposes
-  unsigned int length = strlen(secret); // this is good and valid
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
-                          
+  uint8 secret[DIGEST_LENGTH]; 
   unsigned int i;
   unsigned int username_count=5;
   const uint8 *usernames[] = {"username1",
@@ -780,20 +700,24 @@ START_TEST(test_pph_store_and_reload_with_users){
                                     "password26"};
 
   // setup the context 
-  context = pph_init_context(threshold, secret, length, partial_bytes);
+  context = pph_init_context(threshold, partial_bytes);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
   for(i=0;i<username_count;i++){
     pph_create_account(context,usernames[i],passwords[i],1);
   }
+  
+  // backup our secret
+  memcpy(secret,context->secret,DIGEST_LENGTH);
 
   // let's store our data!
   error = pph_store_context(context,"pph.db");
   ck_assert_msg(error == PPH_ERROR_OK, " couldn't store a ctx with users");
-
+  
 
   pph_destroy_context(context); // we will reload it now...
+
 
   context = pph_reload_context("pph.db");
   ck_assert_msg(context != NULL, " all is fine, so far...");
@@ -803,7 +727,9 @@ START_TEST(test_pph_store_and_reload_with_users){
   user_nodes = context->account_data;
   error = pph_unlock_password_data(context, username_count, usernames,
       passwords);
-  ck_assert_str_eq(secret, context->secret);
+  for(i=0;i<DIGEST_LENGTH;i++){
+    ck_assert(secret[i]==context->secret[i]);
+  }
 
   // clean up our mess
   pph_destroy_context(context);
@@ -816,10 +742,11 @@ START_TEST(test_pph_store_and_reload_with_users){
   // back. 
   error = pph_unlock_password_data(context, 2, usernames_subset,
         password_subset);
+  for(i=0;i<DIGEST_LENGTH;i++){
+    ck_assert(secret[i]==context->secret[i]);
+  }
 
-  ck_assert_str_eq(secret, context->secret);
-
-
+  pph_destroy_context(context);
 }
 END_TEST
 
@@ -833,8 +760,6 @@ Suite * polypasshash_suite(void)
   /* no partial bytes case */
   TCase *tc_non_partial = tcase_create ("non-partial");
   tcase_add_test (tc_non_partial,test_pph_init_context_wrong_threshold);
-  tcase_add_test (tc_non_partial,test_pph_init_context_wrong_secret_length);
-  tcase_add_test (tc_non_partial,test_pph_init_context_wrong_secret_pointer);
   tcase_add_test (tc_non_partial,test_pph_init_context_no_partial_bytes);
   
   // creating an account 
