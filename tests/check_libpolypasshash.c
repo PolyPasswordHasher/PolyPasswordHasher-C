@@ -1,4 +1,4 @@
-/* Check shamir suite
+/* Check libpolypasshash core, no thresholdless accounts and no partial bytes 
  *
  * This suite is designed to test the functionalities of the libshamir
  * module. 
@@ -16,7 +16,6 @@
 
 // we test in the core functionality to avoid a threshold of 0, which
 // is the only non possible value (everyting bigger would roll over)
-// TODO: evaluate if using a uint8 for threshold is good enough. 
 START_TEST(test_pph_init_context_wrong_threshold)
 { 
   // a placeholder for the result.
@@ -33,7 +32,7 @@ START_TEST(test_pph_init_context_wrong_threshold)
 }
 END_TEST
 
-
+// Test an initialization with proper values, asking for 0 partial bytes.
 START_TEST(test_pph_init_context_no_partial_bytes)
 {
   // a placeholder for the result.
@@ -54,6 +53,7 @@ START_TEST(test_pph_init_context_no_partial_bytes)
       "the free function didn't work properly");
 }
 END_TEST
+
 
 // We intend to use it to check the correct parsing of the context values
 START_TEST(test_create_account_context){
@@ -141,6 +141,7 @@ START_TEST(test_create_account_passwords){
 
 }
 END_TEST
+
 // this test is intended to check the correct sanity check on the sharenumber
 // field
 START_TEST(test_create_account_sharenumbers){
@@ -149,8 +150,12 @@ START_TEST(test_create_account_sharenumbers){
   // this ever changes...
   }
 END_TEST
+
+
 // this test is intended to check that a correct account structure is 
-// producted (i.e. hash, etc.)
+// producted, we check the expected hash matches and that we have a two-way
+// flow. In other words, that we can derive the hash from the xored hash and 
+// vice versa
 START_TEST(test_create_account_entry_consistency){
   PPH_ERROR error;
 
@@ -162,15 +167,14 @@ START_TEST(test_create_account_entry_consistency){
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
+  
+  // We don't know the salt yet, but we know the password value, upon creating
+  // the account, we will replace those x's with the salt values. 
   unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x','x',
                                      'x','x','x','x','x','x','x','v','e','r',
                                      'y','s','e','c','u','r','e','\0'};
-  // this is the calculated hash for the password without salt using 
-  // an external tool
   uint8 password_digest[DIGEST_LENGTH]; 
                            
-                          
-                         
   unsigned int i;
   uint8 *digest_result;
   uint8 share_result[SHARE_LENGTH];
@@ -186,14 +190,13 @@ START_TEST(test_create_account_entry_consistency){
   
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
-  
-  context->account_data->account.username[strlen(username)]='\0'; // this makes
-                                                                  // it easy
-                                                                  // to cmp
+ 
+  // we do this because we assume the username here is a normal string, but 
+  // with other circumstances, we can't assume this.  
+  context->account_data->account.username[strlen(username)]='\0'; 
   ck_assert_str_eq(username,context->account_data->account.username);
 
-  // now lets check we can take the digest back from the death... I mean
-  // share
+  // now lets check we can take the digest back from the share
   memcpy(salted_password,context->account_data->account.entries->salt,
       SALT_LENGTH);
   _calculate_digest(password_digest, salted_password, 
@@ -249,7 +252,6 @@ END_TEST
 START_TEST(test_check_login_input_sanity){
   PPH_ERROR error;
 
-  // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
@@ -383,7 +385,6 @@ END_TEST
 START_TEST(test_check_login_wrong_password){
   PPH_ERROR error;
 
-  // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
@@ -490,11 +491,12 @@ START_TEST(test_check_login_proper_data){
 }
 END_TEST
 
-// shamir recombination procedure test cases
+////////// shamir recombination and persistent storage test cases. //////////
+
+// this checks that the unlock password data correctly parses input.
 START_TEST(test_pph_unlock_password_data_input_sanity){
   PPH_ERROR error;
 
-  // a placeholder for the result.
   pph_context *context;
   uint8 threshold = 2; // we have a correct threshold value for this testcase 
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
@@ -551,6 +553,8 @@ START_TEST(test_pph_unlock_password_data_input_sanity){
 }
 END_TEST
 
+// we check that the unlock password data cannot unlock the valut provided w
+// wrong information. 
 START_TEST(test_pph_unlock_password_data_correct_thresholds){
   PPH_ERROR error;
 
@@ -695,6 +699,8 @@ START_TEST(test_pph_reload_context_input_sanity){
 
 }END_TEST
 
+// do a full lifecycle test, in other words, create a context with accounts, 
+// store it, reload it, unlock it and provide login and creation service. 
 START_TEST(test_pph_store_and_reload_with_users){
   PPH_ERROR error;
 

@@ -1,4 +1,4 @@
-/* Check shamir suite
+/* Check libpolypasshash with partial bytes. 
  *
  * This suite is designed to test the functionalities of the libshamir
  * module. 
@@ -13,8 +13,8 @@
 #include<stdlib.h>
 #include<strings.h>
 
-// We tests that a correst AES key is generated during the init_context 
-// function
+// we test that init context will provide a correct value with the partial 
+// bytes value set to something different than 0
 START_TEST(test_pph_init_context_AES_key)
 { 
   pph_context *context; // the context to instantiate
@@ -25,12 +25,13 @@ START_TEST(test_pph_init_context_AES_key)
 
   ck_assert_msg( context != NULL, " couldn't initialize the pph context" );
   ck_assert_msg( context->AES_key != NULL, "the key wansn't generated properly");
+  ck_assert_msg( context->partial_bytes == partial_bytes,
+      "didn't set partial bytes properly");
 
 }
 END_TEST
 
-// this might be overchecking, but we want to make sure it destroy the AES key
-// properly. TODO: consider if the key should be zeroed out before releasing
+// we check that destroy context is working too. This shouldn't be a problem.
 START_TEST(test_pph_destroy_context_AES_key)
 {
   // a placeholder for the result.
@@ -44,7 +45,6 @@ START_TEST(test_pph_destroy_context_AES_key)
   context = pph_init_context(threshold, partial_bytes);
 
   ck_assert_msg(context != NULL, " shouldn't break here");
-  ck_assert_msg(context->AES_key != NULL, " the key wasn't generated properly");
 
   error = pph_destroy_context(context);
   ck_assert(error == PPH_ERROR_OK); 
@@ -52,7 +52,8 @@ START_TEST(test_pph_destroy_context_AES_key)
 }
 END_TEST
 
-// We will test some account creation now...
+// We will test some account creation with thresholdless accounts and partial
+// bytes.
 START_TEST(test_pph_create_accounts)
 {
   PPH_ERROR error;
@@ -65,15 +66,10 @@ START_TEST(test_pph_create_accounts)
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
-  unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x','x',
-                                     'x','x','x','x','x','x','v','e','r','y',
-                                     's','e','c','u','r','e','\0'};
   // this is the calculated hash for the password without salt using 
   // an external tool
   uint8 password_digest[DIGEST_LENGTH]; 
   unsigned int i;
-  uint8 *digest_result;
-  uint8 share_result[SHARE_LENGTH];
 
   context = pph_init_context(threshold, partial_bytes);
 
@@ -117,8 +113,8 @@ START_TEST(test_pph_create_accounts)
 }
 END_TEST
 
-// this test is intended to check that the linked list is correctly created,
-// checks for correct number of entries and username collisions
+// We check for both, thresholdless accounts and threshold accounts under 
+// partial bytes setup.
 START_TEST(test_create_account_mixed_accounts){
   PPH_ERROR error;
 
@@ -130,32 +126,21 @@ START_TEST(test_create_account_mixed_accounts){
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
-  unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x','x',
-                                     'x','x','x','x','x','x','v','e','r','y',
-                                     's','e','c','u','r','e','\0'};
-  // this is the calculated hash for the password without salt using 
-  // an external tool
-  uint8 password_digest[DIGEST_LENGTH]; 
-  unsigned int i;
-  uint8 *digest_result;
-  uint8 share_result[SHARE_LENGTH];
-
+  
+  // init the context, this should work since we already made a test for it.
   context = pph_init_context(threshold, partial_bytes);
-
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  // sending bogus information to the create user function.
+  // create a thresholdless account.
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 0); // THL account. 
-  
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
-  
+  // check that we get a valid username for this. 
   ck_assert_str_eq(username,context->account_data->account.username);
   
   // now let's create a bunch of accounts with thresholds this time
-
   error = pph_create_account(context, "johhnyjoe", strlen("johhnyjoe"),
       "passwording", strlen("passwording"),1);
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -238,7 +223,9 @@ START_TEST(test_check_login_thresholdless){
 }
 END_TEST
 
-// shamir recombination procedure test cases, we should get out key back!
+// we test partial verification, we use a seemingly locked context and try to
+// login. We don't care if the account is thresholdless or threshold, since
+// we only check for the leaked partial bytes. 
 START_TEST(test_pph_partial_verification_and_unlock){
   PPH_ERROR error;
 
@@ -284,8 +271,7 @@ START_TEST(test_pph_partial_verification_and_unlock){
         passwords[i], strlen(passwords[i]),1);
     ck_assert(error == PPH_ERROR_OK);
   }
-  //
-  //
+  
   // let's pretend all is broken
   context->is_unlocked =0;
   context->AES_key = NULL;
@@ -297,7 +283,7 @@ START_TEST(test_pph_partial_verification_and_unlock){
         passwords[0], strlen(passwords[0]));
   ck_assert(error == PPH_ERROR_OK);
 
-  // now let's see if we can try to login with a wrong password
+  // now let's see if we can try to login with a wrong password, we shouldn't
   error = pph_check_login(context, usernames[0], strlen(usernames[0]),
         "wrongpass", strlen("wrongpass"));
   ck_assert(error == PPH_ACCOUNT_IS_INVALID);

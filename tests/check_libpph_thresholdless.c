@@ -1,4 +1,4 @@
-/* Check shamir suite
+/* Check libpolypasshash with thresholdless accounts. 
  *
  * This suite is designed to test the functionalities of the libshamir
  * module. 
@@ -13,7 +13,7 @@
 #include<stdlib.h>
 #include<strings.h>
 
-// We tests that a correst AES key is generated during the init_context 
+// We test that a correst AES key is generated during the init_context 
 // function
 START_TEST(test_pph_init_context_AES_key)
 { 
@@ -29,8 +29,8 @@ START_TEST(test_pph_init_context_AES_key)
 }
 END_TEST
 
-// this might be overchecking, but we want to make sure it destroy the AES key
-// properly. TODO: consider if the key should be zeroed out before releasing
+// this might be overchecking, but we want to make sure it destroys the AES key
+// properly. 
 START_TEST(test_pph_destroy_context_AES_key)
 {
   // a placeholder for the result.
@@ -52,7 +52,7 @@ START_TEST(test_pph_destroy_context_AES_key)
 }
 END_TEST
 
-// We will test some account creation now...
+// We will test some account creation, with only thresholdless accounts. 
 START_TEST(test_pph_create_accounts)
 {
   PPH_ERROR error;
@@ -65,35 +65,25 @@ START_TEST(test_pph_create_accounts)
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
-  unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x','x',
-                                     'x','x','x','x','x','x','v','e','r','y',
-                                     's','e','c','u','r','e','\0'};
-  // this is the calculated hash for the password without salt using 
-  // an external tool
-  uint8 password_digest[DIGEST_LENGTH]; 
-  unsigned int i;
-  uint8 *digest_result;
-  uint8 share_result[SHARE_LENGTH];
-
+  
+  
+  
   context = pph_init_context(threshold, partial_bytes);
 
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  // sending bogus information to the create user function.
+  // attempt to create a thresholdless account now. 
   error = pph_create_account(context, username, strlen(username),
-      password, strlen(password), 0); // THL account. 
+      password, strlen(password), 0); 
   
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
-  
-
   ck_assert_str_eq(username,context->account_data->account.username);
 
   // now lets check there are colissions between thl and non thl accounts
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 1);
-
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       "We should've gotten an error since this account repeats");
   
@@ -117,8 +107,8 @@ START_TEST(test_pph_create_accounts)
 }
 END_TEST
 
-// this test is intended to check that the linked list is correctly created,
-// checks for correct number of entries and username collisions
+// this test is intended to check that we can have both, thresholdless accounts
+// and threshold accounts in a same context and working properly.
 START_TEST(test_create_account_mixed_accounts){
   PPH_ERROR error;
 
@@ -128,11 +118,9 @@ START_TEST(test_create_account_mixed_accounts){
   uint8 partial_bytes = 0;// this function is part of the non-partial bytes
                           // suite
                           
+
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
-  unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x','x',
-                                     'x','x','x','x','x','x','v','e','r','y',
-                                     's','e','c','u','r','e','\0'};
   // this is the calculated hash for the password without salt using 
   // an external tool
   uint8 password_digest[DIGEST_LENGTH]; 
