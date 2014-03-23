@@ -71,9 +71,9 @@ typedef enum{
 typedef struct _pph_entry{
   uint8 share_number;           // the share number that belongs to this entry
   uint8 salt[SALT_LENGTH];      // the salt buffer to use 
-  uint8 hashed_value[DIGEST_LENGTH];// the hashed value for this entry, it is
-                                    // either xored with a share or, if share
-                                    // number is 0, it is encrypted using AES 
+  uint8 polyhashed_value[DIGEST_LENGTH];// the hashed value for this entry, it
+                                    // is either xored with a share or 
+                                    // encrypted using AES 
   struct _pph_entry *next;
 } pph_entry;
 
@@ -449,10 +449,7 @@ pph_context *pph_reload_context(const unsigned char *filename);
 
 
 
-// helper functions
-
-// this produces an AES key of the desired length when given a share context.
-uint8 *generate_AES_key_from_context(pph_context *ctx, unsigned int length);
+// helper functions //////////////////////////
 
 // This produces a salt string, warning, this only generates a 
 // PRINTABLE salt
