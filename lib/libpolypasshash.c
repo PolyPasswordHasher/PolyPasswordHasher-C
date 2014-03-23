@@ -272,7 +272,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 * PROCESS :
 *     1) Check for data sanity, and return errors
 *     2) Check the type of account requested
-*     3) Allocate a share/digest entry for the accound
+*     3) Allocate a share/digest entry for the account
 *     4) Initialize the account data with the information provided
 *     5) Update the context information regarding the new account
 *     6) return
@@ -297,7 +297,6 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   size_t c_len,f_len;
   
   // 1) SANITIZE INFORMATION
-  //
   // check password length
   if(password_length > PASSWORD_LENGTH-1){
     return PPH_PASSWORD_IS_TOO_LONG;
@@ -321,46 +320,57 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     return PPH_CONTEXT_IS_LOCKED;
   }
 
-  // check non-existing username
+  // This while loop will traverse our accounts and check if the username is 
+  // already taken.
   next = ctx->account_data;
   while(next!=NULL){
     node=next;
     next=next->next;
-    if(!memcmp(node->account.username,username,username_length)){
-      return PPH_ACCOUNT_IS_INVALID;
+    if(username_length==node->account.username_length && // if the lengths match
+        !memcmp(node->account.username,username,username_length)){//compare them
+      return PPH_ACCOUNT_IS_INVALID; 
     }
   }
 
+  // 2) check for the type of account requested.
+  // this will generate a share list for non-thresholdless acounts, we won't 
+  // fall inside this loop for thresholdless acounts since shares is 0.
   last_entry = NULL;
   for(i=0;i<shares;i++){
+    // 3) Allocate entries for each account
+    // Try to allocate memory for the entry, if memory fails, destroy the list
+    // and return an error
     entry_node=malloc(sizeof(*entry_node));
     if(entry_node==NULL){
       // destroy the list we had to far... it's a shame if you ask me ...
       _destroy_entry_list(entry_node); //FIXME: this will not work...
       return PPH_NO_MEM;
     }
-    // get a share number
+
+    // get a share for this entry, we rely on the overflow so we reassign shares
+    // in a round robin fashion
     entry_node->share_number = ctx->next_entry;
     ctx->next_entry++;
-    if(ctx->next_entry==0){
-      ctx->next_entry++;
+    if(ctx->next_entry==0 || ctx->next_entry>=MAX_NUMBER_OF_SHARES){
+      ctx->next_entry=1;
     }
 
-    // get a new share.
+
+    // get a new share value to xor with the newly created entry
     gfshare_ctx_enc_getshare( ctx->share_context, entry_node->share_number,
         share_data);
 
-    // get a salt for this entry, we are using sprintf, but we could use 
-    // memcpy in case this function requires it.
-    get_random_salt(SALT_LENGTH, entry_node->salt);
+    // get a new salt for this entry, prepend it to the password and calculate
+    // the hash for it.
+    get_random_salt(SALT_LENGTH, entry_node->salt); // copy the salt directly
+                                                    // into the data structure
     memcpy(salted_password,entry_node->salt,SALT_LENGTH);
     memcpy(salted_password+SALT_LENGTH, password, password_length);
-    //sprintf(salted_password,"%s%s",entry_node->salt, password);
     _calculate_digest(entry_node->hashed_value, salted_password,
         SALT_LENGTH + password_length);
     
     // xor the whole thing, we do this in an unsigned int fashion imagining 
-    // this is where usually where the processor aligns things and is, hence
+    // this is where usually where the processor aligns things and is, hence,
     // faster
     _xor_share_with_digest(entry_node->hashed_value, share_data,
         entry_node->hashed_value, DIGEST_LENGTH-ctx->partial_bytes);
@@ -369,62 +379,73 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     entry_node->next = last_entry;
     last_entry=entry_node;
   }
+  // This if will check for thresholdless accounts, and will build a single 
+  // entry for them.
   if(shares == 0){
-    // i.e this is a thresholdless account. 
+    // 3) allocate an entry for each account
+    // allocate memory and fail if there is not memory available.
     entry_node = malloc(sizeof(*entry_node));
     if(entry_node==NULL){
       return PPH_NO_MEM;
     }
     entry_node->share_number = 0;
     
-    // generate the digest
-    get_random_salt(SALT_LENGTH, entry_node->salt);
+    // we generate a salt for the entry, prepend it to the password and 
+    // calculate a hash for it.
+    get_random_salt(SALT_LENGTH, entry_node->salt); // copy the salt directly
+                                                    // into the data structure
     memcpy(salted_password,entry_node->salt,SALT_LENGTH);
-    memcpy(salted_password+SALT_LENGTH, password, password_length); //FIXME: use a pw length parameter
-    //sprintf(salted_password,"%s%s",entry_node->salt,password);
+    memcpy(salted_password+SALT_LENGTH, password, password_length); 
     _calculate_digest(resulting_hash,salted_password, 
         SALT_LENGTH + password_length); 
 
-    // encrypt the digest
+    // We will encrypt the digest now, instead of xoring it with the share. 
     EVP_CIPHER_CTX_init(&en_ctx);
     EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
     EVP_EncryptUpdate(&en_ctx, entry_node->hashed_value, &c_len, resulting_hash, 
       DIGEST_LENGTH-ctx->partial_bytes);
-    /* update ciphertext with the final remaining bytes */
     EVP_EncryptFinal_ex(&en_ctx, entry_node->hashed_value+c_len, &f_len);
     EVP_CIPHER_CTX_cleanup(&en_ctx);
 
-    // append the unencrypted bytes
+    // For partial verification, we add the remaining bytes of he hash to the
+    // resulting encrypted hash, that's why this for goes from the encrypted 
+    // bytes, to the complete length of the hash
     for(i=c_len+f_len;i<DIGEST_LENGTH;i++){
       entry_node->hashed_value[i] = resulting_hash[i]; //
     }
 
-    //
+    // terminate the list
     entry_node->next=NULL;
+
+    // we now have one share entry under this list, so we increment this
+    // parameter.
     shares++;
 
 
   }
-
-  // allocate the account information 
+  // 4) Allocate the information for the account
+  // allocate the account information, check for memory issues and return.
   node=malloc(sizeof(*node));
   if(node==NULL){
-    // we should destroy the list we created now...
+    // we should destroy the list we created now to avoid memory leaks
     _destroy_entry_list(entry_node);
     return PPH_NO_MEM;
   }
-  // fill username information
+
+  // fill with the user entry with the rest of the account information.
   memcpy(node->account.username,username,username_length);
   node->account.number_of_entries = shares;
   node->account.username_length = username_length;
   node->account.password_length = password_length;
   node->account.entries = entry_node;
 
-  // append it to the context list.
+  // 5) add the resulting account to the current context.
+  // append it to the context list, with the rest of thee users
   node->next = ctx->account_data;
   ctx->account_data = node;
 
-  // everything is set! 
+  // 6) return.
+  // everything is set!
   return PPH_ERROR_OK;
 }
 
@@ -480,22 +501,30 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
                           unsigned int username_length, const char *password,
                           unsigned int password_length){
+  pph_account_node *search; // this will be used to iterate all the users 
 
   pph_account_node *target = NULL; // this will, ideally, point to target 
-                                   //   username
+                                   //   username, if he exists in the list
+  
   uint8 share_data[SHARE_LENGTH];  // this is a buffer to store the current 
                                    //  share
+  
   uint8 resulting_hash[DIGEST_LENGTH]; // this will hold our calculated hash
+  
   uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH]; // this is the buffer
                                                       // we will use for hashing
+  
   uint8 xored_hash[SHARE_LENGTH];
   uint8 sharenumber;
   unsigned int i;
+  unsigned int partial_bytes_offset; // this will hold an offset value for 
+                                     // partial verification.
   // openSSL managers.
   EVP_CIPHER_CTX de_ctx;
   size_t p_len,f_len;
 
-  pph_account_node *search; // this will be used to iterate all the users 
+
+  // 1) Sanitize data and return errors.
   // check for any improper pointers
   if(ctx == NULL || username == NULL || password == NULL){
     return PPH_BAD_PTR;
@@ -517,14 +546,17 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     return PPH_CONTEXT_IS_LOCKED;
   }
 
+  // 2) Try to find the user in our context.
   // search for our user
   search = ctx->account_data;
   while(search!=NULL){
-    if(!memcmp(search->account.username,username,username_length)){
+    if(username_length == search->account.username_length && // check lengths
+        !memcmp(search->account.username,username,username_length)){// compare
       target = search;
     }
     search=search->next;
   } 
+
   if(target == NULL){ //i.e. we found no one
     return PPH_ACCOUNT_IS_INVALID;
   }
@@ -532,81 +564,82 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // if we reach here, we should have enough resources to provide a login
   // functionality to the user.
   
+  // 3) We found it, try to verify the proper password for him.
   // first, check what type of account is this
-  // , for this, verify we can get a sharenumber out of this...
   if(target->account.entries == NULL){
     return PPH_ERROR_UNKNOWN; // this probably happens if data is inconsistent
   }
-  sharenumber = target->account.entries->share_number;// we need only the first 
-                                             // share to do the checking
+
+  // we get the first entry to check if this is a valid login, we could be 
+  // thorough and check for each, but it looks like an overkill
+  sharenumber = target->account.entries->share_number;
+  partial_bytes_offset = DIGEST_LENGTH - ctx->partial_bytes;
+  // if the context is not unlocked, we can only provide partial verification  
   if(ctx->is_unlocked != 1){
-   // partial bytes check
-   // we should:
-   // 1) calculate the proposed digest
-   memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
-   memcpy(salted_password+SALT_LENGTH, password,
-       target->account.password_length); 
-   // sprintf(salted_password,"%s%s",target->account.entries->salt,password);
-   _calculate_digest(resulting_hash, salted_password, 
+    // partial bytes check
+    // calculate the proposed digest, this means, calculate the hash with
+    // the information just provided about the user. 
+    memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
+    memcpy(salted_password+SALT_LENGTH, password,
+         target->account.password_length); 
+    _calculate_digest(resulting_hash, salted_password, 
        SALT_LENGTH + password_length);
    
-   // 2) only compare the bytes that are not obscured.
-   for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
-    if(resulting_hash[i]!=target->account.entries->hashed_value[i]){
+    // only compare the bytes that are not obscured by either AES or the 
+    // share, we start from share_length-partial_bytes to share_length. 
+    if(memcmp(resulting_hash+partial_bytes_offset,
+          target->account.entries->hashed_value+partial_bytes_offset,
+          ctx->partial_bytes)){
       return PPH_ACCOUNT_IS_INVALID;
     }
-   }
-   return PPH_ERROR_OK;
+    return PPH_ERROR_OK;
   }
+
+  // we are unlocked and hence we can provide full verification.
   else{ 
-    if(sharenumber == 0){ // thresholdless case.
-      if(ctx->AES_key != NULL && ctx->is_unlocked == 1){
-        // we should:
-        //
-        // 1) calculate the expected hash...
+    // first, check if the account is a threshold or thresholdless account.
+    if(sharenumber == 0){
+      // if the sharenumber is 0 then we have a thresholdless account
+      if(ctx->AES_key != NULL && ctx->is_unlocked == 1){ // extra safety check
+        // now we should calculate the expected hash by decyphering the
+        // information inside the context.
         EVP_CIPHER_CTX_init(&de_ctx);
         EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
         EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len,
-            target->account.entries->hashed_value,
-            DIGEST_LENGTH-ctx->partial_bytes);
+            target->account.entries->hashed_value, partial_bytes_offset);
         EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
         EVP_CIPHER_CTX_cleanup(&de_ctx);
-        // append the unencrypted bytes
+
+        // append the unencrypted bytes if we have partial bytes. 
         for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
           xored_hash[i] = target->account.entries->hashed_value[i]; //
         }
 
-
-
-        // 2) calculate the proposed digest with the salt.
-        //sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+        // calculate the proposed digest with the parameters provided in
+        // this function.
         memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
         memcpy(salted_password+SALT_LENGTH, password, password_length); 
-        
         _calculate_digest(resulting_hash, salted_password, 
             SALT_LENGTH + password_length);
 
         
-        // 3) compare the hashes....
-        for(i=0;i<DIGEST_LENGTH;i++){// we check the whole hash, we don't expect
-          // partial bytes to modify the end result
-          if(resulting_hash[i]!=xored_hash[i]){
-            return PPH_ACCOUNT_IS_INVALID;    
-          }
+        // 3) compare both, and they should match.
+        if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
+          return PPH_ACCOUNT_IS_INVALID;
         }
-
         return PPH_ERROR_OK;
       }
-
       return PPH_ACCOUNT_IS_INVALID;
-    }else{
+    }
+    // we have a non thresholdless account instead, since the sharenumber is 
+    // not 0
+    else{
       // we do it the normal way for this. We have a valid sharenumber
-      //
       // get the share
       gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
 
-      // calculate the proposed digest with the salt.
-      //sprintf(salted_password,"%s%s",target->account.entries->salt,password);
+      // calculate the proposed digest with the salt from the account and
+      // the password in the argument.
       memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
       memcpy(salted_password+SALT_LENGTH, password, password_length); 
       _calculate_digest(resulting_hash, salted_password, 
@@ -614,22 +647,20 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
       // xor the thing back to normal
       _xor_share_with_digest(xored_hash,target->account.entries->hashed_value,
-          share_data, DIGEST_LENGTH-ctx->partial_bytes);
+          share_data, partial_bytes_offset);
       // append the unobscured bytes
       for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
         xored_hash[i] = target->account.entries->hashed_value[i]; //
       }
 
-
-      // compare, TODO: optimize this.
-      for(i=0;i<DIGEST_LENGTH;i++){
-        if(xored_hash[i] != resulting_hash[i]){
-          return PPH_ACCOUNT_IS_INVALID;
-        } 
+      // compare both.
+      if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
+        return PPH_ACCOUNT_IS_INVALID;
       }
       return PPH_ERROR_OK; // this means, the login does match
     } 
   }
+  // if we get to reach here, we where diverged from usual flow. 
   return PPH_ERROR_UNKNOWN;
 }
 
