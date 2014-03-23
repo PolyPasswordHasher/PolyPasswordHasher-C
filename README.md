@@ -1,7 +1,7 @@
-PolyPassHash 
+PolyPassHash for C  
 ============
 
-The C implementation for the PolyPassHash password storage scheme. This repository provides a C library to manage a polypasshash scheme.
+The C implementation for the [PolyPassHash password storage scheme](https://github.com/JustinCappos/PolyPassHash). This repository provides a C library to manage a polypasshash scheme.
 
 
 
@@ -11,6 +11,86 @@ Included, you will find an automake-autoconf-libtool project to build the librar
 
 A set of tests is also included. Tests are made for [check](http://check.sourceforge.net). If you have check installed, running make check will run all of the test suites.
 
+
+Example
+=======
+```c
+  pph_context *context;
+  uint8 threshold = 2;    // We set a threshold of minimum shares available
+                          //  in order to be able to recover the shares
+                          
+  uint8 partial_bytes = 2;// Partial bytes refers to the amount of bytes to 
+                          //  be used for verification when a context is locked
+
+
+  // setup the context 
+  context = pph_init_context(threshold, partial_bytes);
+  
+  // add some users, we send the context, username and passsords (with length) and a number
+  //  of shares to assign to such user. A user may have more than one share assigned.
+  pph_create_account(context, "Alice", strlen("Alice"), "I.love.bob", strlen("I.love.bob"), 1);
+  pph_create_account(context, "Bob", strlen("Bob"), "i.secretly.love.eve",strlen(i.secretly.love.eve),1);
+  
+  // when creating a user with no shares, we get a **thresholdless** account. Thresholdless
+  //  accounts have their hash encrypted and cannot unlock a context
+  pph_create_account(context,"Eve", strlen("Eve"), "i'm.all.ears", strlen("i'm.all.ears"), 0);
+  
+  // to check a login we must have an unlocked context, we send the credentials and 
+  //  receive an error in return
+  if(pph_check_login("alice",strlen("alice"),"I.love.bob",strlen("I.love.bob") == PPH_ERROR_OK){
+    printf("welcome alice");
+  }else{
+    printf("generic error message");
+  }
+  
+  // We can, then store a context to work with it later, have in mind the context will
+  //  be stored in a locked state and alice and bob will have to unlock it. 
+  pph_store_context(context,"securepasswords");
+  
+  // we can now safely free the information about our context
+  pph_destroy_context(context);
+  
+  // time goes by... and we want to start working again, with the same information about 
+  // alice, bob and eve...
+  
+  // We reload our context.
+  context = pph_reload_context("securepasswords")
+  
+  // at this point we can still provide a login service, thanks to the partial bytes extension
+  if(pph_check_login("alice",strlen("alice"), "i'm.trudy", strlen("i'm.trudy") == PPH_ERROR_OK){
+    printf("welcome alice!"); // this won't happen
+  }else{
+    printf("go away trudy!");
+  }
+  
+  // however, in order to be able to create accounts, we must unlock the vault.
+  // for this, we setup an array of username strings and an array of password strings.
+  char **usernames = malloc(sizeof(*usernames)*2);
+  usernames[0] = strdup("alice");
+  usernames[1] = strdup("bob");
+  
+  char **passwords = malloc(sizeof(*passwords)*2);
+  passwords[0] = strdup("I.love.bob");
+  passwords[1] = strdup("i.secretly.love.eve");
+  
+  pph_unlock_password_data(context, 2, usernames, passwords);
+  
+  // now the data us unlocked. Before unlocking, create account would throw an error. 
+  pph_create_account(context, "carl", strlen("carl"), "verysafe", strlen("verysafe"),0)
+  
+  // we can now check accounts using the full feature also (non-partial bytes)
+  if(PPH_ERROR_OK == pph_check_login(context, "carl", strlen("carl"), "verysafe", strlen("verysafe"))){
+    printf("welcome back carl"); // this is the expected outcome.
+  }else{
+    printf("you are not carl");
+  }
+  
+  
+  // we should now store the context and free the data before leaving
+  pph_store_context(context,"securetpasswords");
+  pph_destroy_context(context);
+
+```
 
 API reference
 =========
