@@ -5,6 +5,8 @@
 # Libraries
 *.lib
 *.a
+*.la
+*.lo
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -17,9 +19,9 @@
 *.out
 *.app
 polypasshash
+check_libgfshare
 
 # autoconf specific
-Makefile.in
 aclocal.m4
 autom4te.cache/
 build/
@@ -41,4 +43,6 @@ scripts/lt~obsolete.m4
 test-driver
 .deps/
 .lib/
+.libs
 build-aux/
+config.status
