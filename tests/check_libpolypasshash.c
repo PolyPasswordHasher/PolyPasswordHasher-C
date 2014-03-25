@@ -201,7 +201,7 @@ START_TEST(test_create_account_entry_consistency){
       SALT_LENGTH);
   _calculate_digest(password_digest, salted_password, 
       SALT_LENGTH + strlen(password));
-  digest_result=context->account_data->account.entries->hashed_value;
+  digest_result=context->account_data->account.entries->polyhashed_value;
 
   gfshare_ctx_enc_getshare(context->share_context, 1, share_result);
   _xor_share_with_digest(digest_result, share_result, digest_result, 
