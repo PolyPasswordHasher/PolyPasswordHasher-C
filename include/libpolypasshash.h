@@ -71,6 +71,7 @@ typedef enum{
 typedef struct _pph_entry{
   uint8 share_number;           // the share number that belongs to this entry
   uint8 salt[SALT_LENGTH];      // the salt buffer to use 
+  unsigned int salt_length;
   uint8 polyhashed_value[DIGEST_LENGTH];// the hashed value for this entry, it
                                     // is either xored with a share or 
                                     // encrypted using AES 
