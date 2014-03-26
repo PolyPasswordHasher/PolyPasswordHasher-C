@@ -72,6 +72,7 @@ typedef struct _pph_entry{
   uint8 share_number;           // the share number that belongs to this entry
   uint8 salt[SALT_LENGTH];      // the salt buffer to use 
   unsigned int salt_length;
+  unsigned int password_length;
   uint8 polyhashed_value[DIGEST_LENGTH];// the hashed value for this entry, it
                                     // is either xored with a share or 
                                     // encrypted using AES 
@@ -82,7 +83,6 @@ typedef struct _pph_entry{
 typedef struct _pph_account{
   unsigned char username[USERNAME_LENGTH]; // the username...
   unsigned int username_length;
-  unsigned int password_length;
   uint8 number_of_entries;                 // the entries for this user
   pph_entry *entries;                      // a pointer to entries of this acc
 }pph_account;
