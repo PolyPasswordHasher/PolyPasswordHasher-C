@@ -289,6 +289,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   uint8 current_entry;
   uint8 share_data[SHARE_LENGTH];
   uint8 resulting_hash[DIGEST_LENGTH];
+  uint8 salt_buffer[SALT_LENGTH];
   uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH];
   // openssl encryption contexts
   EVP_CIPHER_CTX en_ctx;
@@ -338,44 +339,31 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   last_entry = NULL;
   for(i=0;i<shares;i++){
     // 3) Allocate entries for each account
-  
-    // Try to allocate memory for the entry, if memory fails, destroy the list
-    // and return an error
-    entry_node=malloc(sizeof(*entry_node));
-    if(entry_node==NULL){
-      // destroy the list we had to far... it's a shame if you ask me ...
-      _destroy_entry_list(entry_node); //FIXME: this will not work...
+ 
+    // get a new share value
+    gfshare_ctx_enc_getshare( ctx->share_context, ctx->next_entry,
+        share_data);
+
+
+    // get a salt for the password
+    get_random_salt(SALT_LENGTH, salt_buffer);
+
+    // Try to get a new entry.
+    entry_node=create_polyhashed_entry(password, password_length, salt_buffer,
+        SALT_LENGTH, share_data, SHARE_LENGTH, ctx->partial_bytes);
+    if(entry_node == NULL){
+      _destroy_entry_list(last_entry);
       return PPH_NO_MEM;
     }
-
-    // get a share for this entry, we rely on the overflow so we reassign shares
-    // in a round robin fashion
+    
+    // update the share number for this entry, and update the next available
+    // share in a round robin fashion
     entry_node->share_number = ctx->next_entry;
     ctx->next_entry++;
     if(ctx->next_entry==0 || ctx->next_entry>=MAX_NUMBER_OF_SHARES){
       ctx->next_entry=1;
-    }
+    }   
 
-
-    // get a new share value to xor with the newly created entry
-    gfshare_ctx_enc_getshare( ctx->share_context, entry_node->share_number,
-        share_data);
-
-    // get a new salt for this entry, prepend it to the password and calculate
-    // the hash for it.
-    get_random_salt(SALT_LENGTH, entry_node->salt); // copy the salt directly
-                                                    // into the data structure
-    memcpy(salted_password,entry_node->salt,SALT_LENGTH);
-    memcpy(salted_password+SALT_LENGTH, password, password_length);
-    _calculate_digest(entry_node->polyhashed_value, salted_password,
-        SALT_LENGTH + password_length);
-    
-    // xor the whole thing, we do this in an unsigned int fashion imagining 
-    // this is where usually where the processor aligns things and is, hence,
-    // faster
-    _xor_share_with_digest(entry_node->polyhashed_value, share_data,
-        entry_node->polyhashed_value, DIGEST_LENGTH-ctx->partial_bytes);
-    
     // add the node to the list
     entry_node->next = last_entry;
     last_entry=entry_node;
@@ -1012,7 +1000,59 @@ pph_context *pph_reload_context(const unsigned char *filename){
   fclose(fp);
   return loaded_context;
 }
- 
+
+// this function provides a polyhashed entry given the input
+pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
+    password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
+    unsigned int share_length, unsigned int partial_bytes){
+
+
+  pph_entry *entry_node = NULL;
+  
+  // we hold a buffer for the salted password.
+  uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH]; 
+
+  // check input pointers are correct
+  if(password == NULL || salt == NULL || share == NULL){
+    return NULL;
+  }
+
+  // check for valid lengths
+  if(password_length > PASSWORD_LENGTH || salt_length > SALT_LENGTH){
+    return NULL;
+  }
+
+  // check for valid lengths on the share information
+  if(share_length > SHARE_LENGTH || partial_bytes > SHARE_LENGTH){
+    return NULL;
+  }
+
+  entry_node = malloc(sizeof(*entry_node));
+  if(entry_node==NULL){
+    return NULL;
+  }
+
+  // update the salt value in the entry
+  memcpy(entry_node->salt,salt, salt_length);
+
+  // prepend the salt to the password
+  memcpy(salted_password,salt,salt_length);
+  memcpy(salted_password+salt_length, password, password_length);
+
+  // hash the salted password
+  _calculate_digest(entry_node->polyhashed_value, salted_password,
+        salt_length + password_length);
+    
+  // xor the whole thing, with the share, we are doing operations in-place
+  // to make everything faste
+  _xor_share_with_digest(entry_node->polyhashed_value, share,
+        entry_node->polyhashed_value, share_length-partial_bytes);
+    
+  return entry_node;
+}
+
+
+
 // This is a private helper that produces a salt string,
 void get_random_salt(unsigned int length, uint8 *dest){
   unsigned int i;

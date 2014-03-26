@@ -451,6 +451,11 @@ pph_context *pph_reload_context(const unsigned char *filename);
 
 // helper functions //////////////////////////
 
+// this function provides a polyhashed entry given the input
+pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
+    password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
+    unsigned int share_length, unsigned int partial_bytes);
+
 // This produces a salt string, warning, this only generates a 
 // PRINTABLE salt
 void get_random_salt(unsigned int length, uint8 *dest);
