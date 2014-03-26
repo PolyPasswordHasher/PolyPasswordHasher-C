@@ -291,9 +291,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   uint8 resulting_hash[DIGEST_LENGTH];
   uint8 salt_buffer[SALT_LENGTH];
   uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH];
-  // openssl encryption contexts
-  EVP_CIPHER_CTX en_ctx;
-  int c_len,f_len;
+
   
   // 1) SANITIZE INFORMATION
   // check password length
@@ -372,50 +370,24 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   // entry for them.
   if(shares == 0){
     // 3) allocate an entry for each account
-  
-    // allocate memory and fail if there is not memory available.
-    entry_node = malloc(sizeof(*entry_node));
-    if(entry_node==NULL){
+ 
+    // get a salt for the password
+    get_random_salt(SALT_LENGTH, salt_buffer); 
+ 
+    // generate the entry
+    entry_node = create_thresholdless_entry(password, password_length,
+        salt_buffer, SALT_LENGTH, ctx->AES_key, DIGEST_LENGTH,
+        ctx->partial_bytes);
+
+    if(entry_node == NULL){
       return PPH_NO_MEM;
     }
-    entry_node->share_number = 0;
-    
-    // we generate a salt for the entry, prepend it to the password and 
-    // calculate a hash for it.
-    get_random_salt(SALT_LENGTH, entry_node->salt); // copy the salt directly
-                                                    // into the data structure
-    memcpy(salted_password,entry_node->salt,SALT_LENGTH);
-    memcpy(salted_password+SALT_LENGTH, password, password_length); 
-    _calculate_digest(resulting_hash,salted_password, 
-        SALT_LENGTH + password_length); 
-
-    // We will encrypt the digest now, instead of xoring it with the share. 
-    EVP_CIPHER_CTX_init(&en_ctx);
-    EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
-    EVP_EncryptUpdate(&en_ctx, entry_node->polyhashed_value, &c_len, resulting_hash, 
-      DIGEST_LENGTH-ctx->partial_bytes);
-    EVP_EncryptFinal_ex(&en_ctx, entry_node->polyhashed_value+c_len, &f_len);
-    EVP_CIPHER_CTX_cleanup(&en_ctx);
-
-    // For partial verification, we add the remaining bytes of he hash to the
-    // resulting encrypted hash, that's why this for goes from the encrypted 
-    // bytes, to the complete length of the hash
-    for(i=c_len+f_len;i<DIGEST_LENGTH;i++){
-      entry_node->polyhashed_value[i] = resulting_hash[i]; //
-    }
-
-    // terminate the list
-    entry_node->next=NULL;
-
     // we now have one share entry under this list, so we increment this
     // parameter.
     shares++;
-
-
   }
   
   // 4) Allocate the information for the account
-  
   // allocate the account information, check for memory issues and return.
   node=malloc(sizeof(*node));
   if(node==NULL){
@@ -1049,6 +1021,75 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
         entry_node->polyhashed_value, share_length-partial_bytes);
     
   return entry_node;
+}
+
+
+// this other function is the equivalent to the one in the top, but for
+// thresholdless accounts.
+pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
+    password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
+    unsigned int key_length, unsigned int partial_bytes){
+
+
+  pph_entry *entry_node = NULL;
+  uint8 salted_password[SALT_LENGTH + PASSWORD_LENGTH];
+
+  // openssl encryption contexts
+  EVP_CIPHER_CTX en_ctx;
+  int c_len,f_len;
+
+
+
+  // check everything makes sense, nothing should point to null
+  if(password == NULL || salt == NULL || AES_key == NULL){
+    return NULL;
+  }
+
+  // check for password and pass lengths
+  if(password_length > PASSWORD_LENGTH || salt_length > SALT_LENGTH){
+    return NULL;
+  }
+
+  // we check that the key is shorter than the digest we are using for
+  // ctr mode, but we could ommit this, partial bytes should be shorter
+  // than the digest length since we cannot reveal more bytes than the ones
+  // we have.
+  if(key_length > DIGEST_LENGTH || partial_bytes > DIGEST_LENGTH){
+    return NULL;
+  }
+
+  // allocate memory and fail if there is not memory available.
+  entry_node = malloc(sizeof(*entry_node));
+  if(entry_node==NULL){
+    return NULL;
+  }
+
+  // copy the salt into the pph_entry
+  memcpy(entry_node->salt, salt, salt_length);
+  
+  // prepend the salt to the password and generate a digest
+  memcpy(salted_password,entry_node->salt,salt_length);
+  memcpy(salted_password+SALT_LENGTH, password, password_length); 
+  _calculate_digest(entry_node->polyhashed_value,salted_password, 
+      salt_length + password_length); 
+
+  // encrypt the generated digest
+  EVP_CIPHER_CTX_init(&en_ctx);
+  EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, NULL);
+  EVP_EncryptUpdate(&en_ctx, entry_node->polyhashed_value, &c_len,
+      entry_node->polyhashed_value, DIGEST_LENGTH-partial_bytes);
+  EVP_EncryptFinal_ex(&en_ctx, entry_node->polyhashed_value+c_len, &f_len);
+  EVP_CIPHER_CTX_cleanup(&en_ctx);
+
+
+  // thresholdless accounts have this value defaulted to 0;
+  entry_node->share_number = 0;
+
+  // thresholdless accounts should have only one entry
+  entry_node->next = NULL;
+
+  return entry_node;  
+
 }
 
 
