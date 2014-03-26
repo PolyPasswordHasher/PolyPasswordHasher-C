@@ -451,6 +451,16 @@ pph_context *pph_reload_context(const unsigned char *filename);
 
 
 // helper functions //////////////////////////
+//
+// this generates a random secret of the form [stream][streamhash], the 
+// parameters are the length of each section of the secret
+uint8 *generate_pph_secret(unsigned int stream_length,
+    unsigned int hash_bytes);
+
+// this checks whether a given secret complies with the pph_secret prototype
+// ([stream][streamhash])
+PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
+    unsigned int hash_bytes);
 
 // this function provides a polyhashed entry given the input
 pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
