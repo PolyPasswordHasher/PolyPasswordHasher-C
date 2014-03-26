@@ -731,9 +731,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
           while(entry!=NULL){
 
             // calulate the digest given his password.
-            memcpy(salted_password,entry->salt,SALT_LENGTH);
-            memcpy(salted_password+SALT_LENGTH, passwords[i],
-                current_user->account.entries->password_length);
+            memcpy(salted_password,entry->salt,entry->salt_length);
+            memcpy(salted_password+entry->salt_length, passwords[i],
+                entry->password_length);
             _calculate_digest(estimated_digest,salted_password,
                 SALT_LENGTH + current_user->account.entries->password_length);
 
