@@ -400,7 +400,6 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   memcpy(node->account.username,username,username_length);
   node->account.number_of_entries = shares;
   node->account.username_length = username_length;
-  node->account.password_length = password_length;
   node->account.entries = entry_node;
 
   // 5) add the resulting account to the current context.
@@ -481,6 +480,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   
   uint8 xored_hash[SHARE_LENGTH];
   uint8 sharenumber;
+
+  pph_entry *current_entry;
+
   unsigned int i;
   unsigned int partial_bytes_offset; // this will hold an offset value for 
                                      // partial verification.
@@ -538,18 +540,19 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
   // we get the first entry to check if this is a valid login, we could be 
   // thorough and check for each, but it looks like an overkill
-  sharenumber = target->account.entries->share_number;
+  current_entry = target->account.entries;
+  sharenumber = current_entry->share_number;
   partial_bytes_offset = DIGEST_LENGTH - ctx->partial_bytes;
   // if the context is not unlocked, we can only provide partial verification  
   if(ctx->is_unlocked != 1){
     // partial bytes check
     // calculate the proposed digest, this means, calculate the hash with
     // the information just provided about the user. 
-    memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
-    memcpy(salted_password+SALT_LENGTH, password,
-         target->account.password_length); 
+    memcpy(salted_password,current_entry->salt,current_entry->salt_length);
+    memcpy(salted_password+current_entry->salt_length, password,
+        current_entry->password_length);; 
     _calculate_digest(resulting_hash, salted_password, 
-       SALT_LENGTH + password_length);
+       current_entry->salt_length + password_length);
    
     // only compare the bytes that are not obscured by either AES or the 
     // share, we start from share_length-partial_bytes to share_length. 
@@ -571,22 +574,23 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
         // information inside the context.
         EVP_CIPHER_CTX_init(&de_ctx);
         EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
-        EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len,
-            target->account.entries->polyhashed_value, partial_bytes_offset);
+        EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len, 
+            current_entry->polyhashed_value, partial_bytes_offset);
         EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
         EVP_CIPHER_CTX_cleanup(&de_ctx);
 
         // append the unencrypted bytes if we have partial bytes. 
         for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
-          xored_hash[i] = target->account.entries->polyhashed_value[i]; //
+          xored_hash[i] = current_entry->polyhashed_value[i]; //
         }
 
         // calculate the proposed digest with the parameters provided in
         // this function.
-        memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
-        memcpy(salted_password+SALT_LENGTH, password, password_length); 
+        memcpy(salted_password,current_entry->salt, current_entry->salt_length);
+        memcpy(salted_password+current_entry->salt_length, password, 
+            password_length); 
         _calculate_digest(resulting_hash, salted_password, 
-            SALT_LENGTH + password_length);
+            current_entry->salt_length + password_length);
 
         
         // 3) compare both, and they should match.
@@ -607,19 +611,19 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
       // calculate the proposed digest with the salt from the account and
       // the password in the argument.
-      memcpy(salted_password,target->account.entries->salt,SALT_LENGTH);
-      memcpy(salted_password+SALT_LENGTH, password, password_length); 
+      memcpy(salted_password,current_entry->salt, current_entry->salt_length);
+      memcpy(salted_password+current_entry->salt_length, password, 
+          password_length); 
       _calculate_digest(resulting_hash, salted_password, 
-          SALT_LENGTH + password_length);
-
+          current_entry->salt_length + password_length);
+      
       // xor the thing back to normal
-      _xor_share_with_digest(xored_hash,target->account.entries->polyhashed_value,
+      _xor_share_with_digest(xored_hash,current_entry->polyhashed_value,
           share_data, partial_bytes_offset);
       // append the unobscured bytes
       for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
         xored_hash[i] = target->account.entries->polyhashed_value[i]; //
       }
-
       // compare both.
       if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
         return PPH_ACCOUNT_IS_INVALID;
@@ -729,9 +733,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
             // calulate the digest given his password.
             memcpy(salted_password,entry->salt,SALT_LENGTH);
             memcpy(salted_password+SALT_LENGTH, passwords[i],
-                current_user->account.password_length);
+                current_user->account.entries->password_length);
             _calculate_digest(estimated_digest,salted_password,
-                SALT_LENGTH + current_user->account.password_length);
+                SALT_LENGTH + current_user->account.entries->password_length);
 
             // xor the obtained digest with the polyhashed value to obtain
             // our share.
@@ -1006,6 +1010,8 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
 
   // update the salt value in the entry
   memcpy(entry_node->salt,salt, salt_length);
+  entry_node->salt_length = salt_length;
+  entry_node->password_length = password_length;
 
   // prepend the salt to the password
   memcpy(salted_password,salt,salt_length);
@@ -1066,6 +1072,7 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
 
   // copy the salt into the pph_entry
   memcpy(entry_node->salt, salt, salt_length);
+  entry_node->salt_length = salt_length;
   
   // prepend the salt to the password and generate a digest
   memcpy(salted_password,entry_node->salt,salt_length);
