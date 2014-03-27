@@ -746,6 +746,8 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
   const uint8 *password_subset[] = {"password12",
                                     "password26"};
 
+  const uint8 *bad_passwords[] = { "whoisthisguy?",
+                                   "notauser"};
   // setup the context 
   context = pph_init_context(threshold,partial_bytes);
   ck_assert_msg(context != NULL,
@@ -794,7 +796,13 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
   for(i=0;i<DIGEST_LENGTH;i++){
     ck_assert(secret[i] ==  context->secret[i]);
   }
+  
+  // attempt to unlock the valut with  wrong passwords
+  free(context->secret);
+  context->is_unlocked=0;
 
+  error = pph_unlock_password_data(context, 2, usernames_subset, bad_passwords);
+  ck_assert(error == PPH_ACCOUNT_IS_INVALID);
 
   // clean up our mess
   pph_destroy_context(context);
