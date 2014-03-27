@@ -37,7 +37,7 @@
 *
 * INPUTS :
 *   PARAMETERS:
-*     uint8 threshold:            he decided threshold for this specific
+*      uint8 threshold:           he decided threshold for this specific
 *                                 password storage
 *
 *      uint8 partial_bytes:       The number of hashed-bytes to leak in order to
@@ -456,7 +456,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 * PROCESS :
 *     1) Sanitize data and return errors
 *     2) try to find username in the context
-*     3) if found, decide how to verify his information based on the status
+*     3) if found, decide how to verify their information based on the status
 *         of the context (thresholdless, partial verif, etc.)
 *     4) Do the corresponding check and return the proper error
 *
@@ -728,10 +728,10 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
         // check if he is a threshold account.
         if(entry->share_number != 0){
           // if he is a threshold account, we must attempt to reconstruct the
-          // shares using his information. 
+          // shares using their information. 
           while(entry!=NULL){
 
-            // calulate the digest given his password.
+            // calulate the digest given the password.
             memcpy(salted_password,entry->salt,entry->salt_length);
             memcpy(salted_password+entry->salt_length, passwords[i],
                 entry->password_length);
@@ -1263,7 +1263,7 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
   }
 
   // we check that the key is shorter than the digest we are using for
-  // ctr mode, but we could ommit this, partial bytes should be shorter
+  // ctr mode, but we could omit this, partial bytes should be shorter
   // than the digest length since we cannot reveal more bytes than the ones
   // we have.
   if(key_length > DIGEST_LENGTH || partial_bytes > DIGEST_LENGTH){
