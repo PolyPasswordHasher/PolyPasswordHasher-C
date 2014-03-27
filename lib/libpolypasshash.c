@@ -988,7 +988,38 @@ pph_context *pph_reload_context(const unsigned char *filename){
 // parameters are the length of each section of the secret
 uint8 *generate_pph_secret(unsigned int stream_length,
     unsigned int hash_bytes){
-  return NULL;
+  
+
+  uint8 *secret;
+  uint8 stream_digest[DIGEST_LENGTH];
+
+  // sanitize data
+  if(stream_length > DIGEST_LENGTH || stream_length < 1){
+    return NULL;
+  }
+
+  if(hash_bytes > DIGEST_LENGTH || hash_bytes < 1){
+    return NULL;
+  }
+
+  if(hash_bytes + stream_length > DIGEST_LENGTH){
+    return NULL;
+  }
+
+  // allocate memory
+  secret=malloc(sizeof(*secret)*DIGEST_LENGTH);
+  if(secret == NULL){
+    return NULL;
+  }
+
+  // generate a random stream
+  get_random_salt(secret, stream_length);
+
+  // hash the rest of the 
+  _calculate_digest(stream_digest, secret, stream_length);
+  memcpy(secret + stream_length, stream_digest, hash_bytes);
+
+  return secret;
 }
 
 // this checks whether a given secret complies with the pph_secret prototype
