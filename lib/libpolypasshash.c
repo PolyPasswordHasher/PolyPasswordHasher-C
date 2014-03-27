@@ -551,7 +551,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     // the information just provided about the user. 
     memcpy(salted_password,current_entry->salt,current_entry->salt_length);
     memcpy(salted_password+current_entry->salt_length, password,
-        current_entry->password_length);; 
+        current_entry->password_length);
     _calculate_digest(resulting_hash, salted_password, 
        current_entry->salt_length + password_length);
    
@@ -708,7 +708,6 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   // initialize the share numbers
   for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
     share_numbers[i] = 0;
-    //share_numbers[i] = (uint8)(i+1);
   }
   // do the reconstruction. 
   G = gfshare_ctx_init_dec( share_numbers, MAX_NUMBER_OF_SHARES-1,
@@ -775,7 +774,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   memcpy(ctx->secret,secret,SHARE_LENGTH-ctx->partial_bytes);
   // check that we got a valid secret
 
-  // if the share context is not initialized, intialize one with the information
+  // if the share context is not initialized, initialize one with the information
   // we have about our context. 
   if(ctx->share_context == NULL){
     for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
