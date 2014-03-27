@@ -134,8 +134,8 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   
   // to check a login we must have an unlocked context, we send the credentials and 
   // receive an error in return
-  if(pph_check_login(context, "alice", strlen("alice"), "I.love.bob",
-         strlen("I.love.bob") == PPH_ERROR_OK){
+  if(pph_check_login(context, "Alice", strlen("Alice"), "I.love.bob",
+         strlen("I.love.bob")) == PPH_ERROR_OK){
     printf("welcome alice");
   }else{
     printf("generic error message");
@@ -157,12 +157,12 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // We reload our context, we reload a context from disk using
   // pph_reload_context, providing a filename, remember that the obtained 
   // context is locked after loading from disk.
-  context = pph_reload_context("securepasswords")
+  context = pph_reload_context("securepasswords");
   
   // at this point we can still provide a login service, thanks to the partial 
   // bytes extension. But in order to create accounts and to provide full login
   // functionality, we should unlock the store.
-  if(pph_check_login("alice",strlen("alice"), "i'm.trudy", 
+  if(pph_check_login(context, "Alice",strlen("Alice"), "i'm.trudy", 
                                           strlen("i'm.trudy")) == PPH_ERROR_OK){
     printf("welcome alice!"); // this won't happen
   }else{
@@ -170,9 +170,9 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   }
 
   // during the locked phase, we are unable to create accounts
-  if(pph_create_account("trudy", strlen("trudy"), "I'm.trudy", 
-                                strlen("I'm.trudy")) == PPH_CONTEXT_IS_LOCKED){
-    printf("Sorry, we cannot create accounts at thise time");
+  if(pph_create_account(context, "trudy", strlen("trudy"), "I'm.trudy", 
+                           strlen("I'm.trudy"), 0) == PPH_CONTEXT_IS_LOCKED){
+    printf("Sorry, we cannot create accounts at this time");
   }else{
     printf("This shouldn't happen");
   }
@@ -181,7 +181,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // for this, we setup an array of username strings and an array of password 
   // strings.
   char **usernames = malloc(sizeof(*usernames)*2);
-  usernames[0] = strdup("alice");
+  usernames[0] = strdup("Alice");
   usernames[1] = strdup("bob");
   
   char **passwords = malloc(sizeof(*passwords)*2);
