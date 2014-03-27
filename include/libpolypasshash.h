@@ -32,8 +32,8 @@
 #include <openssl/sha.h>
 #include <openssl/aes.h>
 #include <string.h>
-#include <time.h> // for random seed generation, we could remove it in latter
-                  //  revisions 
+#include <stdlib.h>
+#include <fcntl.h>
 
 /* Constant Declaration */
 #define SHARE_LENGTH 256/8              // the length of our share buffers
