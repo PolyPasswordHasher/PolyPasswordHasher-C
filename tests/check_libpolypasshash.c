@@ -398,8 +398,8 @@ START_TEST(test_check_login_input_sanity){
                           
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
-  unsigned char too_big_username[USERNAME_LENGTH+1];
-  unsigned char too_big_password[PASSWORD_LENGTH+1];
+  unsigned char too_big_username[USERNAME_LENGTH+2];
+  unsigned char too_big_password[PASSWORD_LENGTH+2];
   unsigned int i;
 
   // lets send a null context pointer first
@@ -420,7 +420,7 @@ START_TEST(test_check_login_input_sanity){
   ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
   
   // now lets create some insanely big usernames and passwords
-  for(i=0;i<USERNAME_LENGTH;i++){
+  for(i=0;i<USERNAME_LENGTH+1;i++){
     too_big_username[i]='j'; // endless stream of j's, just like bono
   }
   too_big_username[i]='\0'; // null terminate our string
@@ -432,7 +432,7 @@ START_TEST(test_check_login_input_sanity){
       "expected USERNAME_IS_TOO_LONG");
 
   // let's do the same with the password
-  for(i=0;i<USERNAME_LENGTH;i++){
+  for(i=0;i<PASSWORD_LENGTH+1;i++){
     too_big_password[i]='j'; // endless stream of j's
   }
   too_big_password[i]='\0'; // null terminate our string
