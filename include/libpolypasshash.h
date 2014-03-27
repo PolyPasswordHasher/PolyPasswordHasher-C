@@ -449,7 +449,59 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename);
 pph_context *pph_reload_context(const unsigned char *filename);
  
 
+	
+/*******************************************************************
+* NAME :          PHS 
+*
+* DESCRIPTION :   Generate a password hash, given the password, and salt
+*
+* INPUTS :
+*   PARAMETERS:
+*     void *out:          The resulting hash value
+*
+*     size_t outlen:      The size of the hash to produce
+*
+*     const void *in:     The input password to hash.
+*
+*     size_t inlen:       The length of the input.
+*
+*     const void *salt:   The salt to use with the password
+*
+*     size_t saltlen:     The length of the salt to use,
+*
+*     int tcost:          Time cost for the function (unusable at the time)
+*
+*     int mcost:          Memory cost (unusable this time)
+*
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type: int
+*
+*           Values:                         When:
+*            0                                On error ok. 
+*
+*            !=0                              In case of error.
+* 
+* PROCESS :
+*     1) Sanitize the data (check the string is a good string) 
+*     2) Generate a pph_context if there is none in memory
+*     3) Generate a polyhashed entry
+*     4) Copy the polyhashed value to the output buffer
+*     5) Return.
+*
+* CHANGES :
+*     None as of this version
+*/
+int PHS(void *out, size_t outlen, const void *in, size_t inlen,
+   const void* salt, size_t saltlen, int tcost, int mcost); 
 
+									 										 
 
 // helper functions //////////////////////////
 //
