@@ -136,6 +136,8 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
     free(context);
     return NULL;
   }
+  
+  
   gfshare_ctx_enc_setsecret(context->share_context, context->secret);
   
   // finish, return our product
@@ -757,16 +759,22 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   // now we attempt to recombine the secret, we have given him all of the 
   // obtained shares.
   gfshare_ctx_dec_newshares(G, share_numbers);
+  gfshare_ctx_dec_extract(G, secret);
 
-  // if the secret is not initialized, allocate some memory for it and copy
-  // the obtained secret.
-  if(ctx->secret == NULL){
-    gfshare_ctx_dec_extract(G, secret);
-    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH-ctx->partial_bytes);
-    memcpy(ctx->secret,secret,SHARE_LENGTH-ctx->partial_bytes);
-  }else{ // if it isn't, copy the share directly to the existing buffer.
-    gfshare_ctx_dec_extract(G,ctx->secret);
+  // verify that we got a proper secret back.
+  if(check_pph_secret(secret, DIGEST_LENGTH/2, 
+        DIGEST_LENGTH/2-ctx->partial_bytes) != PPH_ERROR_OK){
+    return PPH_ACCOUNT_IS_INVALID;
   }
+  
+  // else, we have a correct secret and we will copy it back to the provided
+  // context.
+  if(ctx->secret == NULL){
+    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH-ctx->partial_bytes);
+  }
+  memcpy(ctx->secret,secret,SHARE_LENGTH-ctx->partial_bytes);
+  // check that we got a valid secret
+
   // if the share context is not initialized, intialize one with the information
   // we have about our context. 
   if(ctx->share_context == NULL){
@@ -1052,7 +1060,7 @@ PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length,
 
   // generate the digest for the stream.
   _calculate_digest(stream_digest, secret, stream_length);
-
+  
   // compare both digests
   if(memcmp(stream_digest, secret+stream_length, hash_bytes) == 0){
     return PPH_ERROR_OK;
