@@ -96,14 +96,13 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
   // length of the shares, and the length of the digest to xor/encrypt
   context->partial_bytes=partial_bytes;
 
-  // 3) generate random secret! 
-  context->secret = NULL; //cue the paranoid parrot meme...
-  context->secret = malloc(sizeof(context->secret)*SHARE_LENGTH-partial_bytes);
+  // 3) generate random secret, we generate a 16 byte stream and append
+  // half of the 16 byte hash to the end of it.
+  context->secret = generate_pph_secret(DIGEST_LENGTH/2, DIGEST_LENGTH/2);
   if(context->secret == NULL){
     free(context);
     return NULL;
   }
-  get_random_salt(SHARE_LENGTH-partial_bytes, context->secret);
 
   // 4) Initialize the rest of the values
   context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
