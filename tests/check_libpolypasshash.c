@@ -226,6 +226,10 @@ START_TEST(test_create_account_usernames){
 }
 END_TEST
 
+
+
+
+
 // this test is intended to check correct sanity checks on the password fields
 START_TEST(test_create_account_passwords){
   PPH_ERROR error;
@@ -265,6 +269,10 @@ START_TEST(test_create_account_passwords){
 }
 END_TEST
 
+
+
+
+
 // this test is intended to check the correct sanity check on the sharenumber
 // field
 START_TEST(test_create_account_sharenumbers){
@@ -273,6 +281,10 @@ START_TEST(test_create_account_sharenumbers){
   // this ever changes...
   }
 END_TEST
+
+
+
+
 
 
 // this test is intended to check that a correct account structure is 
@@ -364,6 +376,10 @@ START_TEST(test_create_account_entry_consistency){
 }
 END_TEST
 
+
+
+
+
 // this test is intended to check that the linked list is correctly created,
 // checks for correct number of entries and username collisions
 START_TEST(test_create_account_entry_list_consistency){
@@ -441,6 +457,10 @@ START_TEST(test_check_login_input_sanity){
 }
 END_TEST
 
+
+
+
+
 // This checks for a proper return code when asking for the wrong username
 START_TEST(test_check_login_wrong_username){
   PPH_ERROR error;
@@ -504,6 +524,9 @@ START_TEST(test_check_login_wrong_username){
 END_TEST
 
 
+
+
+
 // This checks for a proper return code when providing a wrong password 
 START_TEST(test_check_login_wrong_password){
   PPH_ERROR error;
@@ -557,6 +580,10 @@ START_TEST(test_check_login_wrong_password){
   pph_destroy_context(context);
 }
 END_TEST
+
+
+
+
 
 // This checks for a proper behavior when providing an existing username, 
 // first, as the first and only username, then after having many on the list
@@ -613,6 +640,10 @@ START_TEST(test_check_login_proper_data){
   pph_destroy_context(context);
 }
 END_TEST
+
+
+
+
 
 ////////// shamir recombination and persistent storage test cases. //////////
 
@@ -675,6 +706,10 @@ START_TEST(test_pph_unlock_password_data_input_sanity){
 
 }
 END_TEST
+
+
+
+
 
 // we check that the unlock password data cannot unlock the valut provided w
 // wrong information. 
@@ -766,6 +801,10 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
 }
 END_TEST
 
+
+
+
+
 // test input sanity on the store function
 START_TEST(test_pph_store_context_input_sanity){
   PPH_ERROR error;
@@ -790,6 +829,10 @@ START_TEST(test_pph_store_context_input_sanity){
   ck_assert_msg(error == PPH_ERROR_OK," expected ERROR_OK");
 
 }END_TEST
+
+
+
+
 
 // test input sanity on the store function
 START_TEST(test_pph_reload_context_input_sanity){
@@ -821,6 +864,10 @@ START_TEST(test_pph_reload_context_input_sanity){
   pph_destroy_context(context);
 
 }END_TEST
+
+
+
+
 
 // do a full lifecycle test, in other words, create a context with accounts, 
 // store it, reload it, unlock it and provide login and creation service. 
