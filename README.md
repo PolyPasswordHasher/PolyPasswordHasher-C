@@ -57,7 +57,7 @@ After compiling, the library is easily installed by running:
 We do, however, recommend running the tests before installing.
 
 The installation script will copy the header files to /usr/local/include and
-the shared .so into /usr/local/lib. 
+the shared library into /usr/local/lib. 
 
 Compiling a program with libpolypasshash
 ========================================
@@ -86,11 +86,12 @@ An example implementation
 =======
 
 ## The objective
-In order to keep things simple, we are going to produce a store with some 
+In order to keep things simple, we are going to produce a vault with some 
 accounts, store it, reload it and unlock it. 
 
-For the sake of simplicity, we are going to use only threshold accounts. The 
-library supports thresholdless accounts, which are, in essence, user accounts
+In order to explain some of the features of libpolypasshash we will add
+both, threshold and thresholdless accounts. The  library supports 
+thresholdless accounts, which are, in essence, user accounts
 that cannot unlock the store (imagine normal users vs super users). 
 
 We will also configure the context for two partial bytes. Partial bytes aid
@@ -98,6 +99,12 @@ us in providing a login capability even if the store is locked. The store
 is usually locked upon reboot, since the shares are not stored anywhere in disk. 
 
 ```C
+
+...
+
+#include<libpolypasshash.h>
+
+...
 
   // a context is the data structure that holds the information about the 
   // whole pph store
@@ -136,7 +143,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // receive an error in return
   if(pph_check_login(context, "Alice", strlen("Alice"), "I.love.bob",
          strlen("I.love.bob")) == PPH_ERROR_OK){
-    printf("welcome alice");
+    printf("welcome alice\n");
   }else{
     printf("generic error message");
   }
@@ -164,17 +171,17 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // functionality, we should unlock the store.
   if(pph_check_login(context, "Alice",strlen("Alice"), "i'm.trudy", 
                                           strlen("i'm.trudy")) == PPH_ERROR_OK){
-    printf("welcome alice!"); // this won't happen
+    printf("welcome alice!\n"); // this won't happen
   }else{
-    printf("go away trudy!");
+    printf("go away trudy!\n");
   }
 
   // during the locked phase, we are unable to create accounts
   if(pph_create_account(context, "trudy", strlen("trudy"), "I'm.trudy", 
                            strlen("I'm.trudy"), 0) == PPH_CONTEXT_IS_LOCKED){
-    printf("Sorry, we cannot create accounts at this time");
+    printf("Sorry, we cannot create accounts at this time\n");
   }else{
-    printf("This shouldn't happen");
+    printf("This shouldn't happen\n");
   }
   
   // In order to be able to create accounts, we must unlock the vault.
@@ -199,9 +206,9 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // we can now check accounts using the full feature also (non-partial bytes)
   if(pph_check_login(context, "carl", strlen("carl"), "verysafe",
                                           strlen("verysafe")) == PPH_ERROR_OK){
-    printf("welcome back carl"); 
+    printf("welcome back carl\n"); 
   }else{
-    printf("you are not carl");
+    printf("you are not carl\n");
   }
   
   
