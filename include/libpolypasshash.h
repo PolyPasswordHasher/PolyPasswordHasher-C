@@ -56,11 +56,12 @@ typedef enum{
   PPH_ACCOUNT_IS_INVALID,
   PPH_WRONG_SHARE_COUNT,
   PPH_CONTEXT_IS_LOCKED,
+  PPH_VALUE_OUT_OF_RANGE,
+  PPH_SECRET_IS_INVALID,
   // system or user is being brilliant. 
   PPH_FILE_ERR,
   PPH_NO_MEM,
   PPH_BAD_PTR,
-  PPH_PTR_IS_NULL,
   // developer is not brilliant
   PPH_ERROR_UNKNOWN,
 }PPH_ERROR;
