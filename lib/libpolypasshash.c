@@ -1198,12 +1198,14 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
 
 // This is a private helper that produces a salt string,
 void get_random_salt(unsigned int length, uint8 *dest){
-  unsigned int i;
-  FILE *fp;
+  unsigned int i=0;
+  int fp;
 
-  fp = fopen("/dev/urandom","rb");
-  fread(dest,sizeof(uint8),length,fp);
-  fclose(fp);
+  fp = open("/dev/urandom",O_RDONLY);
+  while(i<length){
+    i += read(fp,dest,length);
+  }
+  close(fp);
 }
 
 
