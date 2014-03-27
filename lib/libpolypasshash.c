@@ -1022,14 +1022,45 @@ uint8 *generate_pph_secret(unsigned int stream_length,
   return secret;
 }
 
+
+
+
 // this checks whether a given secret complies with the pph_secret prototype
 // ([stream][streamhash])
 PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
     unsigned int hash_bytes){
-  return PPH_ERROR_UNKNOWN;
+  
+  uint8 stream_digest[DIGEST_LENGTH];
+
+
+  // sanitize data
+  if(stream_length > DIGEST_LENGTH || stream_length < 1){
+    return PPH_VALUE_OUT_OF_RANGE;
+  }
+
+  if(hash_bytes > DIGEST_LENGTH || hash_bytes < 1){
+    return PPH_VALUE_OUT_OF_RANGE;
+  }
+
+  if(hash_bytes + stream_length > DIGEST_LENGTH){
+    return PPH_VALUE_OUT_OF_RANGE;
+  }
+
+  if(secret == NULL){
+    return PPH_BAD_PTR;
+  }
+
+
+  // generate the digest for the stream.
+  _calculate_digest(stream_digest, secret, stream_length);
+
+  // compare both digests
+  if(memcmp(stream_digest, secret+stream_length, hash_bytes) == 0){
+    return PPH_ERROR_OK;
+  }
+
+  return PPH_SECRET_IS_INVALID;
 }
-
-
 
 
 
