@@ -1041,7 +1041,57 @@ pph_context *pph_reload_context(const unsigned char *filename){
 */
 int PHS(void *out, size_t outlen, const void *in, size_t inlen,
    const void* salt, size_t saltlen, int tcost, int mcost){
+  
 
+  static pph_context *context = NULL;
+  pph_entry *generated_entry; 
+  uint8 share[DIGEST_LENGTH];
+
+  // check we are given proper pointers
+  if(out == NULL || in == NULL || salt == NULL){
+    return -1;
+  }
+
+  // we only support 32 byte digests at the moment.
+  if(outlen != DIGEST_LENGTH){
+    return -1;
+  }
+
+  // check the input length
+  if(inlen < 1 || inlen > PASSWORD_LENGTH){
+    return -1;
+  }
+
+  // check the salt length
+  if(saltlen < 1 || saltlen > SALT_LENGTH){
+    return -1;
+  }
+
+  // we ignore the tcost and the mcost variables this time.
+  
+  // initialize the context if there is none in memory.
+  if(context == NULL){
+    context = pph_init_context(2,0);
+  }
+
+  // get a share to xor it with the password
+  gfshare_ctx_enc_getshare(context->share_context, context->next_entry, share);
+  context->next_entry++;
+  if(context->next_entry > MAX_NUMBER_OF_SHARES){
+    context->next_entry = 0;
+  }
+
+  // generate an entry.
+  generated_entry = create_polyhashed_entry( in, inlen, salt, saltlen,
+      share, DIGEST_LENGTH, context->partial_bytes);
+
+  // copy the resulting polyhash to the output
+  memcpy(out, generated_entry->polyhashed_value, outlen);
+
+  // free the generated entry
+  free(generated_entry);
+
+  return 0;
 }
 
 
@@ -1176,7 +1226,7 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
   // hash the salted password
   _calculate_digest(entry_node->polyhashed_value, salted_password,
         salt_length + password_length);
-    
+  
   // xor the whole thing, with the share, we are doing operations in-place
   // to make everything faste
   _xor_share_with_digest(entry_node->polyhashed_value, share,
