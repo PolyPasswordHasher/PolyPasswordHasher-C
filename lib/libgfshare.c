@@ -49,12 +49,8 @@ _gfshare_fill_rand_using_random( unsigned char* buffer,
 {
   unsigned int i;
   for( i = 0; i < count; ++i )
-    //buffer[i] = (random() & 0xff00) >> 8; /* apparently the bottom 8 aren't
-      //                                     * very random but the middles ones
-      //                                     * are
-      //                                     */
-    buffer[i] = 0; // this is a really big patch, but why should we have 
-                   // a random initialization
+    buffer[i] = 1<<i; // this is a really big patch, but why should we have 
+                      // a random initialization
 }
 
 gfshare_rand_func_t gfshare_fill_rand = _gfshare_fill_rand_using_random;
