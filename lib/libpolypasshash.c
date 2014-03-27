@@ -28,6 +28,9 @@
 #include "libpolypasshash.h"
 
 
+
+
+
 /*******************************************************************
 * NAME :            pph_init_conext
 *
@@ -66,12 +69,15 @@
 */
 pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 
+
   pph_context *context;
-  unsigned char share_numbers[MAX_NUMBER_OF_SHARES];//this is a specific
-                                                    //initialization constant.
+
+  // this is a specific initialization constant
+  unsigned char share_numbers[MAX_NUMBER_OF_SHARES];
   unsigned int i;
   
   
+
   // 1) CHECK ARGUMENT SANITY
   // threshold
   if(threshold==0){
@@ -82,19 +88,21 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
     return NULL;
   }
 
-  // 2)INITIALIZE DATA STRUCTURE
-  
+
+
+  // 2)INITIALIZE DATA STRUCTURE 
   context = malloc(sizeof(*context));
   if(context == NULL){
     return NULL;
-  }// TODO: evaluate if we should check for sub-allocation
+  }
 
-  // fill
   context->threshold=threshold;
   
   // initialize the partial bytes offset, this will be used to limit the
   // length of the shares, and the length of the digest to xor/encrypt
   context->partial_bytes=partial_bytes;
+
+
 
   // 3) generate random secret, we generate a 16 byte stream and append
   // half of the 16 byte hash to the end of it.
@@ -103,6 +111,8 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
     free(context);
     return NULL;
   }
+
+
 
   // 4) Initialize the rest of the values
   context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
@@ -144,6 +154,10 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
   return context;
 }
 
+
+
+
+
 /*******************************************************************
 * NAME :            pph_destroy_conext
 *
@@ -175,15 +189,20 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 *     destruction. 
 *
 * CHANGES :
-*     First revision, won't delete accounts. 
+*     (03/17/2014): added support for account deletion
+*     
 */
 PPH_ERROR pph_destroy_context(pph_context *context){
-  // do the first check
+
+
   pph_account_node *current,*next;
-  PPH_ERROR error = PPH_ERROR_UNKNOWN;
+
+
+  // check that we are given a valid pointer
   if(context == NULL){
     return PPH_BAD_PTR;
   }
+  
   
   // do child freeing.
   if(context->secret !=NULL){
@@ -201,22 +220,28 @@ PPH_ERROR pph_destroy_context(pph_context *context){
       free(current); 
     }
   }
+
+
   if(context->share_context!=NULL){
     gfshare_ctx_free(context->share_context);
   }
-  // now it is safe to free everything
+  
+  
+  // now it is safe to free the context
   free(context);
 
-  error = PPH_ERROR_OK;
-
-  return error;
+  return PPH_ERROR_OK;
 }
+
+
+
+
 
 /*******************************************************************
 * NAME :            pph_create_account
 *
 * DESCRIPTION :     given a context and some other data, create a user
-*                   entry in the polypasshashcontext with the desired 
+*                   entry in the polypasshash context with the desired 
 *                   information.
 *
 * INPUTS :
@@ -283,6 +308,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
                         const unsigned int username_length, 
                         const uint8 *password, 
                         const unsigned int password_length, uint8 shares){
+
+
   pph_account_node *node,*next;
   unsigned int length;
   unsigned int i;
@@ -291,23 +318,26 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   uint8 share_data[SHARE_LENGTH];
   uint8 resulting_hash[DIGEST_LENGTH];
   uint8 salt_buffer[SALT_LENGTH];
-  uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH];
 
+  
   
   // 1) SANITIZE INFORMATION
   // check password length
   if(password_length > PASSWORD_LENGTH-1){
     return PPH_PASSWORD_IS_TOO_LONG;
   }
+
   // check username length
   if(username_length > USERNAME_LENGTH-1){
     return PPH_USERNAME_IS_TOO_LONG;
   }
-  // check share numbers
-  if(shares>MAX_NUMBER_OF_SHARES){// we do not check for 0 because of the 
-                                  // the thresholdless accounts
+
+  // check share numbers, we don't check for 0 since that means thresholdless
+  // accounts
+  if(shares>MAX_NUMBER_OF_SHARES){
     return PPH_WRONG_SHARE_COUNT;
   }
+  
   // check correct context pointer
   if(ctx == NULL){
     return PPH_BAD_PTR;
@@ -336,13 +366,13 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   // this will generate a share list for non-thresholdless acounts, we won't 
   // fall inside this loop for thresholdless acounts since shares is 0.
   last_entry = NULL;
+
   for(i=0;i<shares;i++){
+    
     // 3) Allocate entries for each account
- 
     // get a new share value
     gfshare_ctx_enc_getshare( ctx->share_context, ctx->next_entry,
         share_data);
-
 
     // get a salt for the password
     get_random_salt(SALT_LENGTH, salt_buffer);
@@ -367,11 +397,12 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     entry_node->next = last_entry;
     last_entry=entry_node;
   }
+
   // This if will check for thresholdless accounts, and will build a single 
   // entry for them.
   if(shares == 0){
+  
     // 3) allocate an entry for each account
- 
     // get a salt for the password
     get_random_salt(SALT_LENGTH, salt_buffer); 
  
@@ -383,6 +414,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     if(entry_node == NULL){
       return PPH_NO_MEM;
     }
+
     // we now have one share entry under this list, so we increment this
     // parameter.
     shares++;
@@ -404,7 +436,6 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   node->account.entries = entry_node;
 
   // 5) add the resulting account to the current context.
-
   // append it to the context list, with the rest of thee users
   node->next = ctx->account_data;
   ctx->account_data = node;
@@ -415,11 +446,15 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 }
 
 
+
+
+
+
 /*******************************************************************
 * NAME :          pph_check_log_in  
 *
 * DESCRIPTION :   Check whether a username and password combination exists 
-*                 inside the loaded PPH context
+*                 inside the loaded polypasshash context
 *
 * INPUTS :
 *   PARAMETERS:
@@ -457,7 +492,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *     1) Sanitize data and return errors
 *     2) try to find username in the context
 *     3) if found, decide how to verify their information based on the status
-*         of the context (thresholdless, partial verif, etc.)
+*         of the context (thresholdless, partial verif., etc.)
 *     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
@@ -466,27 +501,29 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
                           unsigned int username_length, const char *password,
                           unsigned int password_length){
-  pph_account_node *search; // this will be used to iterate all the users 
-
-  pph_account_node *target = NULL; // this will, ideally, point to target 
-                                   //   username, if he exists in the list
   
-  uint8 share_data[SHARE_LENGTH];  // this is a buffer to store the current 
-                                   //  share
+  // this will be used to iterate all the users 
+  pph_account_node *search;
+  pph_account_node *target = NULL; 
   
-  uint8 resulting_hash[DIGEST_LENGTH]; // this will hold our calculated hash
+  // we will store the current share in this buffer for xor'ing   
+  uint8 share_data[SHARE_LENGTH];  
   
-  uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH]; // this is the buffer
-                                                      // we will use for hashing
-  
+  // we will calculate a "proposed hash" in this buffer  
+  uint8 resulting_hash[DIGEST_LENGTH];
+  uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH]; 
+                                                      
   uint8 xored_hash[SHARE_LENGTH];
-  uint8 sharenumber;
 
+  // these are value holders to improve readability
+  uint8 sharenumber;
   pph_entry *current_entry;
 
   unsigned int i;
-  unsigned int partial_bytes_offset; // this will hold an offset value for 
-                                     // partial verification.
+
+  // this will hold an offset value for partial verification.
+  unsigned int partial_bytes_offset;
+
   // openSSL managers.
   EVP_CIPHER_CTX de_ctx;
   int p_len,f_len;
@@ -498,14 +535,13 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     return PPH_BAD_PTR;
   }
 
-  // if the length is too long for either field, return proper error, we
-  // are substracting the null character as it is not included in the check
-  if(username_length > USERNAME_LENGTH-1){
+  // if the length is too long for either field, return proper error.
+  if(username_length > USERNAME_LENGTH){
     return PPH_USERNAME_IS_TOO_LONG;
   }
   
   // do the same for the password
-  if(password_length > PASSWORD_LENGTH-1){
+  if(password_length > PASSWORD_LENGTH){
     return PPH_PASSWORD_IS_TOO_LONG;
   }
 
@@ -514,38 +550,55 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     return PPH_CONTEXT_IS_LOCKED;
   }
 
+  // check we have a thresholdless key
+  if(ctx->AES_key == NULL && ctx->partial_bytes == 0){
+    return PPH_CONTEXT_IS_LOCKED;
+  }
+
+
   // 2) Try to find the user in our context.
   // search for our user, we search the entries with the same username length 
   // first, and then we check if the contents are the same. 
   search = ctx->account_data;
   while(search!=NULL){
-    if(username_length == search->account.username_length && // check lengths
-        !memcmp(search->account.username,username,username_length)){// compare
+    // we check lengths first and then compare what's in it. 
+    if(username_length == search->account.username_length && 
+        !memcmp(search->account.username,username,username_length)){
       target = search;
     }
     search=search->next;
   } 
 
-  if(target == NULL){ //i.e. we found no one
+  //i.e. we found no one
+  if(target == NULL){ 
     return PPH_ACCOUNT_IS_INVALID;
   }
 
+  
   // if we reach here, we should have enough resources to provide a login
   // functionality to the user.
   
-  // 3) We found it, try to verify the proper password for him.
+
+  // 3) Try to verify the proper password for him.
   // first, check what type of account is this
+  
+  // this probably happens if data is inconsistent, but let's avoid
+  // segmentation faults. 
   if(target->account.entries == NULL){
-    return PPH_ERROR_UNKNOWN; // this probably happens if data is inconsistent
+    return PPH_ERROR_UNKNOWN; 
   }
+
 
   // we get the first entry to check if this is a valid login, we could be 
   // thorough and check for each, but it looks like an overkill
   current_entry = target->account.entries;
   sharenumber = current_entry->share_number;
   partial_bytes_offset = DIGEST_LENGTH - ctx->partial_bytes;
+  
+  
   // if the context is not unlocked, we can only provide partial verification  
   if(ctx->is_unlocked != 1){
+
     // partial bytes check
     // calculate the proposed digest, this means, calculate the hash with
     // the information just provided about the user. 
@@ -569,45 +622,41 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   else{ 
     // first, check if the account is a threshold or thresholdless account.
     if(sharenumber == 0){
+      
       // if the sharenumber is 0 then we have a thresholdless account
-      if(ctx->AES_key != NULL && ctx->is_unlocked == 1){ // extra safety check
-        // now we should calculate the expected hash by decyphering the
-        // information inside the context.
-        EVP_CIPHER_CTX_init(&de_ctx);
-        EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
-        EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len, 
-            current_entry->polyhashed_value, partial_bytes_offset);
-        EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
-        EVP_CIPHER_CTX_cleanup(&de_ctx);
+      
+      // now we should calculate the expected hash by decyphering the
+      // information inside the context.
+      EVP_CIPHER_CTX_init(&de_ctx);
+      EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
+      EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len, 
+          current_entry->polyhashed_value, partial_bytes_offset);
+      EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
+      EVP_CIPHER_CTX_cleanup(&de_ctx);
 
-        // append the unencrypted bytes if we have partial bytes. 
-        for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
-          xored_hash[i] = current_entry->polyhashed_value[i]; //
-        }
-
-        // calculate the proposed digest with the parameters provided in
-        // this function.
-        memcpy(salted_password,current_entry->salt, current_entry->salt_length);
-        memcpy(salted_password+current_entry->salt_length, password, 
-            password_length); 
-        _calculate_digest(resulting_hash, salted_password, 
-            current_entry->salt_length + password_length);
-
-        
-        // 3) compare both, and they should match.
-        if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
-          return PPH_ACCOUNT_IS_INVALID;
-        }
-        return PPH_ERROR_OK;
+      // append the unencrypted bytes if we have partial bytes. 
+      for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
+        xored_hash[i] = current_entry->polyhashed_value[i]; //
       }
-      return PPH_ACCOUNT_IS_INVALID;
-    }
+
+      // calculate the proposed digest with the parameters provided in
+      // this function.
+      memcpy(salted_password,current_entry->salt, current_entry->salt_length);
+      memcpy(salted_password+current_entry->salt_length, password, 
+          password_length); 
+      _calculate_digest(resulting_hash, salted_password, 
+          current_entry->salt_length + password_length);
+
+      
+      // 3) compare both, and they should match.
+      if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
+        return PPH_ACCOUNT_IS_INVALID;
+      }
+      return PPH_ERROR_OK;
+    }else{
     
-    // we have a non thresholdless account instead, since the sharenumber is 
-    // not 0
-    else{
-      // we do it the normal way for this. We have a valid sharenumber
-      // get the share
+      // we have a non thresholdless account instead, since the sharenumber is 
+      // not 0
       gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
 
       // calculate the proposed digest with the salt from the account and
@@ -621,10 +670,12 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       // xor the thing back to normal
       _xor_share_with_digest(xored_hash,current_entry->polyhashed_value,
           share_data, partial_bytes_offset);
+      
       // append the unobscured bytes
       for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
         xored_hash[i] = target->account.entries->polyhashed_value[i]; //
       }
+      
       // compare both.
       if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
         return PPH_ACCOUNT_IS_INVALID;
@@ -632,9 +683,13 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       return PPH_ERROR_OK; // this means, the login does match
     } 
   }
+
   // if we get to reach here, we where diverged from usual flow. 
   return PPH_ERROR_UNKNOWN;
 }
+
+
+
 
 
 /*******************************************************************
@@ -692,24 +747,27 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   uint8 salted_password[USERNAME_LENGTH+SALT_LENGTH];
   uint8 estimated_digest[DIGEST_LENGTH];
   uint8 estimated_share[SHARE_LENGTH];
-  pph_entry *entry;
-  
+  pph_entry *entry; 
   pph_account_node *current_user;
   
+
   //sanitize the data.
   if(ctx == NULL || usernames == NULL || passwords == NULL){
     return PPH_BAD_PTR;
   }
 
+
   if(username_count < ctx->threshold){
     return PPH_ACCOUNT_IS_INVALID;
   }
+
 
   // initialize the share numbers
   for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
     share_numbers[i] = 0;
   }
-  // do the reconstruction. 
+  
+  // initialize a recombination context
   G = gfshare_ctx_init_dec( share_numbers, MAX_NUMBER_OF_SHARES-1,
      SHARE_LENGTH-ctx->partial_bytes);
 
@@ -718,16 +776,19 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   while(current_user!=NULL){
     // check if each of our users is inside the context.
     for(i = 0; i<username_count;i++){
-  
+
+      //compare the proposed against existing users.
       if(!memcmp(usernames[i],current_user->account.username,
             current_user->account.username_length)){
+
         // this is an existing user
         entry = current_user->account.entries;
         
         // check if he is a threshold account.
         if(entry->share_number != 0){
+        
           // if he is a threshold account, we must attempt to reconstruct the
-          // shares using their information. 
+          // shares using their information, traverse his entries
           while(entry!=NULL){
 
             // calulate the digest given the password.
@@ -772,10 +833,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH-ctx->partial_bytes);
   }
   memcpy(ctx->secret,secret,SHARE_LENGTH-ctx->partial_bytes);
-  // check that we got a valid secret
 
-  // if the share context is not initialized, initialize one with the information
-  // we have about our context. 
+  // if the share context is not initialized, initialize one with the
+  // information we have about our context. 
   if(ctx->share_context == NULL){
     for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
       share_numbers[i]=(unsigned char)i+1;
@@ -794,6 +854,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 
   return PPH_ERROR_OK;
 }
+
+
+
 
 
 /*******************************************************************
@@ -841,12 +904,15 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 *     None as of this version
 */
 PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
+  
+  
   FILE *fp;
   pph_account_node *current_node;
-  pph_context context_to_store; // we use a hard copy so we can mess with it
-                                // without damaging the one from the user, he
-                                // might want to keep using it and we need
-                                // to set some values before writing. 
+
+  // we use a hard copy so we can mess with it without damaging the one from the
+  // user, he might want to keep using it and we need to set some values before
+  // writing. 
+  pph_context context_to_store; 
   pph_entry *current_entry;  
 
 
@@ -879,10 +945,14 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   // traverse the list and write it too.
   current_node = ctx->account_data;
   while(current_node!=NULL){
+    
     // write current node...
     fwrite(current_node,sizeof(*current_node),1,fp);
+    
     current_entry = current_node->account.entries;
     while(current_entry != NULL){
+      
+      // write its entries
       fwrite(current_entry,sizeof(*current_entry),1,fp);
       current_entry = current_entry->next;
     }
@@ -896,17 +966,18 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
 }
  
 
+
 /*******************************************************************
 * NAME :          pph_reload_context
 *
 * DESCRIPTION :   Reload a pph_context stored in a file, the secret is
 *                 unknown and the structure is locked by default.
 *                 pph_unlock_password _data should be called after this returns
-*                 a sucessfull pointer 
+*                 a successful pointer 
 *
 * INPUTS :
 *   PARAMETERS:
-*     const unsigned char* filename: The filename of the datastore to use
+*     const unsigned char* filename: The filename of the data store to use
 *
 * OUTPUTS :
 *   PARAMETERS:
@@ -935,11 +1006,13 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
 */
 pph_context *pph_reload_context(const unsigned char *filename){
 
+
   FILE *fp;
   pph_context *loaded_context;
   pph_account_node *accounts,*last,account_buffer;
   pph_entry *entries, *last_entry, entry_buffer;
   unsigned int i;
+
 
   // 1) sanitize data
   if(filename == NULL){
@@ -957,16 +1030,21 @@ pph_context *pph_reload_context(const unsigned char *filename){
   if(loaded_context == NULL){
     return NULL;
   }
+
   fread(loaded_context,sizeof(*loaded_context),1,fp);
   
   // build the account and entry list out of the information from the file. 
   accounts = NULL;
   while(fread(&account_buffer,sizeof(account_buffer),1,fp) != 0){
+    
+    // read an account
     last = accounts;
     accounts = malloc(sizeof(account_buffer));
     memcpy(accounts,&account_buffer,sizeof(account_buffer));
     last_entry = NULL;
     for(i=0;i<account_buffer.account.number_of_entries;i++){
+      
+      // allocate the entry list for this account
       entries = malloc(sizeof(*entries));
       fread(entries,sizeof(*entries),1,fp);
       entries->next = last_entry;
@@ -1046,6 +1124,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
   pph_entry *generated_entry; 
   uint8 share[DIGEST_LENGTH];
 
+
   // check we are given proper pointers
   if(out == NULL || in == NULL || salt == NULL){
     return -1;
@@ -1101,6 +1180,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 
 // helper functions ///////////////////////
 
+
 // this generates a random secret of the form [stream][streamhash], the 
 // parameters are the length of each section of the secret
 uint8 *generate_pph_secret(unsigned int stream_length,
@@ -1142,6 +1222,7 @@ uint8 *generate_pph_secret(unsigned int stream_length,
 
 
 
+
 // this checks whether a given secret complies with the pph_secret prototype
 // ([stream][streamhash])
 PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
@@ -1178,6 +1259,7 @@ PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length,
 
   return PPH_SECRET_IS_INVALID;
 }
+
 
 
 
@@ -1227,12 +1309,15 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
         salt_length + password_length);
   
   // xor the whole thing, with the share, we are doing operations in-place
-  // to make everything faste
+  // to make everything faster
   _xor_share_with_digest(entry_node->polyhashed_value, share,
         entry_node->polyhashed_value, share_length-partial_bytes);
     
   return entry_node;
 }
+
+
+
 
 
 // this other function is the equivalent to the one in the top, but for
@@ -1303,6 +1388,9 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
   return entry_node;  
 
 }
+
+
+
 
 
 
