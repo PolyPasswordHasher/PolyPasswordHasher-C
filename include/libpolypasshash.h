@@ -449,27 +449,41 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename);
 pph_context *pph_reload_context(const unsigned char *filename);
  
 
-	
+
+
+
 /*******************************************************************
 * NAME :          PHS 
 *
-* DESCRIPTION :   Generate a password hash, given the password, and salt
+* DESCRIPTION :   Generate a password hash, given the password, and salt. 
+*                 This is a "virtual" interface and functions as a proof of
+*                 context for the password hashing competition. A context will
+*                 be initialized upon calling, and will be destroyed upon
+*                 return. No persistent setup is done in this function, and no
+*                 accounts are created. 
 *
 * INPUTS :
 *   PARAMETERS:
-*     void *out:          The resulting hash value
+*     void *out:          The resulting hash buffer. The resulting hash will be
+*                         copied here. 
 *
-*     size_t outlen:      The size of the hash to produce
+*     size_t outlen:      The size of the hash to produce, this version only
+*                         supports 32 byte-length outputs. 
 *
 *     const void *in:     The input password to hash.
 *
-*     size_t inlen:       The length of the input.
+*     size_t inlen:       The length of the input, the maximum supported length
+*                         is 128.
 *
 *     const void *salt:   The salt to use with the password
 *
-*     size_t saltlen:     The length of the salt to use,
+*     size_t saltlen:     The length of the salt to use. The maximum supported
+*                         length is 16
 *
-*     int tcost:          Time cost for the function (unusable at the time)
+*     int tcost:          Time cost for this function. This parameter 
+*                         translates directly to the threshold of the
+*                         generated context. With a bigger threshold, the time
+*                         to initialize a context rises. This value can't be 0.
 *
 *     int mcost:          Memory cost (unusable this time)
 *
@@ -489,7 +503,7 @@ pph_context *pph_reload_context(const unsigned char *filename);
 *            !=0                              In case of error.
 * 
 * PROCESS :
-*     1) Sanitize the data (check the string is a good string) 
+*     1) verify the input. 
 *     2) Generate a pph_context if there is none in memory
 *     3) Generate a polyhashed entry
 *     4) Copy the polyhashed value to the output buffer
