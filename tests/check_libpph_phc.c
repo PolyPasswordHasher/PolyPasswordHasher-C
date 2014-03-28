@@ -61,7 +61,7 @@ START_TEST(test_PHS_extraneous_input)
 
   // lets do a valid generation, we should get a 0 error
   returnval = PHS(output, DIGEST_LENGTH, password, strlen(password), salt,
-     SALT_LENGTH, 0, 0);
+     SALT_LENGTH, 2, 0);
   ck_assert(returnval == 0); 
   
 }
@@ -80,8 +80,8 @@ START_TEST(test_PHS_input_ranges)
   uint8 precomputed_hash[DIGEST_LENGTH];
   uint8 password[PASSWORD_LENGTH];
   uint8 salted_password[SALT_LENGTH + PASSWORD_LENGTH];
-  unsigned int i;
-  unsigned int incidences, max_incidences = 5; 
+  unsigned int i,j;
+  unsigned int incidences, max_incidences = 6; 
 
   // generate a full range password (from 0 to 255)
   for(i=0;i<PASSWORD_LENGTH;i++){
@@ -97,7 +97,7 @@ START_TEST(test_PHS_input_ranges)
   // test with full range password
   incidences = 0;
   returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-      SALT_LENGTH, 0, 0);
+      SALT_LENGTH, 2, 0);
   ck_assert(returnval == 0);
 
   // we will check how obscure the hash is, we want the resulting octets to
@@ -120,7 +120,7 @@ START_TEST(test_PHS_input_ranges)
       SALT_LENGTH + PASSWORD_LENGTH);
 
   returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-      SALT_LENGTH, 0, 0);
+      SALT_LENGTH, 2, 0);
 
   // check results
   incidences = 0;
@@ -147,7 +147,7 @@ START_TEST(test_PHS_input_ranges)
 
 
   returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-      SALT_LENGTH, 0, 0);
+      SALT_LENGTH, 2, 0);
   
   // check results
   incidences = 0;
@@ -171,7 +171,7 @@ START_TEST(test_PHS_input_ranges)
       SALT_LENGTH + PASSWORD_LENGTH);
 
   returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-     SALT_LENGTH, 0, 0);
+     SALT_LENGTH, 2, 0);
 
   // check results
   incidences = 0;
@@ -183,6 +183,32 @@ START_TEST(test_PHS_input_ranges)
     
   }
   ck_assert(incidences < max_incidences);
+
+  
+  // testing for different tcost values.
+  for(i = 1; i < MAX_NUMBER_OF_SHARES; i++){
+    // add random salt
+    get_random_salt(SALT_LENGTH, salt);
+
+    // precompute the hash to produce.
+    memcpy(salted_password, salt, SALT_LENGTH);
+    memcpy(salted_password + SALT_LENGTH, password, PASSWORD_LENGTH);
+    _calculate_digest(precomputed_hash, salted_password, 
+      SALT_LENGTH + PASSWORD_LENGTH);
+
+    returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
+     SALT_LENGTH, i, 0);
+
+    // check results
+    incidences = 0;
+    ck_assert(returnval == 0);
+    for(j=0;j<DIGEST_LENGTH; j++){
+      if(output[j] == precomputed_hash[j]){
+        incidences++;
+      }  
+    }
+    ck_assert(incidences < max_incidences);
+  }
 }
 END_TEST
 
@@ -193,50 +219,29 @@ END_TEST
 
 // We will try to see if there are information leakages depending on the
 // input.
-START_TEST(test_PHS_timing)
+START_TEST(test_PHS_tcost_values)
 {
   int returnval;
   uint8 output[DIGEST_LENGTH];
   uint8 salt[SALT_LENGTH];
   uint8 password[PASSWORD_LENGTH];
 
-  // we will use these variables to time the function.
-  time_t  tsalt0,tpassword0, tpassword1, tpolyhash0, tpolyhash1; 
-  clock_t csalt0,cpassword0, cpassword1, cpolyhash0, cpolyhash1;
+  int i;
 
   // initialize the values
-  tsalt0 = time(NULL);
-  csalt0 = clock();
   get_random_salt(SALT_LENGTH, salt);
 
-  tpassword0 = time(NULL);
-  cpassword0 = clock();
   get_random_salt(PASSWORD_LENGTH, password);
 
-  tpolyhash0 = time(NULL);
-  cpolyhash0 = clock();
 
-  returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-     SALT_LENGTH, 0, 0);
+  // test all possible values for tcost.
+  for(i=1;i<MAX_NUMBER_OF_SHARES; i++){
+      returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
+      SALT_LENGTH, i, 0);
   
-  tpolyhash1 = time(NULL);
-  cpolyhash1 = clock();
-
-  ck_assert(returnval == 0);
-
-  printf("\nsalt generation time = (%f,%ld)", 
-      (float)(cpassword0 - csalt0)/CLOCKS_PER_SEC, (long)(tpassword0 - tsalt0));
-  printf("\nrandom password time = (%f,%ld)",
-      (float)(cpolyhash0 - cpassword0)/CLOCKS_PER_SEC, 
-      (long)(tpolyhash0 - tpassword0));
-  printf("\npolyhash creation time = (%f,%ld)",
-      (float)(cpolyhash1 - cpolyhash0)/CLOCKS_PER_SEC,
-      (long)(tpolyhash1 - tpolyhash0)); 
-  printf("\nTotal time : (%f,%ld)\n", 
-      (float)(cpolyhash1 - csalt0)/CLOCKS_PER_SEC, (long)(tpolyhash1 - tsalt0));
-
-}
-END_TEST
+      ck_assert(returnval == 0);
+  }
+}END_TEST
 
 
 
@@ -251,11 +256,15 @@ Suite * polypasshash_PHS_suite(void)
   TCase *tc_phs = tcase_create ("phs_inputs");
   tcase_add_test(tc_phs, test_PHS_extraneous_input);
   tcase_add_test(tc_phs, test_PHS_input_ranges);
-  tcase_add_test(tc_phs, test_PHS_timing);
+  tcase_add_test(tc_phs, test_PHS_tcost_values);
   suite_add_tcase (s, tc_phs);
 
   return s;
 }
+
+
+
+
 
 int main (void)
 {
