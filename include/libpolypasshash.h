@@ -233,7 +233,8 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes);
 *                    value:                     when:
 *                   PPH_ERROR_OK                  the free process worked
 *
-*                   PPH_ERROR_UNKNOWN             if something weird happens    
+*                   PPH_BAD_PTR                   if the pointer given is NULL
+*
 * PROCESS :
 *     Basically destroy pointers in the structure and then free the structure
 *     itself, doing sanity checks in between child and parent structure 
