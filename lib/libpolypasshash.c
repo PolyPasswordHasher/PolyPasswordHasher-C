@@ -67,6 +67,7 @@
 * CHANGES :
 *     21/04/2014: secret is no longer a parameter
 */
+
 pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 
 
@@ -189,6 +190,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 * CHANGES :
 *     (03/17/14): Account freeing is done now. 
 */
+
 PPH_ERROR pph_destroy_context(pph_context *context){
 
 
@@ -299,6 +301,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 * CHANGES :
 *   Added support for different length accounts
 */
+
 PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
                         const unsigned int username_length, 
                         const uint8 *password, 
@@ -495,6 +498,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 * CHANGES :
 *  (21/04/2014): Added support for non-null-terminated usernames and passwords.
 */
+
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
                           unsigned int username_length, const char *password,
                           unsigned int password_length){
@@ -743,6 +747,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 * CHANGES :
 *     (03/25/14): Secret consistency check was added. 
 */
+
 PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
                           const uint8 *usernames[], const uint8 *passwords[]){
   
@@ -909,6 +914,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 * CHANGES :
 *     None as of this version
 */
+
 PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   
   
@@ -1015,6 +1021,7 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
 * CHANGES :
 *     None as of this version
 */
+
 pph_context *pph_reload_context(const unsigned char *filename){
 
 
@@ -1139,6 +1146,7 @@ pph_context *pph_reload_context(const unsigned char *filename){
 * CHANGES :
 *     None as of this version
 */
+
 int PHS(void *out, size_t outlen, const void *in, size_t inlen,
    const void* salt, size_t saltlen, int tcost, int mcost){
   
@@ -1207,6 +1215,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 
 // this generates a random secret of the form [stream][streamhash], the 
 // parameters are the length of each section of the secret
+
 uint8 *generate_pph_secret(unsigned int stream_length,
     unsigned int hash_bytes){
   
@@ -1249,6 +1258,7 @@ uint8 *generate_pph_secret(unsigned int stream_length,
 
 // this checks whether a given secret complies with the pph_secret prototype
 // ([stream][streamhash])
+
 PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
     unsigned int hash_bytes){
   
@@ -1289,6 +1299,7 @@ PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length,
 
 
 // this function provides a polyhashed entry given the input
+
 pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
     password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
     unsigned int share_length, unsigned int partial_bytes){
@@ -1346,6 +1357,7 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
 
 // this other function is the equivalent to the one in the top, but for
 // thresholdless accounts.
+
 pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
     password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
     unsigned int key_length, unsigned int partial_bytes){
@@ -1419,6 +1431,7 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
 
 
 // This is a private helper that produces a salt string,
+
 void get_random_salt(unsigned int length, uint8 *dest){
   unsigned int i=0;
   int fp;
