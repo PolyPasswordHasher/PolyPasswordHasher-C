@@ -206,7 +206,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   
   
   // we should now store the context and free the data before leaving
-  pph_store_context(context,"securetpasswords");
+  pph_store_context(context,"securepasswords");
   pph_destroy_context(context);
 
 ```
