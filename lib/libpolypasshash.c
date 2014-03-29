@@ -30,22 +30,22 @@
 
 
 
-
 /*******************************************************************
-* NAME :            pph_init_conext
+* NAME :            pph_init_context
 *
 * DESCRIPTION :     Initialize a poly pass hash structure with everything
-*                   we need in order to work. Custom initialization is to
-*                   be provided
+*                   we need in order to work. 
+
 *
 * INPUTS :
 *   PARAMETERS:
-*      uint8 threshold:           he decided threshold for this specific
+*     uint8 threshold:            The threshold for this specific
 *                                 password storage
 *
-*      uint8 partial_bytes:       The number of hashed-bytes to leak in order to
-*                                 perform partial verification. In case partial
-*                                 verification wants to be disabled, set to 0.
+*     uint8 partial_bytes:        The number of hashed-bytes to leak in order 
+*                                 to perform partial verification. If 
+*                                 partial_bytes = 0, partial verification is 
+*                                 disabled
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -89,8 +89,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
   }
 
 
-
-  // 2)INITIALIZE DATA STRUCTURE 
+  // 2)INITIALIZE DATA STRUCTURES
   context = malloc(sizeof(*context));
   if(context == NULL){
     return NULL;
@@ -159,10 +158,10 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 
 
 /*******************************************************************
-* NAME :            pph_destroy_conext
+* NAME :            pph_destroy_context
 *
 * DESCRIPTION :     Destroy an existing instance of pph_context, securely 
-*                   dstroying its resources.
+*                   destroying its resources.
 *
 * INPUTS :
 *   PARAMETERS:
@@ -170,7 +169,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 *
 * OUTPUTS :
 *   PARAMETERS:
-*     None
+*     pph_context *context: the context to free/destroy.    
 *     
 *   GLOBALS :
 *     None
@@ -181,16 +180,13 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 *                   PPH_ERROR_OK                  the free process worked
 *
 *                   PPH_ERROR_UNKNOWN             if something weird happens    
-*
-*                   PPH_BAD_PTR                   if the pointer given is null
 * PROCESS :
 *     Basically destroy pointers in the structure and then free the structure
 *     itself, doing sanity checks in between child and parent structure 
 *     destruction. 
 *
 * CHANGES :
-*     (03/17/2014): added support for account deletion
-*     
+*     (03/17/14): Account freeing is done now. 
 */
 PPH_ERROR pph_destroy_context(pph_context *context){
 
@@ -236,7 +232,6 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 
 
 
-
 /*******************************************************************
 * NAME :            pph_create_account
 *
@@ -254,13 +249,13 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 *
 *     const unsigned int username_length: the length of the username field,
 *                                         this value should not exceed 
-*                                         USERNAME_LENGTH.
+*                                         MAX_USERNAME_LENGTH.
 *
 *     const uint8 *password:              This is the password for the new entry
 *
 *     const unsgned int password_length:  The length of the password field, this
 *                                         value should not exceed 
-*                                         PASSWORD_LENGTH
+*                                         MAX_PASSWORD_LENGTH
 *
 *     uint8 shares:                       This is the amount of shares we decide 
 *                                         to allocate to this new account. 
@@ -292,11 +287,10 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 *             PPH_ACCOUNT_IS_INVALID       If the username provided already 
 *                                          exists
 *
-*
 * PROCESS :
 *     1) Check for data sanity, and return errors
 *     2) Check the type of account requested
-*     3) Allocate a share/digest entry for the account
+*     3) Allocate a share/digest entry for the accound
 *     4) Initialize the account data with the information provided
 *     5) Update the context information regarding the new account
 *     6) return
@@ -317,18 +311,18 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   uint8 current_entry;
   uint8 share_data[SHARE_LENGTH];
   uint8 resulting_hash[DIGEST_LENGTH];
-  uint8 salt_buffer[SALT_LENGTH];
+  uint8 salt_buffer[MAX_SALT_LENGTH];
 
   
   
   // 1) SANITIZE INFORMATION
   // check password length
-  if(password_length > PASSWORD_LENGTH-1){
+  if(password_length > MAX_PASSWORD_LENGTH-1){
     return PPH_PASSWORD_IS_TOO_LONG;
   }
 
   // check username length
-  if(username_length > USERNAME_LENGTH-1){
+  if(username_length > MAX_USERNAME_LENGTH-1){
     return PPH_USERNAME_IS_TOO_LONG;
   }
 
@@ -375,11 +369,11 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
         share_data);
 
     // get a salt for the password
-    get_random_salt(SALT_LENGTH, salt_buffer);
+    get_random_salt(MAX_SALT_LENGTH, salt_buffer);
 
     // Try to get a new entry.
     entry_node=create_polyhashed_entry(password, password_length, salt_buffer,
-        SALT_LENGTH, share_data, SHARE_LENGTH, ctx->partial_bytes);
+        MAX_SALT_LENGTH, share_data, SHARE_LENGTH, ctx->partial_bytes);
     if(entry_node == NULL){
       _destroy_entry_list(last_entry);
       return PPH_NO_MEM;
@@ -404,11 +398,11 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   
     // 3) allocate an entry for each account
     // get a salt for the password
-    get_random_salt(SALT_LENGTH, salt_buffer); 
+    get_random_salt(MAX_SALT_LENGTH, salt_buffer); 
  
     // generate the entry
     entry_node = create_thresholdless_entry(password, password_length,
-        salt_buffer, SALT_LENGTH, ctx->AES_key, DIGEST_LENGTH,
+        salt_buffer, MAX_SALT_LENGTH, ctx->AES_key, DIGEST_LENGTH,
         ctx->partial_bytes);
 
     if(entry_node == NULL){
@@ -448,13 +442,11 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 
 
 
-
-
 /*******************************************************************
-* NAME :          pph_check_log_in  
+* NAME :          pph_check_login  
 *
 * DESCRIPTION :   Check whether a username and password combination exists 
-*                 inside the loaded polypasshash context
+*                 inside the loaded PPH context.
 *
 * INPUTS :
 *   PARAMETERS:
@@ -480,19 +472,22 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *           Values:                         When:
 *           PPH_ACCOUNT_IS_INVALID            The combination does not exist
 *           
-*           PPH_USERNAME_IS_TOO_LONG          The username/pw won't fit in the
-*                                             context anyway
+*           PPH_USERNAME_IS_TOO_LONG          The username won't fit in the 
+*                                             buffer
+*
+*           PPH_PASSWORD_IS_TOO_LONG          The password won't fir in the 
+*                                             buffer associated to it. 
 *
 *           PPH_BAD_PTR                       When pointers are null or out
 *                                             of range
 *
-*           PPH_ERROR_UNKNOWN                 anytime else
+*           PPH_ERROR_UNKNOWN                 any time else
 *           
 * PROCESS :
 *     1) Sanitize data and return errors
 *     2) try to find username in the context
-*     3) if found, decide how to verify their information based on the status
-*         of the context (thresholdless, partial verif., etc.)
+*     3) if found, decide how to verify his information based on the status
+*         of the context (thresholdless, partial verif, etc.)
 *     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
@@ -501,7 +496,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
                           unsigned int username_length, const char *password,
                           unsigned int password_length){
-  
+ 
+
   // this will be used to iterate all the users 
   pph_account_node *search;
   pph_account_node *target = NULL; 
@@ -511,14 +507,13 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   
   // we will calculate a "proposed hash" in this buffer  
   uint8 resulting_hash[DIGEST_LENGTH];
-  uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH]; 
+  uint8 salted_password[MAX_SALT_LENGTH+MAX_PASSWORD_LENGTH]; 
                                                       
   uint8 xored_hash[SHARE_LENGTH];
 
   // these are value holders to improve readability
   uint8 sharenumber;
   pph_entry *current_entry;
-
   unsigned int i;
 
   // this will hold an offset value for partial verification.
@@ -536,12 +531,12 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   }
 
   // if the length is too long for either field, return proper error.
-  if(username_length > USERNAME_LENGTH){
+  if(username_length > MAX_USERNAME_LENGTH){
     return PPH_USERNAME_IS_TOO_LONG;
   }
   
   // do the same for the password
-  if(password_length > PASSWORD_LENGTH){
+  if(password_length > MAX_PASSWORD_LENGTH){
     return PPH_PASSWORD_IS_TOO_LONG;
   }
 
@@ -691,7 +686,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
 
 
-
 /*******************************************************************
 * NAME :          pph_unlock_password_data 
 *
@@ -702,8 +696,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *   PARAMETERS:
 *     pph_context *ctx:             The context in which we are working
 *
-*     unsigned int username_count:  The length of the username/password pair 
-*                                   arrays
+*     unsigned int username_count:  The length of the username/password arrays
 *
 *     const char *usernames:        The username attempts
 *
@@ -711,7 +704,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *
 * OUTPUTS :
 *   PARAMETERS:
-*     None
+*     type: pph_context             The context provided will be activated and
+*                                   pointed to the secret if combination was 
+*                                   successful
 *     
 *   GLOBALS :
 *     None
@@ -722,19 +717,29 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *           PPH_ACCOUNT_IS_INVALID            We couldn't recombine with the 
 *                                             information given
 *           
-*           PPH_USERNAME_IS_TOO_LONG          The username/pw won't fit in the
-*                                             context anyway
+*           PPH_USERNAME_IS_TOO_LONG          The username won't fit in the
+*                                             buffer allocated to it.
+*
+*           PPH_PASSOWRD_IS_TOO_LONG          The password won't fit in it's
+*                                             assigned buffer
 *
 *           PPH_BAD_PTR                       When pointers are null or out
 *                                             of range
 *
-*           PPH_ERROR_UNKNOWN                 anytime else
+*           PPH_ERROR_UNKNOWN                 any time else
 *           
 * PROCESS :
-*     TODO: THIS
+*     1) Verify input sanity
+*     2) traverse user accounts searching for proposed username
+*     3) produce shares out of the password digest
+*     4) give shares to the recombination context
+*     5) attempt recombination
+*     6) verify correct recombination.
+*     7) if successful, unlock the store
+*     8) return error code
 *
 * CHANGES :
-*     TODO: 
+*     (03/25/14): Secret consistency check was added. 
 */
 PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
                           const uint8 *usernames[], const uint8 *passwords[]){
@@ -744,7 +749,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx *G;
   unsigned int i;
   uint8 secret[SHARE_LENGTH];
-  uint8 salted_password[USERNAME_LENGTH+SALT_LENGTH];
+  uint8 salted_password[MAX_USERNAME_LENGTH+MAX_SALT_LENGTH];
   uint8 estimated_digest[DIGEST_LENGTH];
   uint8 estimated_share[SHARE_LENGTH];
   pph_entry *entry; 
@@ -755,7 +760,6 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   if(ctx == NULL || usernames == NULL || passwords == NULL){
     return PPH_BAD_PTR;
   }
-
 
   if(username_count < ctx->threshold){
     return PPH_ACCOUNT_IS_INVALID;
@@ -770,6 +774,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   // initialize a recombination context
   G = gfshare_ctx_init_dec( share_numbers, MAX_NUMBER_OF_SHARES-1,
      SHARE_LENGTH-ctx->partial_bytes);
+
 
   // traverse our possible users
   current_user=ctx->account_data;
@@ -796,7 +801,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
             memcpy(salted_password+entry->salt_length, passwords[i],
                 entry->password_length);
             _calculate_digest(estimated_digest,salted_password,
-                SALT_LENGTH + current_user->account.entries->password_length);
+                MAX_SALT_LENGTH + current_user->account.entries->password_length);
 
             // xor the obtained digest with the polyhashed value to obtain
             // our share.
@@ -815,6 +820,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     } 
     current_user = current_user->next;
   }
+
 
   // now we attempt to recombine the secret, we have given him all of the 
   // obtained shares.
@@ -863,10 +869,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 * NAME :          pph_store_context
 *
 * DESCRIPTION :   store the information of the working context into a file. 
-*                 The status of the secret is lost in the process and the 
-*                 structure is set as such. After reloading the stucture, the
-*                 user should call pph_unlock_password_data with enough 
-*                 valid accounts.
+*                 Elements as the secret and the share context are not stored.
+*                 
 *
 * INPUTS :
 *   PARAMETERS:
@@ -884,7 +888,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 *     Type: int PPH_ERROR     
 *           Values:                         When:
 *           PPH_ERROR_OK                      When the file was stored 
-*                                             succcessfully.
+*                                             successfully.
 *
 *           PPH_BAD_PTR                       When pointers are null or out
 *                                             of range
@@ -895,10 +899,10 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 *           PPH_ERROR_UNKNOWN                 anytime else
 *           
 * PROCESS :
-*     1) Sanitize the data (unset flags, point secret to NULL)
-*     2) open the selected file.
-*     3) traverse the dynamic linked lists storing everything
-*     4) close the file, return appropriate error
+*     * Sanitize the data (unset flags, point secret to NULL)
+*     * open the selected file.
+*     * traverse the dynamic linked lists storing everything
+*     * close the file, return appropriate error
 *
 * CHANGES :
 *     None as of this version
@@ -920,7 +924,8 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   if(ctx == NULL || filename == NULL){
     return PPH_BAD_PTR;
   }
-  
+ 
+
   // we backup the context so we can mess with it without breaking anything. 
   memcpy(&context_to_store,ctx,sizeof(*ctx));
 
@@ -933,11 +938,13 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   // set this context's information to locked.
   context_to_store.is_unlocked = 0; 
 
+
   // 2) open selected file
   fp=fopen(filename,"wb");
   if(fp==NULL){
     return PPH_FILE_ERR;
   }
+
 
   // 3) write the context
   fwrite(&context_to_store,sizeof(context_to_store),1,fp); 
@@ -964,7 +971,9 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   fclose(fp);
   return PPH_ERROR_OK;
 }
- 
+
+
+
 
 
 /*******************************************************************
@@ -973,11 +982,11 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
 * DESCRIPTION :   Reload a pph_context stored in a file, the secret is
 *                 unknown and the structure is locked by default.
 *                 pph_unlock_password _data should be called after this returns
-*                 a successful pointer 
+*                 a valid pointer 
 *
 * INPUTS :
 *   PARAMETERS:
-*     const unsigned char* filename: The filename of the data store to use
+*     const unsigned char* filename: The filename of the datastore to use
 *
 * OUTPUTS :
 *   PARAMETERS:
@@ -996,10 +1005,10 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
 *            A valid pointer                  if everything went fine
 * 
 * PROCESS :
-*     1) Sanitize the data (check the string is a good string) 
-*     2) open the selected file.
-*     3) Build a dynamic list by traversing the file's contents
-*     4) close the file, return appropriate structure
+*     * Sanitize the data (check the string is a good string) 
+*     * open the selected file.
+*     * Build a dynamic list by traversing the file's contents
+*     * close the file, return appropriate structure
 *
 * CHANGES :
 *     None as of this version
@@ -1019,12 +1028,14 @@ pph_context *pph_reload_context(const unsigned char *filename){
     return NULL;
   }
 
+
   // 2) open selected file
   fp= fopen(filename,"rb");
   if(fp == NULL){
     return NULL;
   }
   
+
   // 3) load the context structure from the file. 
   loaded_context = malloc(sizeof(*loaded_context));
   if(loaded_context == NULL){
@@ -1056,6 +1067,7 @@ pph_context *pph_reload_context(const unsigned char *filename){
   }
   loaded_context->account_data = accounts;
   
+
   // 4) close the file.
   fclose(fp);
   return loaded_context;
@@ -1064,7 +1076,7 @@ pph_context *pph_reload_context(const unsigned char *filename){
 
 
 
-	
+
 /*******************************************************************
 * NAME :          PHS 
 *
@@ -1145,12 +1157,12 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
   }
 
   // check the input length
-  if(inlen < 1 || inlen > PASSWORD_LENGTH){
+  if(inlen < 1 || inlen > MAX_PASSWORD_LENGTH){
     return -1;
   }
 
   // check the salt length
-  if(saltlen < 1 || saltlen > SALT_LENGTH){
+  if(saltlen < 1 || saltlen > MAX_SALT_LENGTH){
     return -1;
   }
 
@@ -1283,7 +1295,7 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
   pph_entry *entry_node = NULL;
   
   // we hold a buffer for the salted password.
-  uint8 salted_password[SALT_LENGTH+PASSWORD_LENGTH]; 
+  uint8 salted_password[MAX_SALT_LENGTH+MAX_PASSWORD_LENGTH]; 
 
   // check input pointers are correct
   if(password == NULL || salt == NULL || share == NULL){
@@ -1291,7 +1303,7 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
   }
 
   // check for valid lengths
-  if(password_length > PASSWORD_LENGTH || salt_length > SALT_LENGTH){
+  if(password_length > MAX_PASSWORD_LENGTH || salt_length > MAX_SALT_LENGTH){
     return NULL;
   }
 
@@ -1338,7 +1350,7 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
 
 
   pph_entry *entry_node = NULL;
-  uint8 salted_password[SALT_LENGTH + PASSWORD_LENGTH];
+  uint8 salted_password[MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH];
 
   // openssl encryption contexts
   EVP_CIPHER_CTX en_ctx;
@@ -1352,7 +1364,7 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
   }
 
   // check for password and pass lengths
-  if(password_length > PASSWORD_LENGTH || salt_length > SALT_LENGTH){
+  if(password_length > MAX_PASSWORD_LENGTH || salt_length > MAX_SALT_LENGTH){
     return NULL;
   }
 
@@ -1376,7 +1388,7 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
   
   // prepend the salt to the password and generate a digest
   memcpy(salted_password,entry_node->salt,salt_length);
-  memcpy(salted_password+SALT_LENGTH, password, password_length); 
+  memcpy(salted_password+MAX_SALT_LENGTH, password, password_length); 
   _calculate_digest(entry_node->polyhashed_value,salted_password, 
       salt_length + password_length); 
 
