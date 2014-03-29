@@ -256,7 +256,7 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 * INPUTS :
 *   PARAMETERS:
 *     pph_context *ctx:                   This is the context in which the
-*                                         account wiil be created
+*                                         account will be created
 *     
 *     const uint8 *username:              This is the desired username for the
 *                                         new entry
@@ -304,7 +304,7 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 * PROCESS :
 *     1) Check for data sanity, and return errors
 *     2) Check the type of account requested
-*     3) Allocate a share/digest entry for the accound
+*     3) Allocate a share/digest entry for the account
 *     4) Initialize the account data with the information provided
 *     5) Update the context information regarding the new account
 *     6) return

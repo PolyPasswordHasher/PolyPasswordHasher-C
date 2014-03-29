@@ -242,7 +242,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 * INPUTS :
 *   PARAMETERS:
 *     pph_context *ctx:                   This is the context in which the
-*                                         account wiil be created
+*                                         account will be created
 *     
 *     const uint8 *username:              This is the desired username for the
 *                                         new entry
@@ -290,7 +290,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 * PROCESS :
 *     1) Check for data sanity, and return errors
 *     2) Check the type of account requested
-*     3) Allocate a share/digest entry for the accound
+*     3) Allocate a share/digest entry for the account
 *     4) Initialize the account data with the information provided
 *     5) Update the context information regarding the new account
 *     6) return
@@ -348,8 +348,9 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   while(next!=NULL){
     node=next;
     next=next->next;
-    if(username_length==node->account.username_length && // if the lengths match
-        !memcmp(node->account.username,username,username_length)){//compare them
+    // only compare them if their lengths match
+    if(username_length==node->account.username_length && 
+        !memcmp(node->account.username,username,username_length)){
       return PPH_ACCOUNT_IS_INVALID; 
     }
   }
@@ -357,8 +358,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 
   // 2) check for the type of account requested.
   
-  // this will generate a share list for non-thresholdless acounts, we won't 
-  // fall inside this loop for thresholdless acounts since shares is 0.
+  // this will generate a share list for non-thresholdless accounts, we won't 
+  // fall inside this loop for thresholdless accounts since shares is 0.
   last_entry = NULL;
 
   for(i=0;i<shares;i++){
@@ -620,7 +621,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       
       // if the sharenumber is 0 then we have a thresholdless account
       
-      // now we should calculate the expected hash by decyphering the
+      // now we should calculate the expected hash by deciphering the
       // information inside the context.
       EVP_CIPHER_CTX_init(&de_ctx);
       EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
