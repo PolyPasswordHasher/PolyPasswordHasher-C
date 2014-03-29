@@ -80,7 +80,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 
   // 1) CHECK ARGUMENT SANITY
   // threshold
-  if(threshold==0){
+  if(threshold==0 || threshold > MAX_NUMBER_OF_SHARES){
     return NULL;
   }
 
