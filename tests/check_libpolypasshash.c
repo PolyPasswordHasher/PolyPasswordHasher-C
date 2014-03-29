@@ -363,7 +363,7 @@ START_TEST(test_create_account_entry_consistency){
   // we will check for the existing account error handler now...
   error = pph_create_account(context, username, strlen(username),
       password, strlen(password),1);
-  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+  ck_assert_msg(error == PPH_ACCOUNT_EXISTS, 
       "We should've gotten an error since this account repeats");
   
 

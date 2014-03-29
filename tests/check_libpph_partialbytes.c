@@ -96,7 +96,7 @@ START_TEST(test_pph_create_accounts)
   // accounts
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 1);
-  ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
+  ck_assert_msg(error == PPH_ACCOUNT_EXISTS, 
       "We should have gotten an error since this account repeats");
   
   // finally, check it returns the proper error code if the vault is locked

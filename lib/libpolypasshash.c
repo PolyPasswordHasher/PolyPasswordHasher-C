@@ -284,7 +284,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 *             PPH_CONTEXT_IS_LOCKED        When the context is locked and, hence
 *                                          he cannot create accounts
 *
-*             PPH_ACCOUNT_IS_INVALID       If the username provided already 
+*             PPH_ACCOUNT_EXISTS          If the username provided already 
 *                                          exists
 *
 * PROCESS :
@@ -351,7 +351,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // only compare them if their lengths match
     if(username_length==node->account.username_length && 
         !memcmp(node->account.username,username,username_length)){
-      return PPH_ACCOUNT_IS_INVALID; 
+      return PPH_ACCOUNT_EXISTS; 
     }
   }
 
