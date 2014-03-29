@@ -216,16 +216,16 @@ START_TEST(test_create_account_usernames){
   uint8 threshold = 2; 
   uint8 partial_bytes = 0;
                         
-  unsigned char username[USERNAME_LENGTH+1];
+  unsigned char username[MAX_USERNAME_LENGTH+1];
   unsigned int i;
   
 
   // we will simulate a really big username, terminated with a null character
   // to get an incorrect "length" parameter
-  for(i=0;i<USERNAME_LENGTH;i++){
+  for(i=0;i<MAX_USERNAME_LENGTH;i++){
     username[i] = 'k'; 
   }
-  username[USERNAME_LENGTH] = '\0';
+  username[MAX_USERNAME_LENGTH] = '\0';
 
   // initialize a correct context from scratch
   context = pph_init_context(threshold,partial_bytes);
@@ -256,7 +256,7 @@ START_TEST(test_create_account_passwords){
   pph_context *context;
   uint8 threshold = 2; 
   uint8 partial_bytes = 0;
-  unsigned char password[PASSWORD_LENGTH+1];
+  unsigned char password[MAX_PASSWORD_LENGTH+1];
   unsigned int i;
 
 
@@ -266,10 +266,10 @@ START_TEST(test_create_account_passwords){
       "this was a good initialization, go tell someone");
   
   
- for(i=0;i<PASSWORD_LENGTH;i++){
+ for(i=0;i<MAX_PASSWORD_LENGTH;i++){
     password[i] = 'k'; // endless string of k's
   }
-  password[PASSWORD_LENGTH] = '\0';
+  password[MAX_PASSWORD_LENGTH] = '\0';
  
   // sending bogus information to the create user function.
   error = pph_create_account(context, "ichooseverylongpasswords",
@@ -319,7 +319,7 @@ START_TEST(test_create_account_entry_consistency){
   
   // We don't know the salt yet, but we know the password value, upon creating
   // the account, we will replace those x's with the salt values. 
-  unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x','x',
+  unsigned char salted_password[] = {'x','x','x','x','x','x','x','x','x',
                                      'x','x','x','x','x','x','x','v','e','r',
                                      'y','s','e','c','u','r','e','\0'};
   uint8 password_digest[DIGEST_LENGTH]; 
@@ -345,9 +345,9 @@ START_TEST(test_create_account_entry_consistency){
 
   // now lets check we can take the digest back from the share
   memcpy(salted_password,context->account_data->account.entries->salt,
-      SALT_LENGTH);
+      MAX_SALT_LENGTH);
   _calculate_digest(password_digest, salted_password, 
-      SALT_LENGTH + strlen(password));
+      MAX_SALT_LENGTH + strlen(password));
   digest_result=context->account_data->account.entries->polyhashed_value;
 
 
@@ -403,8 +403,8 @@ START_TEST(test_check_login_input_sanity){
                           
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
-  unsigned char too_big_username[USERNAME_LENGTH+2];
-  unsigned char too_big_password[PASSWORD_LENGTH+2];
+  unsigned char too_big_username[MAX_USERNAME_LENGTH+2];
+  unsigned char too_big_password[MAX_PASSWORD_LENGTH+2];
   unsigned int i;
 
 
@@ -426,7 +426,7 @@ START_TEST(test_check_login_input_sanity){
   ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
   
   // now lets create some big usernames and passwords
-  for(i=0;i<USERNAME_LENGTH+1;i++){
+  for(i=0;i<MAX_USERNAME_LENGTH+1;i++){
     too_big_username[i]='j';
   }
   too_big_username[i]='\0'; // null terminate our string
@@ -438,7 +438,7 @@ START_TEST(test_check_login_input_sanity){
       "expected USERNAME_IS_TOO_LONG");
 
   // let's do the same with the password
-  for(i=0;i<PASSWORD_LENGTH+1;i++){
+  for(i=0;i<MAX_PASSWORD_LENGTH+1;i++){
     too_big_password[i]='j'; 
   }
   too_big_password[i]='\0'; 

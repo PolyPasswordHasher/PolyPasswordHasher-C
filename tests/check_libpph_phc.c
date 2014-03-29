@@ -22,37 +22,37 @@ START_TEST(test_PHS_extraneous_input)
 
   int returnval;
   uint8 output[DIGEST_LENGTH];
-  uint8 salt[SALT_LENGTH];
+  uint8 salt[MAX_SALT_LENGTH];
   uint8 password[] = {"testpassword"};
 
 
   // test for null pointers
   returnval = PHS(output, DIGEST_LENGTH, password, strlen(password), NULL,
-      SALT_LENGTH, 0, 0);
+      MAX_SALT_LENGTH, 0, 0);
   ck_assert(returnval == -1);
 
   returnval = PHS(NULL, DIGEST_LENGTH, password, strlen(password), salt, 
-      SALT_LENGTH, 0,0);
+      MAX_SALT_LENGTH, 0,0);
   ck_assert(returnval == -1);
 
   returnval = PHS(output, DIGEST_LENGTH, NULL, strlen(password), salt,
-     SALT_LENGTH, 0, 0);
+     MAX_SALT_LENGTH, 0, 0);
   ck_assert(returnval == -1);
   
   // now let's test for wrong values in the length parameters
   returnval = PHS(output, DIGEST_LENGTH + 1, password, strlen(password), salt,
-     SALT_LENGTH, 0, 0);
+     MAX_SALT_LENGTH, 0, 0);
   ck_assert(returnval == -1);
 
-  returnval = PHS(output, 0, password, strlen(password), salt, SALT_LENGTH, 0,
+  returnval = PHS(output, 0, password, strlen(password), salt, MAX_SALT_LENGTH, 0,
      0);
   ck_assert(returnval == -1);
 
-  returnval = PHS(output, DIGEST_LENGTH, password, 0, salt, SALT_LENGTH, 0, 0);
+  returnval = PHS(output, DIGEST_LENGTH, password, 0, salt, MAX_SALT_LENGTH, 0, 0);
   ck_assert(returnval == -1);
 
-  returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH +1, salt,
-     SALT_LENGTH, 0, 0);
+  returnval = PHS(output, DIGEST_LENGTH, password, MAX_PASSWORD_LENGTH +1, salt,
+     MAX_SALT_LENGTH, 0, 0);
   ck_assert(returnval == -1);
 
   returnval = PHS(output, DIGEST_LENGTH, password, strlen(password), salt,
@@ -60,12 +60,12 @@ START_TEST(test_PHS_extraneous_input)
   ck_assert(returnval == -1);
 
   returnval = PHS(output, DIGEST_LENGTH, password, strlen(password), salt,
-     SALT_LENGTH + 1, 0, 0);
+     MAX_SALT_LENGTH + 1, 0, 0);
   ck_assert(returnval == -1);
 
   // lets do a valid generation, we should get a 0 error
   returnval = PHS(output, DIGEST_LENGTH, password, strlen(password), salt,
-     SALT_LENGTH, 2, 0);
+     MAX_SALT_LENGTH, 2, 0);
   ck_assert(returnval == 0); 
   
 }
@@ -82,29 +82,29 @@ START_TEST(test_PHS_input_ranges)
   
   int returnval;
   uint8 output[DIGEST_LENGTH];
-  uint8 salt[SALT_LENGTH];
+  uint8 salt[MAX_SALT_LENGTH];
   uint8 precomputed_hash[DIGEST_LENGTH];
-  uint8 password[PASSWORD_LENGTH];
-  uint8 salted_password[SALT_LENGTH + PASSWORD_LENGTH];
+  uint8 password[MAX_PASSWORD_LENGTH];
+  uint8 salted_password[MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH];
   unsigned int i,j;
   unsigned int incidences, max_incidences = 6; 
 
   
   // generate a full range password (from 0 to 255)
-  for(i=0;i<PASSWORD_LENGTH;i++){
+  for(i=0;i<MAX_PASSWORD_LENGTH;i++){
     password[i] = i%255;
   }
 
   // precompute the hash to produce.
-  memcpy(salted_password, salt, SALT_LENGTH);
-  memcpy(salted_password + SALT_LENGTH, password, PASSWORD_LENGTH);
+  memcpy(salted_password, salt, MAX_SALT_LENGTH);
+  memcpy(salted_password + MAX_SALT_LENGTH, password, MAX_PASSWORD_LENGTH);
   _calculate_digest(precomputed_hash, salted_password, 
-      SALT_LENGTH + PASSWORD_LENGTH);
+      MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH);
 
   // test with full range password
   incidences = 0;
-  returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-      SALT_LENGTH, 2, 0);
+  returnval = PHS(output, DIGEST_LENGTH, password, MAX_PASSWORD_LENGTH, salt,
+      MAX_SALT_LENGTH, 2, 0);
   ck_assert(returnval == 0);
 
   // we will check how obscure the hash is, we want the resulting octets to
@@ -118,16 +118,16 @@ START_TEST(test_PHS_input_ranges)
 
 
   // test with a random password
-  get_random_salt(PASSWORD_LENGTH, password);
+  get_random_salt(MAX_PASSWORD_LENGTH, password);
 
   // precompute the hash to produce.
-  memcpy(salted_password, salt, SALT_LENGTH);
-  memcpy(salted_password + SALT_LENGTH, password, PASSWORD_LENGTH);
+  memcpy(salted_password, salt, MAX_SALT_LENGTH);
+  memcpy(salted_password + MAX_SALT_LENGTH, password, MAX_PASSWORD_LENGTH);
   _calculate_digest(precomputed_hash, salted_password, 
-      SALT_LENGTH + PASSWORD_LENGTH);
+      MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH);
 
-  returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-      SALT_LENGTH, 2, 0);
+  returnval = PHS(output, DIGEST_LENGTH, password, MAX_PASSWORD_LENGTH, salt,
+      MAX_SALT_LENGTH, 2, 0);
 
   // check results
   incidences = 0;
@@ -142,19 +142,19 @@ START_TEST(test_PHS_input_ranges)
  
 
   // add a full_range salt.
-  for( i = 0; i < SALT_LENGTH; i++){
+  for( i = 0; i < MAX_SALT_LENGTH; i++){
     salt[i] = 255-i;
   }
   
   // precompute the hash to produce.
-  memcpy(salted_password, salt, SALT_LENGTH);
-  memcpy(salted_password + SALT_LENGTH, password, PASSWORD_LENGTH);
+  memcpy(salted_password, salt, MAX_SALT_LENGTH);
+  memcpy(salted_password + MAX_SALT_LENGTH, password, MAX_PASSWORD_LENGTH);
   _calculate_digest(precomputed_hash, salted_password, 
-      SALT_LENGTH + PASSWORD_LENGTH);
+      MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH);
 
 
-  returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-      SALT_LENGTH, 2, 0);
+  returnval = PHS(output, DIGEST_LENGTH, password, MAX_PASSWORD_LENGTH, salt,
+      MAX_SALT_LENGTH, 2, 0);
   
   // check results
   incidences = 0;
@@ -169,16 +169,16 @@ START_TEST(test_PHS_input_ranges)
  
   
   // add random salt
-  get_random_salt(SALT_LENGTH, salt);
+  get_random_salt(MAX_SALT_LENGTH, salt);
 
   // precompute the hash to produce.
-  memcpy(salted_password, salt, SALT_LENGTH);
-  memcpy(salted_password + SALT_LENGTH, password, PASSWORD_LENGTH);
+  memcpy(salted_password, salt, MAX_SALT_LENGTH);
+  memcpy(salted_password + MAX_SALT_LENGTH, password, MAX_PASSWORD_LENGTH);
   _calculate_digest(precomputed_hash, salted_password, 
-      SALT_LENGTH + PASSWORD_LENGTH);
+      MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH);
 
-  returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-     SALT_LENGTH, 2, 0);
+  returnval = PHS(output, DIGEST_LENGTH, password, MAX_PASSWORD_LENGTH, salt,
+     MAX_SALT_LENGTH, 2, 0);
 
   // check results
   incidences = 0;
@@ -195,16 +195,16 @@ START_TEST(test_PHS_input_ranges)
   // testing for different tcost values.
   for(i = 1; i < MAX_NUMBER_OF_SHARES; i++){
     // add random salt
-    get_random_salt(SALT_LENGTH, salt);
+    get_random_salt(MAX_SALT_LENGTH, salt);
 
     // precompute the hash to produce.
-    memcpy(salted_password, salt, SALT_LENGTH);
-    memcpy(salted_password + SALT_LENGTH, password, PASSWORD_LENGTH);
+    memcpy(salted_password, salt, MAX_SALT_LENGTH);
+    memcpy(salted_password + MAX_SALT_LENGTH, password, MAX_PASSWORD_LENGTH);
     _calculate_digest(precomputed_hash, salted_password, 
-      SALT_LENGTH + PASSWORD_LENGTH);
+      MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH);
 
-    returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-     SALT_LENGTH, i, 0);
+    returnval = PHS(output, DIGEST_LENGTH, password, MAX_PASSWORD_LENGTH, salt,
+     MAX_SALT_LENGTH, i, 0);
 
     // check results
     incidences = 0;
@@ -230,20 +230,20 @@ START_TEST(test_PHS_tcost_values)
 
   int returnval;
   uint8 output[DIGEST_LENGTH];
-  uint8 salt[SALT_LENGTH];
-  uint8 password[PASSWORD_LENGTH];
+  uint8 salt[MAX_SALT_LENGTH];
+  uint8 password[MAX_PASSWORD_LENGTH];
   int i;
 
 
   // initialize the values
-  get_random_salt(SALT_LENGTH, salt);
-  get_random_salt(PASSWORD_LENGTH, password);
+  get_random_salt(MAX_SALT_LENGTH, salt);
+  get_random_salt(MAX_PASSWORD_LENGTH, password);
 
 
   // test all possible values for tcost.
   for(i=1;i<MAX_NUMBER_OF_SHARES; i++){
-      returnval = PHS(output, DIGEST_LENGTH, password, PASSWORD_LENGTH, salt,
-      SALT_LENGTH, i, 0);
+      returnval = PHS(output, DIGEST_LENGTH, password, MAX_PASSWORD_LENGTH, salt,
+      MAX_SALT_LENGTH, i, 0);
   
       ck_assert(returnval == 0);
   }

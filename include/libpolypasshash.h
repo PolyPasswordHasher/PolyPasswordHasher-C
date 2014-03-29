@@ -36,21 +36,30 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-/* Constant Declaration */
-#define SHARE_LENGTH 256/8              // the length of our share buffers
+
+// constants declaration
+
+// the length of our share buffers
+#define SHARE_LENGTH 256/8              
 #define DIGEST_LENGTH SHARE_LENGTH
-#define MAX_NUMBER_OF_SHARES 255        // the maximum number of shares
-#define USERNAME_LENGTH 128             // the maximum username length
-#define SALT_LENGTH 17                  // the length of the salt to be used
-#define PASSWORD_LENGTH 128             // I'm setting this as for the PHC
+
+// the maximum number of shares to use in this framework.
+#define MAX_NUMBER_OF_SHARES 255
+
+// these constants are set to meet the password hashing competition guidelines
+#define MAX_USERNAME_LENGTH 128            
+#define MAX_SALT_LENGTH 16                  
+#define MAX_PASSWORD_LENGTH 128            
 
 /* Custom types */ 
 typedef unsigned char uint8;
 
 /* enums */
 typedef enum{
+
   // all goes good
   PPH_ERROR_OK = 0,
+
   // accounts go bad
   PPH_USERNAME_IS_TOO_LONG,
   PPH_PASSWORD_IS_TOO_LONG,
