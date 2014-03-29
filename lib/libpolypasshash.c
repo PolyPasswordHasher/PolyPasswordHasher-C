@@ -117,7 +117,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
   context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
 
   // since this is a new context, it should be unlocked
-  context->is_unlocked = 1; 
+  context->is_unlocked = true; 
 
   // for the time being, the AES_key is the secret now. 
   context->AES_key = context->secret;
@@ -338,7 +338,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   }
 
   // check if we are able to get shares from the context vault
-  if(ctx->is_unlocked != 1 || ctx->AES_key == NULL){
+  if(ctx->is_unlocked != true || ctx->AES_key == NULL){
     return PPH_CONTEXT_IS_LOCKED;
   }
 
@@ -542,7 +542,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   }
 
   // check if the context is locked and we lack partial bytes to check
-  if(ctx->is_unlocked != 1 && ctx->partial_bytes == 0){
+  if(ctx->is_unlocked != true && ctx->partial_bytes == 0){
     return PPH_CONTEXT_IS_LOCKED;
   }
 
@@ -593,7 +593,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   
   
   // if the context is not unlocked, we can only provide partial verification  
-  if(ctx->is_unlocked != 1){
+  if(ctx->is_unlocked != true){
 
     // partial bytes check
     // calculate the proposed digest, this means, calculate the hash with
@@ -856,7 +856,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   // we have an initialized share context, we set the recombined secret to it 
   // and set the unlock flag to one so it is ready to use.
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
-  ctx->is_unlocked = 1;
+  ctx->is_unlocked = true;
   ctx->AES_key = ctx->secret;
 
   return PPH_ERROR_OK;
@@ -937,7 +937,7 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   context_to_store.account_data = NULL;
 
   // set this context's information to locked.
-  context_to_store.is_unlocked = 0; 
+  context_to_store.is_unlocked = false; 
 
 
   // 2) open selected file

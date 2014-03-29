@@ -102,7 +102,7 @@ START_TEST(test_pph_create_accounts)
   
   // finally, check it returns the proper error code if the vault is locked
   // still
-  context->is_unlocked = 0; 
+  context->is_unlocked = false; 
   context->AES_key = NULL;
   
   // we will check for the existing account error handler now...
@@ -290,7 +290,7 @@ START_TEST(test_pph_unlock_password_data){
   }
 
   // let's pretend all is broken
-  context->is_unlocked =0;
+  context->is_unlocked = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context= NULL;
@@ -325,7 +325,7 @@ START_TEST(test_pph_unlock_password_data){
 
 
   // let's imagine it's all broken (Again)
-  context->is_unlocked = 0;
+  context->is_unlocked = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context = NULL;

@@ -35,6 +35,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 
 // constants declaration
@@ -145,7 +146,7 @@ typedef struct _pph_context{
   uint8 next_entry;             
  
   // this is a boolean flag to indicate if the secret is available.  
-  uint8 is_unlocked;             
+  bool is_unlocked;             
   
   // if the context is unlocked, these will point to the secret and the AES
   // key

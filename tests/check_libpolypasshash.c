@@ -369,7 +369,7 @@ START_TEST(test_create_account_entry_consistency){
 
   // finally, check it returns the proper error code if the vault is locked
   // still, we will simulate account locking by unsetting the flag. 
-  context->is_unlocked = 0; 
+  context->is_unlocked = false; 
                            
   
   // we will check for the locked context error now...
@@ -449,9 +449,9 @@ START_TEST(test_check_login_input_sanity){
       "expected PASSWORD_IS_TOO_LONG");
   
   // finally, check it returns the proper error code if the vault is locked
-  // still. We set the unlocked flag to 0 to log the context, and we also know
-  // that partial bytes is 0 and won't provide any login functionality. 
-  context->is_unlocked = 0; 
+  // still. We set the unlocked flag to false to lock the context, and we also
+  // know that partial bytes is 0 and won't provide any login functionality. 
+  context->is_unlocked = false; 
 
   error=pph_check_login(context,username,strlen(username), password,
       strlen(password));
@@ -684,7 +684,7 @@ START_TEST(test_pph_unlock_password_data_input_sanity){
       "this was a good initialization, go tell someone");
   
   // let's imagine it's all broken
-  context->is_unlocked = 0;
+  context->is_unlocked = false;
   
   // now give a wrong username count, below the threshold.
   error = pph_unlock_password_data(context, 0, usernames, passwords);
@@ -767,7 +767,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
 
 
   // let's imagine it's all broken
-  context->is_unlocked = 0;
+  context->is_unlocked = false;
   strcpy(context->secret,"thiswasnotthesecretstring");
 
   // now give a correct full account information, we expect to have our secret
@@ -779,7 +779,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
   }
 
   // let's imagine it's all broken (Again)
-  context->is_unlocked = 0;
+  context->is_unlocked = false;
   strcpy(context->secret,"thiswasnotthesecretstring");
 
   // now give a correct full account information, we expect to have our secret
@@ -804,7 +804,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds){
   
   // attempt to unlock the vault with  wrong passwords
   free(context->secret);
-  context->is_unlocked=0;
+  context->is_unlocked = false;
 
   error = pph_unlock_password_data(context, 2, usernames_subset, bad_passwords);
   ck_assert(error == PPH_ACCOUNT_IS_INVALID);
@@ -877,7 +877,7 @@ START_TEST(test_pph_reload_context_input_sanity){
   ck_assert_msg(context->threshold == 2, " threshold didn't match the one set");
   ck_assert_msg(context->partial_bytes == 0, "partial bytes don't match");
   ck_assert_msg(context->secret == NULL, " didn't store null for secret");
-  ck_assert_msg(context->is_unlocked == 0, " loaded an unlocked context");
+  ck_assert_msg(context->is_unlocked == false, " loaded an unlocked context");
   
   pph_destroy_context(context);
 
