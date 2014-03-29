@@ -192,8 +192,9 @@ typedef struct _pph_context{
 *     None
 *   
 *   RETURN :
-*     Type:   pph_context         the resulting context or NULL if something 
-*                                 fails
+*     Type:   pph_context         the resulting context or NULL when either 
+*                                 allocation fails or the input given is not
+*                                 within the valid ranges.
 * PROCESS :
 *   1) verify arguments
 *   2) allocate data structures
