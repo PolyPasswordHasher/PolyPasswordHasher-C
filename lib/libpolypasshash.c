@@ -40,7 +40,9 @@
 * INPUTS :
 *   PARAMETERS:
 *     uint8 threshold:            The threshold for this specific
-*                                 password storage
+*                                 password storage. This is, the minimum
+*                                 number of shares needed to unlock the 
+*                                 upon reloading
 *
 *     uint8 partial_bytes:        The number of hashed-bytes to leak in order 
 *                                 to perform partial verification. If 
@@ -54,8 +56,9 @@
 *     None
 *   
 *   RETURN :
-*     Type:   pph_context         the resulting context or NULL if something 
-*                                 fails
+*     Type:   pph_context         the resulting context or NULL when either
+*                                 allocation fails or the input given is not
+*                                 within the valid ranges.
 * PROCESS :
 *   1) verify arguments
 *   2) allocate data structures
