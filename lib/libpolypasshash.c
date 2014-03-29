@@ -57,7 +57,7 @@
 *     Type:   pph_context         the resulting context or NULL if something 
 *                                 fails
 * PROCESS :
-*   1) verify parameters are well formed
+*   1) verify arguments
 *   2) allocate data structures
 *   3) generate a custom random secret
 *   4) initialize the rest of the values
