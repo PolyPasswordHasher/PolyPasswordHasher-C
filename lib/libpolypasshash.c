@@ -98,7 +98,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
   context->threshold=threshold;
   
   // initialize the partial bytes offset, this will be used to limit the
-  // length of the shares, and the length of the digest to xor/encrypt
+  // length of the shares, and the length of the digest to xor/encrypt.
   context->partial_bytes=partial_bytes;
 
 
@@ -113,13 +113,14 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes){
 
 
 
-  // 4) Initialize the rest of the values
+  // 4) Initialize the rest of the values.
   context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
 
-  // since this is a new context, it should be unlocked
+  // since this is a new context, it should be unlocked.
   context->is_unlocked = true; 
 
-  // for the time being, the AES_key is the secret now. 
+  // We are using the secret to encrypt thresholdless accounts, so we set the 
+  // AES key to be the same as the secret. 
   context->AES_key = context->secret;
 
   // initialize the rest
