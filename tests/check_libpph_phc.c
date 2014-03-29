@@ -4,6 +4,8 @@
  * @date    03/27/2014 
  * @license MIT
  */
+
+
 #include<check.h>
 #include"libgfshare.h"
 #include"libpolypasshash.h"
@@ -12,14 +14,16 @@
 #include<time.h>
 
 
+
 // we will test for extraneous input on the PHS function first
 START_TEST(test_PHS_extraneous_input)
 { 
+
+
   int returnval;
   uint8 output[DIGEST_LENGTH];
   uint8 salt[SALT_LENGTH];
   uint8 password[] = {"testpassword"};
-
 
 
   // test for null pointers
@@ -74,6 +78,8 @@ END_TEST
 // We will now test the generated input with non-ascii ranges.
 START_TEST(test_PHS_input_ranges)
 {
+  
+  
   int returnval;
   uint8 output[DIGEST_LENGTH];
   uint8 salt[SALT_LENGTH];
@@ -83,6 +89,7 @@ START_TEST(test_PHS_input_ranges)
   unsigned int i,j;
   unsigned int incidences, max_incidences = 6; 
 
+  
   // generate a full range password (from 0 to 255)
   for(i=0;i<PASSWORD_LENGTH;i++){
     password[i] = i%255;
@@ -216,21 +223,20 @@ END_TEST
 
 
 
-
-// We will try to see if there are information leakages depending on the
-// input.
+// test the full range in the tcost values.
 START_TEST(test_PHS_tcost_values)
 {
+
+
   int returnval;
   uint8 output[DIGEST_LENGTH];
   uint8 salt[SALT_LENGTH];
   uint8 password[PASSWORD_LENGTH];
-
   int i;
+
 
   // initialize the values
   get_random_salt(SALT_LENGTH, salt);
-
   get_random_salt(PASSWORD_LENGTH, password);
 
 
@@ -241,6 +247,8 @@ START_TEST(test_PHS_tcost_values)
   
       ck_assert(returnval == 0);
   }
+
+
 }END_TEST
 
 
@@ -250,6 +258,8 @@ START_TEST(test_PHS_tcost_values)
 // suite declaration
 Suite * polypasshash_PHS_suite(void)
 {
+
+
   Suite *s = suite_create ("PHS");
 
   // Input consistency, ranges and speed
@@ -265,7 +275,7 @@ Suite * polypasshash_PHS_suite(void)
 
 
 
-
+// suite runner setup
 int main (void)
 {
   int number_failed;
