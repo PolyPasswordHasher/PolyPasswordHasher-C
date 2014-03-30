@@ -131,9 +131,12 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
 
 
 
-  // 3) generate random secret, we generate a 16 byte stream and append
-  // half of the 16 byte hash to the end of it.
-  context->secret = generate_pph_secret(DIGEST_LENGTH/2, DIGEST_LENGTH/2);
+  // 3) generate random secret, we generate a random byte stream and append
+  // half of the 16 byte hash to the end of it, we have chosen to use
+  // only four hash bytes in order to have more random bytes. 
+  context->secret = generate_pph_secret(
+      SIGNATURE_RANDOM_BYTE_LENGTH-partial_bytes,
+      SIGNATURE_HASH_BYTE_LENGTH);
   if(context->secret == NULL) {
     free(context);
     
@@ -944,8 +947,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_dec_extract(G, secret);
 
   // verify that we got a proper secret back.
-  if(check_pph_secret(secret, DIGEST_LENGTH/2, 
-        DIGEST_LENGTH/2-ctx->partial_bytes) != PPH_ERROR_OK){
+  if(check_pph_secret(secret, SIGNATURE_RANDOM_BYTE_LENGTH-ctx->partial_bytes,
+        SIGNATURE_HASH_BYTE_LENGTH) != PPH_ERROR_OK){
     
     return PPH_ACCOUNT_IS_INVALID;
     

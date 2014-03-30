@@ -52,6 +52,14 @@
 #define MAX_SALT_LENGTH 16                  
 #define MAX_PASSWORD_LENGTH 128            
 
+// the pph secret contains a specific signature to be able to discern from a 
+// valid secret to an invalid one. This signature corresponds to the following
+// layout: [random_bytes][hash_of_random_bytes]. We define here the length of
+// the first and two sections of the secret.
+#define SIGNATURE_HASH_BYTE_LENGTH 4
+#define SIGNATURE_RANDOM_BYTE_LENGTH DIGEST_LENGTH-SIGNATURE_HASH_BYTE_LENGTH
+
+
 /* Custom types */ 
 typedef unsigned char uint8;
 
