@@ -596,7 +596,7 @@ pph_context *pph_reload_context(const unsigned char *filename);
 *
 *            !=0                              In case of error.
 * 
-* PROCESS :
+* PROCESS 
 *     1) verify the input. 
 *     2) Generate a pph_context if there is none in memory
 *     3) Generate a polyhashed entry
@@ -620,7 +620,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 // parameters are the length of each section of the secret
 
 uint8 *generate_pph_secret(unsigned int stream_length,
-    unsigned int hash_bytes);
+    unsigned int hash_length);
 
 
 

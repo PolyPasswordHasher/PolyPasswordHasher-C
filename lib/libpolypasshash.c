@@ -1220,7 +1220,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 // parameters are the length of each section of the secret
 
 uint8 *generate_pph_secret(unsigned int stream_length,
-    unsigned int hash_bytes){
+    unsigned int hash_length){
   
 
   uint8 *secret;
@@ -1231,11 +1231,11 @@ uint8 *generate_pph_secret(unsigned int stream_length,
     return NULL;
   }
 
-  if(hash_bytes > DIGEST_LENGTH || hash_bytes < 1){
+  if(hash_length > DIGEST_LENGTH || hash_length < 1){
     return NULL;
   }
 
-  if(hash_bytes + stream_length > DIGEST_LENGTH){
+  if(hash_length + stream_length > DIGEST_LENGTH){
     return NULL;
   }
 
@@ -1250,7 +1250,7 @@ uint8 *generate_pph_secret(unsigned int stream_length,
 
   // hash the rest of the 
   _calculate_digest(stream_digest, secret, stream_length);
-  memcpy(secret + stream_length, stream_digest, hash_bytes);
+  memcpy(secret + stream_length, stream_digest, hash_length);
 
   return secret;
 }
