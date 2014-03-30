@@ -42,12 +42,15 @@
 *     uint8 threshold:            The threshold for this specific
 *                                 password storage. This is, the minimum
 *                                 number of shares needed to unlock the 
-*                                 upon reloading
+*                                 upon reloading. The valid ranges for the 
+*                                 threshold go from 1 to MAX_NUMBER_OF_SHARES;
+*                                 however, a value of 1 is a bad idea.
 *
 *     uint8 partial_bytes:        The number of hashed-bytes to leak in order 
 *                                 to perform partial verification. If 
 *                                 partial_bytes = 0, partial verification is 
-*                                 disabled
+*                                 disabled. Partial bytes should range from 0
+*                                 to DIGEST_LENGTH
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -59,6 +62,7 @@
 *     Type:   pph_context         the resulting context or NULL when either
 *                                 allocation fails or the input given is not
 *                                 within the valid ranges.
+*
 * PROCESS :
 *   1) verify arguments
 *   2) allocate data structures
@@ -84,7 +88,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
 
   // 1) CHECK ARGUMENT SANITY
   // threshold
-  if(threshold==0 || threshold > MAX_NUMBER_OF_SHARES) {
+  if(threshold == 0 || threshold > MAX_NUMBER_OF_SHARES) {
     return NULL;
   }
 

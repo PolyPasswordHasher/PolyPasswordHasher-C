@@ -177,15 +177,18 @@ typedef struct _pph_context{
 *
 * INPUTS :
 *   PARAMETERS:
-*     uint8 threshold:            The threshold for this specific
+*     uint8 threshold:            The threshold for this 
 *                                 password storage. This is, the minimum
 *                                 number of shares needed to unlock the 
-*                                 upon reloading
+*                                 upon reloading. The valid ranges for the
+*                                 threshold go from 1 to MAX_NUMBER_OF_SHARES;
+*                                 however, a value of 1 is a bad idea.
 *
 *     uint8 partial_bytes:        The number of hashed-bytes to leak in order 
 *                                 to perform partial verification. If 
 *                                 partial_bytes = 0, partial verification is 
-*                                 disabled
+*                                 disabled. Partial bytes should range from 0
+*                                 to DIGEST_LENGTH. 
 * OUTPUTS :
 *   PARAMETERS:
 *     None
