@@ -697,7 +697,9 @@ inline void _xor_share_with_digest(uint8 *result, uint8 *share,
   for(i = char_aligned_length; i<char_aligned_length+char_aligned_offset;i++) {
     *(result+i) = *(share+i) ^ *(digest+i); 
   }
+    
   return;
+    
 }
 
 
@@ -716,6 +718,8 @@ inline void _calculate_digest(uint8 *digest, const uint8 *password,
   EVP_DigestFinal_ex(&mctx,  digest, 0);
   EVP_MD_CTX_cleanup(&mctx);
 
+  return;
+
 }
 
 
@@ -729,6 +733,9 @@ inline void _destroy_entry_list(pph_entry *head) {
     free(last);
     last=head;
   }
+
+  return;
+
 } 
 #endif /* LIBPOLYPASSHASH_H */
 
