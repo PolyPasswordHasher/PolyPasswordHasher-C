@@ -667,7 +667,7 @@ void get_random_salt(unsigned int length, uint8 *dest);
 
 // xoring two streams of bytes. 
 inline void _xor_share_with_digest(uint8 *result, uint8 *share,
-     uint8 * digest,unsigned int length){
+     uint8 * digest,unsigned int length) {
   int i;
   unsigned int *xor_digest_pointer;
   unsigned int *xor_share_pointer;
@@ -683,13 +683,13 @@ inline void _xor_share_with_digest(uint8 *result, uint8 *share,
   xor_share_pointer = (unsigned int*)share;
   xor_result_pointer = (unsigned int*)result;
   
-  for(i=0;i<aligned_length;i++){
+  for(i=0;i<aligned_length;i++) {
       *(xor_result_pointer + i) = 
         *(xor_share_pointer+i)^*(xor_digest_pointer +i);
   }
   
   // xor the rest, if we have a number that's not divisible by a word.
-  for(i = char_aligned_length; i<char_aligned_length+char_aligned_offset;i++){
+  for(i = char_aligned_length; i<char_aligned_length+char_aligned_offset;i++) {
     *(result+i) = *(share+i) ^ *(digest+i); 
   }
   return;
@@ -700,7 +700,7 @@ inline void _xor_share_with_digest(uint8 *result, uint8 *share,
 // we will make an inline of the hash calculation, since it is done in many
 // places and looks too messy
 inline void _calculate_digest(uint8 *digest, const uint8 *password,
-    unsigned int length){
+    unsigned int length) {
   EVP_MD_CTX mctx;
 
   EVP_MD_CTX_init(&mctx);
@@ -716,10 +716,10 @@ inline void _calculate_digest(uint8 *digest, const uint8 *password,
 
 
 // in the generate user event and when destroying a context object
-inline void _destroy_entry_list(pph_entry *head){
+inline void _destroy_entry_list(pph_entry *head) {
   pph_entry *last;
   last=head;
-  while(head!=NULL){
+  while(head!=NULL) {
     head=head->next;
     free(last);
     last=head;
