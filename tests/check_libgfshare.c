@@ -74,7 +74,7 @@ START_TEST(generate_secrets_256_shares)
   unsigned int i;
 
   
-  for(i=0;i<256;i++){
+  for(i=0;i<256;i++) {
     sharenrs[i] = (i+1)%255;
   }
 
@@ -99,7 +99,7 @@ START_TEST(generate_secrets_256_shares)
   //gfshare_ctx_dec_giveshare( G, 3, share4); 
   gfshare_ctx_dec_giveshare( G, 4, share5);
 
-  for(i=0;i<256;i++){
+  for(i=0;i<256;i++) {
     sharenrs[i] = 0;
   }
 
@@ -137,7 +137,7 @@ START_TEST(generate_secrets_same_recomb)
   unsigned int i;
 
 
-  for(i=0;i<256;i++){
+  for(i=0;i<256;i++) {
     sharenrs[i] = (i+1)%255;
   }
 
@@ -157,7 +157,7 @@ START_TEST(generate_secrets_same_recomb)
   gfshare_ctx_enc_setsecret(G, secret);
   gfshare_ctx_enc_getshare( G, 0, recomb);
 
-  for(i=0;i<256;i++){
+  for(i=0;i<256;i++) {
     ck_assert(share1[i] == recomb[i]);
   }
 }

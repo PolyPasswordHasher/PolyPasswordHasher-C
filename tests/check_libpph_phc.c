@@ -91,7 +91,7 @@ START_TEST(test_PHS_input_ranges)
 
   
   // generate a full range password (from 0 to 255)
-  for(i=0;i<MAX_PASSWORD_LENGTH;i++){
+  for(i=0;i<MAX_PASSWORD_LENGTH;i++) {
     password[i] = i%255;
   }
 
@@ -109,8 +109,8 @@ START_TEST(test_PHS_input_ranges)
 
   // we will check how obscure the hash is, we want the resulting octets to
   // not resemble the original hash. 
-  for(i=0;i<DIGEST_LENGTH; i++){
-    if(output[i] == precomputed_hash[i]){
+  for(i=0;i<DIGEST_LENGTH; i++) {
+    if(output[i] == precomputed_hash[i]) {
       incidences ++;
     } 
   }
@@ -132,8 +132,8 @@ START_TEST(test_PHS_input_ranges)
   // check results
   incidences = 0;
   ck_assert(returnval == 0);
-  for(i=0;i<DIGEST_LENGTH; i++){
-    if(output[i] == precomputed_hash[i]){
+  for(i=0;i<DIGEST_LENGTH; i++) {
+    if(output[i] == precomputed_hash[i]) {
       incidences++;
     }
     
@@ -142,7 +142,7 @@ START_TEST(test_PHS_input_ranges)
  
 
   // add a full_range salt.
-  for( i = 0; i < MAX_SALT_LENGTH; i++){
+  for( i = 0; i < MAX_SALT_LENGTH; i++) {
     salt[i] = 255-i;
   }
   
@@ -159,8 +159,8 @@ START_TEST(test_PHS_input_ranges)
   // check results
   incidences = 0;
   ck_assert(returnval == 0);
-  for(i=0;i<DIGEST_LENGTH; i++){
-    if(output[i] == precomputed_hash[i]){
+  for(i=0;i<DIGEST_LENGTH; i++) {
+    if(output[i] == precomputed_hash[i]) {
       incidences++;
     }
     
@@ -183,8 +183,8 @@ START_TEST(test_PHS_input_ranges)
   // check results
   incidences = 0;
   ck_assert(returnval == 0);
-  for(i=0;i<DIGEST_LENGTH; i++){
-    if(output[i] == precomputed_hash[i]){
+  for(i=0;i<DIGEST_LENGTH; i++) {
+    if(output[i] == precomputed_hash[i]) {
       incidences++;
     }
     
@@ -193,7 +193,7 @@ START_TEST(test_PHS_input_ranges)
 
   
   // testing for different tcost values.
-  for(i = 1; i < MAX_NUMBER_OF_SHARES; i++){
+  for(i = 1; i < MAX_NUMBER_OF_SHARES; i++) {
     // add random salt
     get_random_salt(MAX_SALT_LENGTH, salt);
 
@@ -209,8 +209,8 @@ START_TEST(test_PHS_input_ranges)
     // check results
     incidences = 0;
     ck_assert(returnval == 0);
-    for(j=0;j<DIGEST_LENGTH; j++){
-      if(output[j] == precomputed_hash[j]){
+    for(j=0;j<DIGEST_LENGTH; j++) {
+      if(output[j] == precomputed_hash[j]) {
         incidences++;
       }  
     }
@@ -241,7 +241,7 @@ START_TEST(test_PHS_tcost_values)
 
 
   // test all possible values for tcost.
-  for(i=1;i<MAX_NUMBER_OF_SHARES; i++){
+  for(i=1;i<MAX_NUMBER_OF_SHARES; i++) {
       returnval = PHS(output, DIGEST_LENGTH, password, MAX_PASSWORD_LENGTH, salt,
       MAX_SALT_LENGTH, i, 0);
   

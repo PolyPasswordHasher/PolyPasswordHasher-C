@@ -124,7 +124,7 @@ END_TEST
 
 // We check for both, thresholdless accounts and threshold accounts under 
 // partial bytes setup.
-START_TEST(test_create_account_mixed_accounts){
+START_TEST(test_create_account_mixed_accounts) {
   
   
   PPH_ERROR error;
@@ -169,7 +169,7 @@ END_TEST
 
 // This checks for a proper behavior when providing an existing username, 
 // first, as the first and only username, then after having many on the list
-START_TEST(test_check_login_thresholdless){
+START_TEST(test_check_login_thresholdless) {
 
 
   PPH_ERROR error;
@@ -203,7 +203,7 @@ START_TEST(test_check_login_thresholdless){
   
   // lets add a whole bunch of users and check for an existing one again
   // 1) add a whole new bunch of users:
-  for(i=1;i<9;i++){
+  for(i=1;i<9;i++) {
     error = pph_create_account(context, anotheruser, strlen(anotheruser),
         "anotherpassword", strlen("anotherpassword"), 1);
     ck_assert_msg(error == PPH_ERROR_OK,
@@ -239,7 +239,7 @@ END_TEST
 // we test partial verification, we use a seemingly locked context and try to
 // login. We don't care if the account is thresholdless or threshold, since
 // we only check for the leaked partial bytes. 
-START_TEST(test_pph_partial_verification_and_unlock){
+START_TEST(test_pph_partial_verification_and_unlock) {
 
 
   PPH_ERROR error;
@@ -278,7 +278,7 @@ START_TEST(test_pph_partial_verification_and_unlock){
       "this was a good initialization, go tell someone");
   
   // store the accounts
-  for(i=0;i<username_count;i++){
+  for(i=0;i<username_count;i++) {
     error = pph_create_account(context, usernames[i], strlen(usernames[i]),
         passwords[i], strlen(passwords[i]),1);
     ck_assert(error == PPH_ERROR_OK);

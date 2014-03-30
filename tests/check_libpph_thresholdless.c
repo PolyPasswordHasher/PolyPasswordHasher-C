@@ -124,7 +124,7 @@ END_TEST
 
 // this test is intended to check that we can have both, thresholdless accounts
 // and threshold accounts in a same context and working properly.
-START_TEST(test_create_account_mixed_accounts){
+START_TEST(test_create_account_mixed_accounts) {
 
 
   PPH_ERROR error;
@@ -172,7 +172,7 @@ END_TEST
 
 // This checks for a proper behavior when providing an existing username, 
 // first, as the first and only username, then after having many on the list
-START_TEST(test_check_login_thresholdless){
+START_TEST(test_check_login_thresholdless) {
 
 
   PPH_ERROR error;
@@ -205,7 +205,7 @@ START_TEST(test_check_login_thresholdless){
   
   // lets add a whole bunch of users and check for an existing one again
   // 1) add a whole new bunch of users:
-  for(i=1;i<9;i++){
+  for(i=1;i<9;i++) {
     error = pph_create_account(context, anotheruser, strlen(anotheruser),
         "anotherpassword", strlen("anotherpassword"),1);
     ck_assert_msg(error == PPH_ERROR_OK,
@@ -241,7 +241,7 @@ END_TEST
 
 
 // shamir recombination procedure test cases, we should get out key back!
-START_TEST(test_pph_unlock_password_data){
+START_TEST(test_pph_unlock_password_data) {
 
 
   PPH_ERROR error;
@@ -283,7 +283,7 @@ START_TEST(test_pph_unlock_password_data){
   memcpy(key_backup,context->AES_key,DIGEST_LENGTH);
    
   // store the accounts
-  for(i=0;i<username_count;i++){
+  for(i=0;i<username_count;i++) {
     error = pph_create_account(context, usernames[i], strlen(usernames[i]),
         passwords[i], strlen(passwords[i]),1);
     ck_assert(error == PPH_ERROR_OK);
@@ -337,7 +337,7 @@ START_TEST(test_pph_unlock_password_data){
   ck_assert(error == PPH_ERROR_OK);
   ck_assert_msg(context->secret !=NULL, " didnt allocate the secret!");
   ck_assert(context->AES_key != NULL);
-  for(i=0;i<DIGEST_LENGTH;i++){
+  for(i=0;i<DIGEST_LENGTH;i++) {
     ck_assert(key_backup[i] == context->AES_key[i]);
   } 
 
