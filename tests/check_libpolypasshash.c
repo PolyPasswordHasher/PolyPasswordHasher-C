@@ -1035,6 +1035,7 @@ Suite * polypasshash_suite(void)
   suite_add_tcase (s, tc_store_context);
 
   return s;
+
 }
 
 
