@@ -369,7 +369,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 
   // 2) check for the type of account requested.
   
-  // this will generate a share list for non-thresholdless accounts, we won't 
+  // this will generate a share list for threshold accounts, we won't 
   // fall inside this loop for thresholdless accounts since shares is 0.
   last_entry = NULL;
 
