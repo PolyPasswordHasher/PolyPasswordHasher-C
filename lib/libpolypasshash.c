@@ -383,7 +383,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
         share_data);
 
     // get a salt for the password
-    get_random_salt(MAX_SALT_LENGTH, salt_buffer);
+    get_random_bytes(MAX_SALT_LENGTH, salt_buffer);
 
     // Try to get a new entry.
     entry_node=create_polyhashed_entry(password, password_length, salt_buffer,
@@ -412,7 +412,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   
     // 3) allocate an entry for each account
     // get a salt for the password
-    get_random_salt(MAX_SALT_LENGTH, salt_buffer); 
+    get_random_bytes(MAX_SALT_LENGTH, salt_buffer); 
  
     // generate the entry
     entry_node = create_thresholdless_entry(password, password_length,
@@ -648,7 +648,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
       // append the unencrypted bytes if we have partial bytes. 
       for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
-        xored_hash[i] = current_entry->polyhashed_value[i]; //
+        xored_hash[i] = current_entry->polyhashed_value[i];
       }
 
       // calculate the proposed digest with the parameters provided in
@@ -683,9 +683,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       _xor_share_with_digest(xored_hash,current_entry->polyhashed_value,
           share_data, partial_bytes_offset);
       
-      // append the unobscured bytes
+      // add the partial bytes to the end of the digest.
       for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
-        xored_hash[i] = target->account.entries->polyhashed_value[i]; //
+        xored_hash[i] = target->account.entries->polyhashed_value[i];
       }
       
       // compare both.
@@ -797,7 +797,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   // traverse our possible users
   current_user=ctx->account_data;
   while(current_user!=NULL){
-    // check if each of our users is inside the context.
+    // check if each of the provided users is inside the context. We traverse
+    // our user list inside the while, and compare against the provided users 
+    // inside this for loop.
     for(i = 0; i<username_count;i++){
 
       //compare the proposed against existing users.
@@ -1191,7 +1193,9 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
     return -1;
   }
 
-  
+  // remember, in our case, tcost maps directly to the threshold value, we also
+  // decided to leave no partial bytes to have the whole hash protected by the
+  // shares 
   context = pph_init_context(tcost,0);
 
   // get a share to xor it with the password
@@ -1254,7 +1258,7 @@ uint8 *generate_pph_secret(unsigned int stream_length,
   }
 
   // generate a random stream
-  get_random_salt(secret, stream_length);
+  get_random_bytes(secret, stream_length);
 
   // hash the rest of the 
   _calculate_digest(stream_digest, secret, stream_length);
@@ -1443,7 +1447,7 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
 
 // This is a private helper that produces a salt string,
 
-void get_random_salt(unsigned int length, uint8 *dest){
+void get_random_bytes(unsigned int length, uint8 *dest){
   unsigned int i=0;
   int fp;
 

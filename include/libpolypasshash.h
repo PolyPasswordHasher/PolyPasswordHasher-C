@@ -660,7 +660,7 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
 // This produces a salt string, warning, this only generates a 
 // PRINTABLE salt
 
-void get_random_salt(unsigned int length, uint8 *dest);
+void get_random_bytes(unsigned int length, uint8 *dest);
 
 
 
