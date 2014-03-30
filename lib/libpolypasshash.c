@@ -1393,8 +1393,8 @@ uint8 *generate_pph_secret(unsigned int stream_length,
   }
 
   // generate a random stream
-  get_random_bytes(secret, stream_length);
-
+  get_random_bytes(stream_length, secret);
+ 
   // hash the rest of the 
   _calculate_digest(stream_digest, secret, stream_length);
   memcpy(secret + stream_length, stream_digest, hash_length);
