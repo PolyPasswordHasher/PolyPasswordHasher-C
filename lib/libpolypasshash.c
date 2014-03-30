@@ -555,7 +555,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     return PPH_PASSWORD_IS_TOO_LONG;
   }
 
-  // check if the context is locked and we lack partial bytes to check
+  // check if the context is locked and we lack partial bytes to check. If we
+  // do not have enough partial bytes (at least one), we cannot do partial
+  // verification
   if(ctx->is_unlocked != true && ctx->partial_bytes == 0){
     return PPH_CONTEXT_IS_LOCKED;
   }
