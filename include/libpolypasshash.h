@@ -302,9 +302,11 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 *
 *             PPH_NO_MEM                   If malloc, calloc fails.
 *
-*             PPH_USERNAME_IS_TOO_LONG     When that happens
+*             PPH_USERNAME_IS_TOO_LONG     When the value for username_length 
+*                                          is too long.
 *
-*             PPH_PASSWORD_IS_TOO_LONG     The same thing
+*             PPH_PASSWORD_IS_TOO_LONG     when the value for password_length
+*                                          is too long
 *
 *             PPH_CONTEXT_IS_LOCKED        When the context is locked and, hence
 *                                          he cannot create accounts
@@ -366,7 +368,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *           PPH_USERNAME_IS_TOO_LONG          The username won't fit in the 
 *                                             buffer
 *
-*           PPH_PASSWORD_IS_TOO_LONG          The password won't fir in the 
+*           PPH_PASSWORD_IS_TOO_LONG          The password won't fit in the 
 *                                             buffer associated to it. 
 *
 *           PPH_BAD_PTR                       When pointers are null or out
