@@ -507,7 +507,7 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename);
 *
 * DESCRIPTION :   Reload a pph_context stored in a file, the secret is
 *                 unknown and the structure is locked by default.
-*                 pph_unlock_password _data should be called after this returns
+*                 pph_unlock_password_data should be called after this returns
 *                 a valid pointer 
 *
 * INPUTS :
