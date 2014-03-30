@@ -906,7 +906,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 *           PPH_FILE_ERR                      when the file selected is non-
 *                                             writable. 
 *
-*           PPH_ERROR_UNKNOWN                 anytime else
+*           PPH_ERROR_UNKNOWN                 any time else
 *           
 * PROCESS :
 *     * Sanitize the data (unset flags, point secret to NULL)
