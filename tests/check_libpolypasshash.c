@@ -111,27 +111,29 @@ START_TEST(test_generate_and_check_pph_secret_mixed) {
 
   // this time, we expect to get a valid secret, and then modify it so we get
   // an error.
-  unsigned int stream_length = DIGEST_LENGTH/2;
-  unsigned int hash_bytes = DIGEST_LENGTH/2;
+  unsigned int stream_length = DIGEST_LENGTH;
+  unsigned int hash_bytes = DIGEST_LENGTH;
   PPH_ERROR error;
+  unsigned int i;
 
+  // we will check all of the possible ranges for this
+  for(i=1;i<DIGEST_LENGTH;i++){
+    // check that the function returns a valid secret.
+    secret = generate_pph_secret(stream_length-i, i);
+    ck_assert(secret != NULL);
 
-  // check that the function returns a valid secret.
-  secret = generate_pph_secret(stream_length, hash_bytes);
-  ck_assert(secret != NULL);
+    // check that with the proper values we get a correct secret check
+    error = check_pph_secret(secret, stream_length-i, i);
+    ck_assert(error == PPH_ERROR_OK);
 
-  // check that with the proper values we get a correct secret check
-  error = check_pph_secret(secret, stream_length, hash_bytes);
-  ck_assert(error == PPH_ERROR_OK);
-
-  // check that with some modification to the secret we get a non-valid secret,
-  // we will prove this by inverting the first byte. 
-  secret[0] = ~secret[0]; 
-  error = check_pph_secret(secret, stream_length, hash_bytes);
-  ck_assert(error == PPH_SECRET_IS_INVALID);
-
-  free(secret);
-
+    // check that with some modification to the secret we get a non-valid
+    // secret, we will prove this by inverting the first byte. 
+    secret[0] = ~secret[0]; 
+    error = check_pph_secret(secret, stream_length-i, i);
+    ck_assert(error == PPH_SECRET_IS_INVALID);
+  
+    free(secret);
+  }
 }END_TEST
 
 
@@ -152,6 +154,12 @@ START_TEST(test_pph_init_context_wrong_threshold)
 
   ck_assert_msg(context == NULL,
       "the context returned upon a wrong threshold value should be NULL");
+
+  // test for over-extension of the threshold value
+  threshold =MAX_NUMBER_OF_SHARES+1;
+  context = pph_init_context(threshold, partial_bytes);
+
+  ck_assert_msg(context == NULL);
   
 }
 END_TEST
@@ -170,7 +178,10 @@ START_TEST(test_pph_init_context_no_partial_bytes)
   // set the correct threshold and partial bytes this time
   uint8 threshold = 2;
   uint8 partial_bytes = 0;
-                          
+
+  //test for a over-extended value for partial bytes first
+  context = pph_init_context(threshold,DIGEST_LENGTH+1);
+  ck_assert_msg(context == NULL);  
 
   context = pph_init_context(threshold,partial_bytes);
 
