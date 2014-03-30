@@ -656,7 +656,50 @@ START_TEST(test_check_login_proper_data) {
 END_TEST
 
 
+// this test attempts to create full ranged usernames and passwords and check
+// the login procedures at the same time.
+START_TEST(test_pph_create_and_check_login_full_range) {
+ 
+ 
+  pph_context *context;
+  uint8 username_buffer[MAX_USERNAME_LENGTH];
+  uint8 password_buffer[MAX_PASSWORD_LENGTH];
+  unsigned int i;
+  uint8 threshold = 2;
+  uint8 partial_bytes = 0;
+  PPH_ERROR error;
 
+
+  context = pph_init_context( threshold, partial_bytes);
+  ck_assert(context != NULL);
+
+  // we will iterate all of the lengths of the username fields and generate 
+  // random string users.
+  for( i = 1; i < MAX_USERNAME_LENGTH; i++){
+    
+    // generate a username and a password of length i
+    get_random_bytes(i, username_buffer);
+    get_random_bytes(i, password_buffer);
+
+    // create an account with those credentials
+    error = pph_create_account( context, username_buffer, i, password_buffer, 
+        i, 1);
+    ck_assert( error == PPH_ERROR_OK );
+
+    // check the login of the newly created account
+    error = pph_check_login( context, username_buffer, i, password_buffer, i);
+    ck_assert( error == PPH_ERROR_OK);
+
+    // now invert the first byte of the password so we can't login
+    password_buffer[0] = ~password_buffer[0];
+    error = pph_check_login( context, username_buffer, i, password_buffer, i);
+    ck_assert( error != PPH_ERROR_OK);
+
+  }
+
+  pph_destroy_context(context);
+
+}END_TEST
 
 
 ////////// shamir recombination and persistent storage test cases. //////////
@@ -1018,6 +1061,7 @@ Suite * polypasshash_suite(void)
   tcase_add_test (tc_non_partial,test_check_login_wrong_username);
   tcase_add_test (tc_non_partial,test_check_login_wrong_password);
   tcase_add_test (tc_non_partial,test_check_login_proper_data);
+  tcase_add_test (tc_non_partial,test_pph_create_and_check_login_full_range);
   suite_add_tcase (s, tc_non_partial);
 
   /* vault unlocking (for both cases) */
