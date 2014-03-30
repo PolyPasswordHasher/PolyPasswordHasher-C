@@ -172,8 +172,22 @@ typedef struct _pph_context{
 * NAME :            pph_init_context
 *
 * DESCRIPTION :     Initialize a poly pass hash structure with everything
-*                   we need in order to work. 
-
+*                   we need in order to work. The produced structure will
+*
+*                   This is the layout of the generated structure:
+*
+*                   typedef struct _pph_context{
+*                     gfshare_ctx* share_context      = new share context
+*                     uint8 threshold                 = threshold
+*                     uint8 available_shares;         = MAX_NUMBER_OF_SHARES
+*                     uint8 next_entry;               = 1
+*                     bool is_unlocked;               = true   
+*                     uint8 *AES_key;                 = will point to secret       
+*                     uint8 *secret;                  = generated secret
+*                     uint8 partial_bytes;            = partial_bytes
+*                     pph_account_node* account_data; = NULL
+*                   } pph_context;
+*                
 *
 * INPUTS :
 *   PARAMETERS:
@@ -223,6 +237,22 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes);
 *
 * DESCRIPTION :     Destroy an existing instance of pph_context, securely 
 *                   destroying its resources.
+*
+*                   The structure will have to free the following elements 
+*                   before it can be safely freed:
+*
+*                   typedef struct _pph_context{
+*                     gfshare_ctx* share_context      = needs freeing
+*                     uint8 threshold                 = 
+*                     uint8 available_shares;         = 
+*                     uint8 next_entry;               = 
+*                     bool is_unlocked;               = 
+*                     uint8 *AES_key;                 = needs freeing      
+*                     uint8 *secret;                  = needs freeing
+*                     uint8 partial_bytes;            = 
+*                     pph_account_node* account_data; = needs freeing
+*                   } pph_context;
+
 *
 * INPUTS :
 *   PARAMETERS:
