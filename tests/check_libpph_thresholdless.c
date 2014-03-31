@@ -368,6 +368,112 @@ END_TEST
 
 
 
+// We are going to test the full application lifecycle with a thresholdless
+// account, by generating a new context, creating threshold accounts, creating
+// a thresholdless account, saving the context, reloading the context, unlocking
+// the context and logging as a thresholdless account
+START_TEST(test_pph_thresholdless_full_lifecycle){
+
+
+  PPH_ERROR error;
+  pph_context *context;
+  uint8 threshold = 2; 
+  uint8 partial_bytes = 0;
+  unsigned int i;
+  unsigned int username_count=5;
+  const uint8 *usernames[] = {"username1",
+                              "username12",
+                              "username1231",
+                              "username26",
+                              "username5",
+                            };
+  const uint8 *passwords[] = {"password1",
+                              "password12",
+                              "password1231",
+                              "password26",
+                              "password5"
+                              };
+  
+    unsigned int username_lengths[] = { strlen("username1"),
+                                      strlen("username12"),
+                                      strlen("username1231"),
+                                      strlen("username26"),
+                                      strlen("username5"),
+                                  };
+  const uint8 *usernames_subset[] = { "username12",
+                                      "username26"};
+  unsigned int username_lengths_subset[] = { strlen("username12"),
+                                            strlen("username26"),
+                                            };
+  const uint8 *password_subset[] = { "password12",
+                                     "password26"};
+  uint8 key_backup[DIGEST_LENGTH];
+
+
+  // check for bad pointers at first
+  error = pph_unlock_password_data(NULL, username_count, usernames,
+      username_lengths, passwords);
+  ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
+
+  // setup the context 
+  context = pph_init_context(threshold, partial_bytes);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  // backup the key...
+  memcpy(key_backup,context->AES_key,DIGEST_LENGTH);
+   
+  // store the accounts
+  for(i=0;i<username_count;i++) {
+    error = pph_create_account(context, usernames[i], strlen(usernames[i]),
+        passwords[i], strlen(passwords[i]),1);
+    ck_assert(error == PPH_ERROR_OK);
+  }
+
+
+  // create a thresholdless account
+  error = pph_create_account( context, "thresholdless", strlen("thresholdless"),
+      "thresholdlesspw", strlen("thresholdlesspw"), 0);
+  ck_assert( error == PPH_ERROR_OK);
+
+  // check that we can login with the thresholdless account
+  error = pph_check_login(context, "thresholdless", strlen("thresholdless"),
+      "thresholdlesspw", strlen("thresholdlesspw"));
+  ck_assert( error == PPH_ERROR_OK);
+
+
+  // store the context
+  error = pph_store_context( context, "pph.db");
+  ck_assert( error == PPH_ERROR_OK);
+  pph_destroy_context(context);
+
+  // reload the context
+  context = pph_reload_context("pph.db");
+  ck_assert( context != NULL);
+ 
+  // let's check for NULL pointers on the username and password fields
+  error = pph_unlock_password_data(context, username_count, usernames, 
+      username_lengths, passwords);
+  ck_assert_msg(error == PPH_ERROR_OK," EXPECTED PPH_ERROR_OK");
+
+
+  // check that we can login with an unlocked context.
+  error = pph_check_login(context, usernames_subset[0], 
+    strlen(usernames_subset[0]),password_subset[0], strlen(password_subset[0]));
+  ck_assert(error == PPH_ERROR_OK);
+
+  // check that we can login with the thresholdless account
+  error = pph_check_login(context, "thresholdless", strlen("thresholdless"),
+      "thresholdlesspw", strlen("thresholdlesspw"));
+  ck_assert( error == PPH_ERROR_OK);
+
+  pph_destroy_context(context);
+
+
+}END_TEST
+
+
+
 
 // test suite definition
 Suite * polypasshash_thl_suite(void)
@@ -379,12 +485,13 @@ Suite * polypasshash_thl_suite(void)
 
   /* no partial bytes with thresholdless accounts case */
   TCase *tc_non_partial = tcase_create ("non-partial");
-  tcase_add_test (tc_non_partial,test_pph_init_context_AES_key);
-  tcase_add_test (tc_non_partial,test_pph_destroy_context_AES_key);
-  tcase_add_test (tc_non_partial,test_pph_create_accounts);
-  tcase_add_test (tc_non_partial,test_create_account_mixed_accounts);
-  tcase_add_test (tc_non_partial,test_check_login_thresholdless);
-  tcase_add_test (tc_non_partial,test_pph_unlock_password_data);
+  tcase_add_test (tc_non_partial, test_pph_init_context_AES_key);
+  tcase_add_test (tc_non_partial, test_pph_destroy_context_AES_key);
+  tcase_add_test (tc_non_partial, test_pph_create_accounts);
+  tcase_add_test (tc_non_partial, test_create_account_mixed_accounts);
+  tcase_add_test (tc_non_partial, test_check_login_thresholdless);
+  tcase_add_test (tc_non_partial, test_pph_unlock_password_data);
+  tcase_add_test (tc_non_partial, test_pph_thresholdless_full_lifecycle);
   suite_add_tcase (s, tc_non_partial);
 
   return s;
