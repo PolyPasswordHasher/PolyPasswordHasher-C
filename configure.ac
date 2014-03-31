@@ -2,10 +2,8 @@
 
 # Prelude.
 AC_PREREQ([2.59])
-AC_INIT([polypasshash], [0.0], [torresariass@gmail.com])
+AC_INIT([polypasshash], [1.0], [torresariass@gmail.com])
 
-# unique source file --- primitive safety check 
-AC_CONFIG_SRCDIR([lib/libgfshare.c])
 
 # place to put some extra build scripts installed
 AC_CONFIG_AUX_DIR([build-aux])
