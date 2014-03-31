@@ -370,6 +370,8 @@ context data structure.
 
 * usernames : an array of usernames to attempt unlocking
 
+* username_lengths: an array containing the length of each specific username
+
 * passwords : an array of passwords correspoding to each username in the same index
 
 ###### returns
