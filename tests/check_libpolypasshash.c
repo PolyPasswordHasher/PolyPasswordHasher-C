@@ -1082,8 +1082,6 @@ START_TEST(test_pph_unlock_password_data_full_range) {
   pph_context *context;
 
   // initialize the buffers
-  //usernames = malloc(sizeof(**usernames)*MAX_USERNAME_LENGTH-1);
-  //passwords = malloc(sizeof(**passwords)*MAX_PASSWORD_LENGTH-1);
   username_lengths = malloc(sizeof(*username_lengths)*MAX_USERNAME_LENGTH);
 
   context = pph_init_context( threshold, partial_bytes);
