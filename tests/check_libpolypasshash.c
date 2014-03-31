@@ -720,6 +720,12 @@ START_TEST(test_pph_unlock_password_data_input_sanity) {
                               "username26",
                               "username5",
                             };
+  unsigned int username_lengths[] = { strlen("username1"),
+                                      strlen("username12"),
+                                      strlen("username1231"),
+                                      strlen("username26"),
+                                      strlen("username5"),
+                                  };
   const uint8 *passwords[] = {"password1",
                               "password12",
                               "password1231",
@@ -729,7 +735,8 @@ START_TEST(test_pph_unlock_password_data_input_sanity) {
 
   
   // check for bad pointers at first
-  error = pph_unlock_password_data(NULL, username_count, usernames, passwords);
+  error = pph_unlock_password_data(NULL, username_count, usernames,
+     username_lengths, passwords);
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
@@ -741,22 +748,31 @@ START_TEST(test_pph_unlock_password_data_input_sanity) {
   context->is_unlocked = false;
   
   // now give a wrong username count, below the threshold.
-  error = pph_unlock_password_data(context, 0, usernames, passwords);
+  error = pph_unlock_password_data(context, 0, usernames, username_lengths,
+      passwords);
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       " Expected ACCOUNT_IS_INVALID");
 
   // do it again, more graphical... 
-  error = pph_unlock_password_data(context, threshold -1, usernames, passwords);
+  error = pph_unlock_password_data(context, threshold -1, usernames,
+     username_lengths, passwords);
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       " Expected ACCOUNT_IS_INVALID");
 
   // let's check for NULL pointers on the username and password fields
-  error = pph_unlock_password_data(context, username_count, NULL, passwords);
+  error = pph_unlock_password_data(context, username_count, NULL, 
+     username_lengths, passwords);
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
  
+  // check for wrong values in the username_lengths field
+  error = pph_unlock_password_data(context, username_count, usernames, NULL,
+      passwords);
+  ck_assert( error == PPH_BAD_PTR);
+
   // let's check for NULL pointers on the username and password fields
-  error = pph_unlock_password_data(context, username_count, usernames, NULL);
+  error = pph_unlock_password_data(context, username_count, usernames, 
+      username_lengths, NULL);
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   pph_destroy_context(context);
@@ -795,9 +811,17 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
                               "password5"
                               };
 
-  
+  unsigned int username_lengths[] = { strlen("username1"),
+                                      strlen("username12"),
+                                      strlen("username1231"),
+                                      strlen("username26"),
+                                      strlen("username5"),
+                                  };
   const uint8 *usernames_subset[] = { "username12",
                                       "username26"};
+  unsigned int username_lengths_subset[] = { strlen("username12"),
+                                            strlen("username26"),
+                                    };
   const uint8 *password_subset[] = {"password12",
                                     "password26"};
   const uint8 *bad_passwords[] = { "whoisthisguy?",
@@ -827,7 +851,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   // now give a correct full account information, we expect to have our secret
   // back. 
   error = pph_unlock_password_data(context, username_count, usernames,
-      passwords);
+      username_lengths, passwords);
   for(i=0;i<DIGEST_LENGTH;i++) {
     ck_assert(secret[i] ==  context->secret[i]);
   }
@@ -839,7 +863,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   // now give a correct full account information, we expect to have our secret
   // back. 
   error = pph_unlock_password_data(context, 2, usernames_subset,
-      password_subset);
+      username_lengths_subset, password_subset);
   for(i=0;i<DIGEST_LENGTH;i++) {
     ck_assert(secret[i] ==  context->secret[i]);
   }
@@ -850,7 +874,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   pph_create_account(context,"ipicklocks", strlen("ipicklocks"),"ipickpockets",
       strlen("ipickpockets"), 3);
   error = pph_unlock_password_data(context, 1 ,strdup("ipicklocks"),
-      strdup("ipickpockets"));
+      1, strdup("ipickpockets"));
   
   for(i=0;i<DIGEST_LENGTH;i++) {
     ck_assert(secret[i] ==  context->secret[i]);
@@ -860,7 +884,8 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   free(context->secret);
   context->is_unlocked = false;
 
-  error = pph_unlock_password_data(context, 2, usernames_subset, bad_passwords);
+  error = pph_unlock_password_data(context, 2, usernames_subset,
+     username_lengths_subset, bad_passwords);
   ck_assert(error == PPH_ACCOUNT_IS_INVALID);
 
   // clean up our mess
@@ -966,9 +991,17 @@ START_TEST(test_pph_store_and_reload_with_users) {
                               "password5"
                               };
 
-  
+  unsigned int username_lengths[] = { strlen("username1"),
+                                      strlen("username12"),
+                                      strlen("username1231"),
+                                      strlen("username26"),
+                                      strlen("username5"),
+                                  };
   const uint8 *usernames_subset[] = { "username12",
                                       "username26"};
+  unsigned int username_lengths_subset[] = { strlen("username12"),
+                                            strlen("username26"),
+                                            };
 
   const uint8 *password_subset[] = {"password12",
                                     "password26"};
@@ -1004,7 +1037,7 @@ START_TEST(test_pph_store_and_reload_with_users) {
   pph_account_node *user_nodes;
   user_nodes = context->account_data;
   error = pph_unlock_password_data(context, username_count, usernames,
-      passwords);
+      username_lengths, passwords);
   for(i=0;i<DIGEST_LENGTH;i++) {
     ck_assert(secret[i]==context->secret[i]);
   }
@@ -1019,7 +1052,7 @@ START_TEST(test_pph_store_and_reload_with_users) {
   // now give a correct full account information, we expect to have our secret
   // back. 
   error = pph_unlock_password_data(context, 2, usernames_subset,
-        password_subset);
+        username_lengths_subset, password_subset);
   for(i=0;i<DIGEST_LENGTH;i++) {
     ck_assert(secret[i]==context->secret[i]);
   }

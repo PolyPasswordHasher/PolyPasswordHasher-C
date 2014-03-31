@@ -262,16 +262,26 @@ START_TEST(test_pph_unlock_password_data) {
                               "password26",
                               "password5"
                               };
+  
+    unsigned int username_lengths[] = { strlen("username1"),
+                                      strlen("username12"),
+                                      strlen("username1231"),
+                                      strlen("username26"),
+                                      strlen("username5"),
+                                  };
   const uint8 *usernames_subset[] = { "username12",
                                       "username26"};
-
+  unsigned int username_lengths_subset[] = { strlen("username12"),
+                                            strlen("username26"),
+                                            };
   const uint8 *password_subset[] = { "password12",
                                      "password26"};
   uint8 key_backup[DIGEST_LENGTH];
 
 
   // check for bad pointers at first
-  error = pph_unlock_password_data(NULL, username_count, usernames, passwords);
+  error = pph_unlock_password_data(NULL, username_count, usernames,
+      username_lengths, passwords);
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
@@ -296,29 +306,33 @@ START_TEST(test_pph_unlock_password_data) {
   context->share_context= NULL;
 
   // now give a wrong username count, i.e. below the threshold.
-  error = pph_unlock_password_data(context, 0, usernames, passwords);
+  error = pph_unlock_password_data(context, 0, usernames, username_lengths,
+      passwords);
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       " Expected ACCOUNT_IS_INVALID");
 
   // do it again, more graphical... 
-  error = pph_unlock_password_data(context, threshold -1, usernames, passwords);
+  error = pph_unlock_password_data(context, threshold -1, usernames, 
+      username_lengths, passwords);
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       " Expected ACCOUNT_IS_INVALID");
 
   // let's check for NULL pointers on the username and password fields
-  error = pph_unlock_password_data(context, username_count, NULL, passwords);
+  error = pph_unlock_password_data(context, username_count, NULL,
+     username_lengths, passwords);
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
  
   // let's check for NULL pointers on the username and password fields
-  error = pph_unlock_password_data(context, username_count, usernames, NULL);
+  error = pph_unlock_password_data(context, username_count, usernames, 
+      username_lengths, NULL);
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
 
   // now give correct account information, we expect to have our secret
   // back. 
   error = pph_unlock_password_data(context, username_count, usernames,
-      passwords);
+      username_lengths, passwords);
   ck_assert(error == PPH_ERROR_OK);
   ck_assert_msg(context->secret !=NULL, " didnt allocate the secret!");
   ck_assert(context->AES_key != NULL);
@@ -333,7 +347,7 @@ START_TEST(test_pph_unlock_password_data) {
   // now give correct account information, we expect to have our secret
   // back. 
   error = pph_unlock_password_data(context, 2, usernames_subset,
-      password_subset);
+      username_lengths_subset, password_subset);
   ck_assert(error == PPH_ERROR_OK);
   ck_assert_msg(context->secret !=NULL, " didnt allocate the secret!");
   ck_assert(context->AES_key != NULL);

@@ -92,10 +92,14 @@ int main(void)
   char **passwords = malloc(sizeof(*passwords)*2);
   passwords[0] = strdup("I.love.bob");
   passwords[1] = strdup("i.secretly.love.eve");
+
+  unsigned int *username_lengths = malloc(sizeof(*username_lengths)*2);
+  username_lengths[0] = strlen("Alice");
+  username_lengths[1] = strlen("bob");
   
   // if the information provided was correct, the pph_unlock_password_data
   // returns PPH_ERROR_OK, unlocks the vault and recovers the secrets.
-  pph_unlock_password_data(context, 2, usernames, passwords);
+  pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
   
   // now the data us unlocked. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 

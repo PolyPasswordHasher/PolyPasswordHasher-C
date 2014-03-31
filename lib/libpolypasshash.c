@@ -576,7 +576,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 */
 
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
-                          unsigned int username_length, const char *password,
+                          unsigned int username_length, uint8 *password,
                           unsigned int password_length){
  
 
@@ -806,13 +806,16 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *
 * INPUTS :
 *   PARAMETERS:
-*     pph_context *ctx:             The context in which we are working
+*     pph_context *ctx:                The context in which we are working
 *
-*     unsigned int username_count:  The length of the username/password arrays
+*     unsigned int username_count:     The length of the username/password arrays
 *
-*     const char *usernames:        The username attempts
+*     const char *usernames:           The username attempts
 *
-*     const char *passwords:        The password attempts
+*     unsigned int username_lengths[]: The length of the username fields,
+*                                      in the same order as the usernames.
+*
+*     const char *passwords:           The password attempts
 *
 * OUTPUTS :
 *   PARAMETERS:
@@ -855,7 +858,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 */
 
 PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
-                          const uint8 *usernames[], const uint8 *passwords[]){
+                          const uint8 *usernames[], 
+                          unsigned int username_lengths[],
+                          const uint8 *passwords[]){
   
   
   uint8 share_numbers[MAX_NUMBER_OF_SHARES];
@@ -870,7 +875,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   
 
   //sanitize the data.
-  if(ctx == NULL || usernames == NULL || passwords == NULL){
+  if(ctx == NULL || usernames == NULL || passwords == NULL || 
+      username_lengths == NULL){
     
     return PPH_BAD_PTR;
     
@@ -902,8 +908,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     for(i = 0; i<username_count;i++){
 
       //compare the proposed against existing users.
-      if(!memcmp(usernames[i],current_user->account.username,
-            current_user->account.username_length)){
+      if(username_lengths[i] == current_user->account.username_length &&
+          (!memcmp(usernames[i],current_user->account.username,
+            current_user->account.username_length))){
 
         // this is an existing user
         entry = current_user->account.entries;
@@ -920,7 +927,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
             memcpy(salted_password+entry->salt_length, passwords[i],
                 entry->password_length);
             _calculate_digest(estimated_digest,salted_password,
-                MAX_SALT_LENGTH + current_user->account.entries->password_length);
+             MAX_SALT_LENGTH + current_user->account.entries->password_length);
 
             // xor the obtained digest with the polyhashed value to obtain
             // our share.
@@ -953,7 +960,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     return PPH_ACCOUNT_IS_INVALID;
     
   }
-  
+
   // else, we have a correct secret and we will copy it back to the provided
   // context.
   if(ctx->secret == NULL){
@@ -978,7 +985,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   ctx->is_unlocked = true;
   ctx->AES_key = ctx->secret;
-
+  
   return PPH_ERROR_OK;
     
 }

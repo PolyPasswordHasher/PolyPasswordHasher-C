@@ -426,7 +426,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 */
 
 PPH_ERROR pph_check_login(pph_context *ctx, const char *username, 
-                          unsigned int username_length, const char *password,
+                          unsigned int username_length, uint8 *password,
                           unsigned int password_length);
 
 
@@ -441,13 +441,16 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *
 * INPUTS :
 *   PARAMETERS:
-*     pph_context *ctx:             The context in which we are working
+*     pph_context *ctx:                The context in which we are working
 *
-*     unsigned int username_count:  The length of the username/password arrays
+*     unsigned int username_count:     The length of the username/password arrays
 *
-*     const char *usernames:        The username attempts
+*     const char *usernames:           The username attempts
 *
-*     const char *passwords:        The password attempts
+*     unsigned int username_lengths[]: The length of the username fields, 
+*                                      in the same order as the usernames.
+*
+*     const char *passwords:           The password attempts
 *
 * OUTPUTS :
 *   PARAMETERS:
@@ -490,7 +493,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 */
 
 PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
-                          const uint8 *usernames[], const uint8 *passwords[]);
+                          const uint8 *usernames[],
+                          unsigned int username_lengths[],
+                          const uint8 *passwords[]);
                                   
 
 
