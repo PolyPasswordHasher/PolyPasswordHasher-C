@@ -18,7 +18,7 @@ check_libpolypasshash_SOURCES = check_libpolypasshash.c\
 																$(top_builddir)/include/libpolypasshash.h
 check_libpolypasshash_CFLAGS = @CHECK_CFLAGS@ -I$(top_builddir)/include
 check_libpolypasshash_LDADD = $(top_builddir)/lib/libgfshare.la\
-															$(top_builddir)/lib/libpolypasshash.la\
+															$(top_builddir)/src/libpolypasshash.la\
 															@CHECK_LIBS@
 
 check_libpph_thresholdless_SOURCES = check_libpph_thresholdless.c\
@@ -27,7 +27,7 @@ check_libpph_thresholdless_SOURCES = check_libpph_thresholdless.c\
 
 check_libpph_thresholdless_CFLAGS= @CHECK_CFLAGS@ -I$(top_builddir)/include
 check_libpph_thresholdless_LDADD = $(top_builddir)/lib/libgfshare.la\
-																	 $(top_builddir)/lib/libpolypasshash.la\
+																	 $(top_builddir)/src/libpolypasshash.la\
 																	 @CHECK_LIBS@
 
 check_libpph_partialbytes_SOURCES= check_libpph_partialbytes.c\
@@ -36,7 +36,7 @@ check_libpph_partialbytes_SOURCES= check_libpph_partialbytes.c\
 
 check_libpph_partialbytes_CFLAGS= @CHECK_CFLAGS@ -I$(top_builddir)/include
 check_libpph_partialbytes_LDADD = $(top_builddir)/lib/libgfshare.la\
-																	 $(top_builddir)/lib/libpolypasshash.la\
+																	 $(top_builddir)/src/libpolypasshash.la\
 																	 @CHECK_LIBS@
 
 check_libpph_phc_SOURCES= check_libpph_phc.c\
@@ -45,5 +45,5 @@ check_libpph_phc_SOURCES= check_libpph_phc.c\
 
 check_libpph_phc_CFLAGS= @CHECK_CFLAGS@ -I$(top_builddir)/include
 check_libpph_phc_LDADD = $(top_builddir)/lib/libgfshare.la\
-												 $(top_builddir)/lib/libpolypasshash.la\
+												 $(top_builddir)/src/libpolypasshash.la\
 												 @CHECK_LIBS@
