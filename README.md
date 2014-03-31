@@ -146,11 +146,11 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // receive an error in return
   if(pph_check_login(context, "Alice", strlen("Alice"), "I.love.bob",
          strlen("I.love.bob")) == PPH_ERROR_OK){
-    printf("welcome alice");
+    printf("welcome alice\n");
   }else{
-    printf("generic error message");
+    printf("generic error message\n");
   }
-  
+
   // We can, then store a context to work with it later, have in mind the 
   // context will be stored in a locked state and alice and bob will have 
   // to unlock it. 
@@ -172,19 +172,19 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // at this point we can still provide a login service, thanks to the partial 
   // bytes extension. But in order to create accounts and to provide full login
   // functionality, we should unlock the store.
-  if(pph_check_login(context, "Alice",strlen("Alice"), "i'm.trudy", 
+  if(pph_check_login(context, "Alice",strlen("alice"), "i'm.trudy", 
                                           strlen("i'm.trudy")) == PPH_ERROR_OK){
-    printf("welcome alice!"); // this won't happen
+    printf("welcome alice!\n"); // this won't happen
   }else{
-    printf("go away trudy!");
+    printf("go away trudy!\n");
   }
 
   // during the locked phase, we are unable to create accounts
   if(pph_create_account(context, "trudy", strlen("trudy"), "I'm.trudy", 
-                           strlen("I'm.trudy"), 0) == PPH_CONTEXT_IS_LOCKED){
-    printf("Sorry, we cannot create accounts at this time");
+                            strlen("I'm.trudy"), 1) == PPH_CONTEXT_IS_LOCKED){
+    printf("Sorry, we cannot create accounts at this time\n");
   }else{
-    printf("This shouldn't happen");
+    printf("!!! This shouldn't happen\n");
   }
   
   // In order to be able to create accounts, we must unlock the vault.
@@ -192,16 +192,21 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // strings.
   char **usernames = malloc(sizeof(*usernames)*2);
   usernames[0] = strdup("Alice");
-  usernames[1] = strdup("bob");
+  usernames[1] = strdup("Bob");
   
   char **passwords = malloc(sizeof(*passwords)*2);
   passwords[0] = strdup("I.love.bob");
   passwords[1] = strdup("i.secretly.love.eve");
+
+  unsigned int *username_lengths = malloc(sizeof(*username_lengths)*2);
+  username_lengths[0] = strlen("Alice");
+  username_lengths[1] = strlen("bob");
+  
   
   // if the information provided was correct, the pph_unlock_password_data
   // returns PPH_ERROR_OK, unlocks the vault and recovers the secrets.
-  pph_unlock_password_data(context, 2, usernames, passwords);
-  
+  pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
+
   // now the data us unlocked. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
                                                         strlen("verysafe"),0);
@@ -209,7 +214,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // we can now check accounts using the full feature also (non-partial bytes)
   if(pph_check_login(context, "carl", strlen("carl"), "verysafe",
                                           strlen("verysafe")) == PPH_ERROR_OK){
-    printf("welcome back carl"); 
+    printf("welcome back carl\n"); 
   }else{
     printf("you are not carl");
   }

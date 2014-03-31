@@ -45,7 +45,7 @@ int main(void)
   }else{
     printf("generic error message\n");
   }
-  
+
   // We can, then store a context to work with it later, have in mind the 
   // context will be stored in a locked state and alice and bob will have 
   // to unlock it. 
@@ -87,7 +87,7 @@ int main(void)
   // strings.
   char **usernames = malloc(sizeof(*usernames)*2);
   usernames[0] = strdup("Alice");
-  usernames[1] = strdup("bob");
+  usernames[1] = strdup("Bob");
   
   char **passwords = malloc(sizeof(*passwords)*2);
   passwords[0] = strdup("I.love.bob");
@@ -97,10 +97,11 @@ int main(void)
   username_lengths[0] = strlen("Alice");
   username_lengths[1] = strlen("bob");
   
+  
   // if the information provided was correct, the pph_unlock_password_data
   // returns PPH_ERROR_OK, unlocks the vault and recovers the secrets.
   pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
-  
+
   // now the data us unlocked. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
                                                         strlen("verysafe"),0);
