@@ -1065,6 +1065,94 @@ END_TEST
 
 
 
+// we will check for a full input range unlocking procedure using random
+// username-password combinations of various lengths, the procedure should
+// yield a correct secret and an incorrect secret when prompted with one bad
+// password
+START_TEST(test_pph_unlock_password_data_full_range) {
+  
+  
+  uint8 *usernames[MAX_USERNAME_LENGTH];
+  uint8 *passwords[MAX_PASSWORD_LENGTH];
+  unsigned int *username_lengths;
+  unsigned int i;
+  PPH_ERROR error;
+  uint8 threshold = 2;
+  uint8 partial_bytes = 0;
+  pph_context *context;
+
+  // initialize the buffers
+  //usernames = malloc(sizeof(**usernames)*MAX_USERNAME_LENGTH-1);
+  //passwords = malloc(sizeof(**passwords)*MAX_PASSWORD_LENGTH-1);
+  username_lengths = malloc(sizeof(*username_lengths)*MAX_USERNAME_LENGTH);
+
+  context = pph_init_context( threshold, partial_bytes);
+  ck_assert(context != NULL);
+  
+  // initialize a username password pair of each length of a random value
+  for( i = 0; i < MAX_USERNAME_LENGTH-1; i++){
+
+    usernames[i] = malloc(sizeof(*usernames[i])*MAX_USERNAME_LENGTH);
+    passwords[i] = malloc(sizeof(*passwords[i])*MAX_PASSWORD_LENGTH);
+    ck_assert( usernames[i] != NULL);
+    ck_assert( passwords[i] != NULL);
+
+    get_random_bytes( i+1, usernames[i]);
+    get_random_bytes( i+1, passwords[i]);
+    
+   
+    username_lengths[i]= i + 1;
+    
+    error = pph_create_account( context, usernames[i], username_lengths[i],
+        passwords[i], username_lengths[i], 1);
+    ck_assert( error == PPH_ERROR_OK);
+    
+    error = pph_check_login( context, usernames[i], username_lengths[i],
+        passwords[i], username_lengths[i]);
+    ck_assert( error == PPH_ERROR_OK);
+
+  }
+
+  // lock the context
+  context->is_unlocked = false;
+  
+  // unlock the context
+  error = pph_unlock_password_data( context, MAX_USERNAME_LENGTH -1, usernames,
+      username_lengths, passwords);
+  ck_assert( error == PPH_ERROR_OK );
+
+  // check we can login after unlocking
+  for(i = 0; i < MAX_USERNAME_LENGTH-1; i++){
+  
+    error = pph_check_login( context, usernames[i], username_lengths[i],
+        passwords[i], username_lengths[i]);
+    ck_assert(error == PPH_ERROR_OK);
+
+  }
+
+  // now, fail to unlock the context, 
+  context->is_unlocked = false;
+  passwords[0][0] = ~passwords[0][0];
+
+  error = pph_unlock_password_data( context, MAX_USERNAME_LENGTH -1, usernames,
+      username_lengths, passwords);
+  ck_assert( error != PPH_ERROR_OK);
+
+  // free everything
+  for(i = 0; i < MAX_USERNAME_LENGTH-1; i++) {
+    
+    free(usernames[i]);
+    free(passwords[i]);
+
+  }
+
+  free(username_lengths);
+  pph_destroy_context(context);
+
+}END_TEST;
+
+
+
 // Define the suite.
 Suite * polypasshash_suite(void)
 {
@@ -1101,7 +1189,8 @@ Suite * polypasshash_suite(void)
   TCase *tc_unlock_shamir = tcase_create ("unlock_shamir");
   tcase_add_test (tc_unlock_shamir, test_pph_unlock_password_data_input_sanity);
   tcase_add_test (tc_unlock_shamir, 
-      test_pph_unlock_password_data_correct_thresholds);
+        test_pph_unlock_password_data_correct_thresholds);
+  tcase_add_test (tc_unlock_shamir, test_pph_unlock_password_data_full_range);
   suite_add_tcase (s, tc_unlock_shamir);
 
   /* pph context persistency tests */
