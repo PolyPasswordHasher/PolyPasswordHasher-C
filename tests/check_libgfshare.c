@@ -1,7 +1,7 @@
 /* Check shamir suite
  *
- * This suite is designed to test the functionalities of the libshamir
- * module. 
+ * This suite is designed to test the functionalities of the libgfshare
+ * module for the generation of Shamir secrets.
  *
  * @author  Santiago Torres
  * @date    10/03/2014
@@ -12,9 +12,14 @@
 #include<stdlib.h>
 #include<strings.h>
 
+
+
+// basic suite test, taken from the libgfshare module
 START_TEST(generate_secrets)
 {
-  int ok = 1, i;
+
+
+  // initialize some big shares and a relatively simple secret.
   unsigned char* secret = (unsigned char*)strdup("hello");
   unsigned char* share1 = malloc(256);
   unsigned char* share2 = malloc(256);
@@ -22,6 +27,7 @@ START_TEST(generate_secrets)
   unsigned char* recomb = malloc(256);
   unsigned char* sharenrs = (unsigned char*)strdup("0123");
   gfshare_ctx *G; 
+  
   
   G = gfshare_ctx_init_enc( sharenrs, 4, 2, 256);
 
@@ -32,8 +38,6 @@ START_TEST(generate_secrets)
 
   gfshare_ctx_free(G);
 
-  //match the ctx_dec_giveshare, you will smash the stack like in the good
-  //ol' times
   G = gfshare_ctx_init_dec( sharenrs, 3, 256);
   gfshare_ctx_dec_giveshare( G, 0, share1);
   gfshare_ctx_dec_giveshare( G, 1, share2);
@@ -48,9 +52,15 @@ START_TEST(generate_secrets)
 END_TEST
 
 
+
+
+
+// Test for a more close scenario, we generate 256 shares, in the same fashion
+// we will do it in the polypasshash library.
 START_TEST(generate_secrets_256_shares)
 {
-  int ok = 1, i;
+  
+  
   unsigned char* secret = (unsigned char*)strdup("hello");
   unsigned char* share1 = malloc(256);
   unsigned char* share2 = malloc(256);
@@ -61,8 +71,10 @@ START_TEST(generate_secrets_256_shares)
   unsigned char* sharenrs = malloc(256);
   unsigned char random_shares[11];
   gfshare_ctx *G;
+  unsigned int i;
 
-  for(i=0;i<256;i++){
+  
+  for(i=0;i<256;i++) {
     sharenrs[i] = (i+1)%255;
   }
 
@@ -81,12 +93,14 @@ START_TEST(generate_secrets_256_shares)
   G = gfshare_ctx_init_dec( sharenrs, 11, 256);
   gfshare_ctx_dec_giveshare( G, 0, share1);
   gfshare_ctx_dec_giveshare( G, 1, share2);
-  //gfshare_ctx_dec_giveshare( G, 2, share3); we could give him these guys
-  //gfshare_ctx_dec_giveshare( G, 3, share4); but imagin we don't have them
+  
+  // we could give him these shares, but let's imagine we don't have them 
+  //gfshare_ctx_dec_giveshare( G, 2, share3); 
+  //gfshare_ctx_dec_giveshare( G, 3, share4); 
   gfshare_ctx_dec_giveshare( G, 4, share5);
 
-  for(i=0;i<256;i++){
-    sharenrs[i] = 0;//(i+1)%255;
+  for(i=0;i<256;i++) {
+    sharenrs[i] = 0;
   }
 
   sharenrs[0]=1;
@@ -101,9 +115,15 @@ START_TEST(generate_secrets_256_shares)
 }
 END_TEST
 
+
+
+
+// Now we test for the recombination procedure, we should be able to get the
+// same shares back after recovering the secrets.
 START_TEST(generate_secrets_same_recomb)
 {
-  int ok = 1, i;
+
+
   unsigned char* secret = calloc(256,1);
   unsigned char* share1 = malloc(256);
   unsigned char* share2 = malloc(256);
@@ -114,8 +134,10 @@ START_TEST(generate_secrets_same_recomb)
   unsigned char* sharenrs = malloc(256);
   unsigned char random_shares[11];
   gfshare_ctx *G;
+  unsigned int i;
 
-  for(i=0;i<256;i++){
+
+  for(i=0;i<256;i++) {
     sharenrs[i] = (i+1)%255;
   }
 
@@ -135,7 +157,7 @@ START_TEST(generate_secrets_same_recomb)
   gfshare_ctx_enc_setsecret(G, secret);
   gfshare_ctx_enc_getshare( G, 0, recomb);
 
-  for(i=0;i<256;i++){
+  for(i=0;i<256;i++) {
     ck_assert(share1[i] == recomb[i]);
   }
 }
@@ -144,6 +166,7 @@ END_TEST
 
 
 
+// add our tests to the suite
 Suite * shamir_suite (void)
 {
   Suite *s = suite_create ("split");
@@ -158,6 +181,11 @@ Suite * shamir_suite (void)
   return s;
 }
 
+
+
+
+
+// initialize the suite
 int main (void)
 {
   int number_failed;

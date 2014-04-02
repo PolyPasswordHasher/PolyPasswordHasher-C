@@ -20,6 +20,14 @@ A set of tests is also included. Tests are made for
 make check will run all of the test suites.
 
 
+Index
+========
+* [Building instructions](#building_instructions)
+* [Compiling against polypasshash](#compiling)
+* [Example Implementation](#example)
+* [API Reference](#api)
+
+<a name="building_instructions">
 Building the library
 =====================
 
@@ -59,6 +67,7 @@ We do, however, recommend running the tests before installing.
 The installation script will copy the header files to /usr/local/include and
 the shared library into /usr/local/lib. 
 
+<a name="compiling">
 Compiling a program with libpolypasshash
 ========================================
 After the installation has been done successfully, you can complile programs by
@@ -82,6 +91,7 @@ you are not familiar with these types of installations:
   ./polypasshash_example.out
 ```
 
+<a name="example">
 An example implementation
 =======
 
@@ -145,9 +155,9 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
          strlen("I.love.bob")) == PPH_ERROR_OK){
     printf("welcome alice\n");
   }else{
-    printf("generic error message");
+    printf("generic error message\n");
   }
-  
+
   // We can, then store a context to work with it later, have in mind the 
   // context will be stored in a locked state and alice and bob will have 
   // to unlock it. 
@@ -169,7 +179,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // at this point we can still provide a login service, thanks to the partial 
   // bytes extension. But in order to create accounts and to provide full login
   // functionality, we should unlock the store.
-  if(pph_check_login(context, "Alice",strlen("Alice"), "i'm.trudy", 
+  if(pph_check_login(context, "Alice",strlen("alice"), "i'm.trudy", 
                                           strlen("i'm.trudy")) == PPH_ERROR_OK){
     printf("welcome alice!\n"); // this won't happen
   }else{
@@ -189,16 +199,21 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // strings.
   char **usernames = malloc(sizeof(*usernames)*2);
   usernames[0] = strdup("Alice");
-  usernames[1] = strdup("bob");
+  usernames[1] = strdup("Bob");
   
   char **passwords = malloc(sizeof(*passwords)*2);
   passwords[0] = strdup("I.love.bob");
   passwords[1] = strdup("i.secretly.love.eve");
+
+  unsigned int *username_lengths = malloc(sizeof(*username_lengths)*2);
+  username_lengths[0] = strlen("Alice");
+  username_lengths[1] = strlen("bob");
+  
   
   // if the information provided was correct, the pph_unlock_password_data
   // returns PPH_ERROR_OK, unlocks the vault and recovers the secrets.
-  pph_unlock_password_data(context, 2, usernames, passwords);
-  
+  pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
+
   // now the data us unlocked. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
                                                         strlen("verysafe"),0);
@@ -213,11 +228,11 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   
   
   // we should now store the context and free the data before leaving
-  pph_store_context(context,"securetpasswords");
+  pph_store_context(context,"securepasswords");
   pph_destroy_context(context);
 
 ```
-
+<a name="api">
 API reference
 =========
 The API is a simple set of functions to aid you in the creation and management of a PolyPassHash scheme. 
@@ -233,6 +248,8 @@ The API is a simple set of functions to aid you in the creation and management o
   * [user\_management](#user_management_functions)
     * [pph\_create\_account](#pph_create_account)
     * [pph\_check\_login](#pph_check_login)
+  * [other functions](#other_functions)
+    * [ PHS ](#PHS)
 
 <a name="data_structures"/>
 ## Data structures
@@ -264,11 +281,13 @@ specific shares. As a user of this library, you won't need to address them.
 ## Functions
 Functions in the libpolypasshash library are divided in user management or context management. User management functions carry the role of user adding and login check. Context management functions are oriented to the maintenance and operation of the whole polypasshash scheme. 
 
+====
 
 
 <a name="context_managemet"/>
 ### Context management functions.
 
+====
 
 
 <a name="pph_init_context"/>
@@ -283,11 +302,14 @@ Initializes a polypasshash context structure with everything needed in order to 
 ##### returns 
 An initialized pph_context
 
+====
 
 
 
 <a name="pph_destroy_context"/>
 #### pph\_destroy\_context
+
+
 Safely destroy all of the references in an initialized pph_context. 
 
 ###### parameters
@@ -296,10 +318,12 @@ Safely destroy all of the references in an initialized pph_context.
 
 ###### returns
 An error code indicating whether the operation was successful or not. 
-
-
-
-
+ 
+==== 
+   
+   
+ 
+ 
 <a name="pph_store_context"/>
 #### pph\_store\_context
 Persist the non-sensitive information about a context to disk. Have in mind 
@@ -316,6 +340,7 @@ words, the context written to disk is stored in a locked state.
 An error code indicating whether the operation was successful or what was the 
 reason for failure.
 
+====
 
 
 
@@ -335,7 +360,7 @@ only verify logins if the partial bytes argument provided was non-zero.
 ###### returns
 A locked, but initialized, pph_context. 
 
-
+====
 
 
 
@@ -352,11 +377,14 @@ context data structure.
 
 * usernames : an array of usernames to attempt unlocking
 
+* username_lengths: an array containing the length of each specific username
+
 * passwords : an array of passwords correspoding to each username in the same index
 
 ###### returns
 An error indicating if the attempt was successful or not.
 
+====
 
 
 
@@ -364,6 +392,7 @@ An error indicating if the attempt was successful or not.
 <a name="user_management_functions"/>
 ### User Management Functions
 
+====
 
 
 
@@ -389,6 +418,7 @@ An error indicating whether the account could be added, or the cause of failure.
 Too long usernames and passwords will return an error, as well as an already 
 existing account. 
 
+====
 
 
 
@@ -411,3 +441,42 @@ Provided a username and password pair, check if such pair exists within th conte
 
 ###### returns 
 An error code indicating if the login attempt was successful.
+
+====
+
+
+
+<a name="other_functions"/>
+### Other functions
+
+====
+
+<a name="PHS"/>
+#### PHS
+Hash an input string with the given arguments.
+
+This function is a mere demonstration of the resulting hashes inside a polypasshash store.
+The motivation behind this function is to showcase the safety of the polyhashed passwords. This function is aimed for the Password Hashing Competition.
+
+###### parameters
+
+  * void * out: The output hash
+  
+  * size_t outlen: the length of the produced string
+  
+  * void * in:  The input password
+  
+  * size_t inlen: the length of the input password
+
+  * void * salt: A salt input
+  
+  * size_t saltlen: The length of the input salt
+  
+  * int tcost: a time cost, in this case, this parameter modifies the threshold of the produced context directly.
+
+  * int mcost: a memory/ other cost parameter
+
+###### returns 
+An error code indicating if the hash procedure was successful. If the function is successful, the resulting hash will be placed in the out buffer.
+
+====

@@ -20,12 +20,19 @@
 *.app
 polypasshash
 check_libgfshare
+check_libpolypasshash
+check_libpph_thresholdless
+check_libpph_partialbytes
+check_libpph_phc
 
 # autoconf specific
+Makefile
+Makefile.in
 aclocal.m4
 autom4te.cache/
 build/
 config.guess
+config.h
 config.h.in
 config.h.in~
 config.sub
@@ -46,3 +53,10 @@ test-driver
 .libs
 build-aux/
 config.status
+stamp-h1
+
+# libtool
+libtool
+
+# generated files
+pph.db
