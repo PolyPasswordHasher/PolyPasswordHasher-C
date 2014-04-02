@@ -32,8 +32,8 @@
 #include <openssl/sha.h>
 #include <openssl/aes.h>
 #include <string.h>
-#include <time.h> // for random seed generation, we could remove it in latter
-                  //  revisions 
+#include <stdlib.h>
+#include <fcntl.h>
 
 /* Constant Declaration */
 #define SHARE_LENGTH 256/8              // the length of our share buffers
@@ -56,11 +56,12 @@ typedef enum{
   PPH_ACCOUNT_IS_INVALID,
   PPH_WRONG_SHARE_COUNT,
   PPH_CONTEXT_IS_LOCKED,
+  PPH_VALUE_OUT_OF_RANGE,
+  PPH_SECRET_IS_INVALID,
   // system or user is being brilliant. 
   PPH_FILE_ERR,
   PPH_NO_MEM,
   PPH_BAD_PTR,
-  PPH_PTR_IS_NULL,
   // developer is not brilliant
   PPH_ERROR_UNKNOWN,
 }PPH_ERROR;
@@ -71,6 +72,8 @@ typedef enum{
 typedef struct _pph_entry{
   uint8 share_number;           // the share number that belongs to this entry
   uint8 salt[SALT_LENGTH];      // the salt buffer to use 
+  unsigned int salt_length;
+  unsigned int password_length;
   uint8 polyhashed_value[DIGEST_LENGTH];// the hashed value for this entry, it
                                     // is either xored with a share or 
                                     // encrypted using AES 
@@ -81,7 +84,6 @@ typedef struct _pph_entry{
 typedef struct _pph_account{
   unsigned char username[USERNAME_LENGTH]; // the username...
   unsigned int username_length;
-  unsigned int password_length;
   uint8 number_of_entries;                 // the entries for this user
   pph_entry *entries;                      // a pointer to entries of this acc
 }pph_account;
@@ -450,6 +452,27 @@ pph_context *pph_reload_context(const unsigned char *filename);
 
 
 // helper functions //////////////////////////
+//
+// this generates a random secret of the form [stream][streamhash], the 
+// parameters are the length of each section of the secret
+uint8 *generate_pph_secret(unsigned int stream_length,
+    unsigned int hash_bytes);
+
+// this checks whether a given secret complies with the pph_secret prototype
+// ([stream][streamhash])
+PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
+    unsigned int hash_bytes);
+
+// this function provides a polyhashed entry given the input
+pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
+    password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
+    unsigned int share_length, unsigned int partial_bytes);
+
+// this other function is the equivalent to the one in the top, but for
+// thresholdless accounts.
+pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
+    password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
+    unsigned int key_length, unsigned int partial_bytes);
 
 // This produces a salt string, warning, this only generates a 
 // PRINTABLE salt
