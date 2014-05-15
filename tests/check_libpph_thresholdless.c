@@ -91,6 +91,7 @@ START_TEST(test_pph_create_accounts)
       password, strlen(password), 0);  
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
+  context->account_data->account.username[strlen(username)]='\0';
   ck_assert_str_eq(username,context->account_data->account.username);
 
   // now lets check there are collisions between threshold and thresholdless
@@ -149,6 +150,7 @@ START_TEST(test_create_account_mixed_accounts) {
       strlen(password), 0); 
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
+  context->account_data->account.username[strlen(username)]='\0';
   ck_assert_str_eq(username,context->account_data->account.username);
   
   // now let's create a bunch of accounts with thresholds this time
