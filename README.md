@@ -7,7 +7,7 @@ a C library to manage a polypasswordhasher store.
 
 A polypasswordhasher store uses Shamir shares to obscure the password's hashes in 
 order to make them unfeasible to crack. More details about this scheme can 
-be seen [here](https://github.com/JustinCappos/PolyPasswordHasher)
+be seen [here](https://github.com/PolyPasswordHasher/PolyPasswordHasher)
 
 
 What's in here?
