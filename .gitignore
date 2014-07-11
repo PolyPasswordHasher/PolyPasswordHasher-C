@@ -18,9 +18,9 @@
 *.exe
 *.out
 *.app
-polypasshash
+polypasswordhasher
 check_libgfshare
-check_libpolypasshash
+check_libpolypasswordhasher
 check_libpph_thresholdless
 check_libpph_partialbytes
 check_libpph_phc

@@ -1,4 +1,4 @@
-/* Check libpolypasshash with the thresholdless extension
+/* Check libpolypasswordhasher with the thresholdless extension
  *
  * The thresholdless extension is tested in this suite
  *
@@ -10,7 +10,7 @@
 
 #include<check.h>
 #include"libgfshare.h"
-#include"libpolypasshash.h"
+#include"libpolypasswordhasher.h"
 #include<stdlib.h>
 #include<strings.h>
 
@@ -478,7 +478,7 @@ START_TEST(test_pph_thresholdless_full_lifecycle){
 
 
 // test suite definition
-Suite * polypasshash_thl_suite(void)
+Suite * polypasswordhasher_thl_suite(void)
 {
 
 
@@ -506,7 +506,7 @@ Suite * polypasshash_thl_suite(void)
 int main (void)
 {
   int number_failed;
-  Suite *s =  polypasshash_thl_suite();
+  Suite *s =  polypasswordhasher_thl_suite();
   SRunner *sr = srunner_create (s);
   srunner_run_all (sr, CK_VERBOSE);
   number_failed = srunner_ntests_failed (sr);

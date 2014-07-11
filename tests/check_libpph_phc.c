@@ -8,7 +8,7 @@
 
 #include<check.h>
 #include"libgfshare.h"
-#include"libpolypasshash.h"
+#include"libpolypasswordhasher.h"
 #include<stdlib.h>
 #include<strings.h>
 #include<time.h>
@@ -256,7 +256,7 @@ START_TEST(test_PHS_tcost_values)
 
 
 // suite declaration
-Suite * polypasshash_PHS_suite(void)
+Suite * polypasswordhasher_PHS_suite(void)
 {
 
 
@@ -279,7 +279,7 @@ Suite * polypasshash_PHS_suite(void)
 int main (void)
 {
   int number_failed;
-  Suite *s =  polypasshash_PHS_suite();
+  Suite *s =  polypasswordhasher_PHS_suite();
   SRunner *sr = srunner_create (s);
   srunner_run_all (sr, CK_VERBOSE);
   number_failed = srunner_ntests_failed (sr);

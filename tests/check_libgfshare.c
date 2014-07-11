@@ -56,7 +56,7 @@ END_TEST
 
 
 // Test for a more close scenario, we generate 256 shares, in the same fashion
-// we will do it in the polypasshash library.
+// we will do it in the polypasswordhasher library.
 START_TEST(generate_secrets_256_shares)
 {
   

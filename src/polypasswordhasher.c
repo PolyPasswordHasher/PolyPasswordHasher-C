@@ -1,4 +1,4 @@
-#include "libpolypasshash.h"
+#include "libpolypasswordhasher.h"
 
 
 int main(void)

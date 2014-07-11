@@ -25,7 +25,7 @@
 
 #include "config.h"
 #include "libgfshare.h"
-#include "libpolypasshash.h"
+#include "libpolypasswordhasher.h"
 
 
 
@@ -293,7 +293,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 * NAME :            pph_create_account
 *
 * DESCRIPTION :     given a context and some other data, create a user
-*                   entry in the polypasshash context with the desired 
+*                   entry in the polypasswordhasher context with the desired 
 *                   information.
 *
 * INPUTS :

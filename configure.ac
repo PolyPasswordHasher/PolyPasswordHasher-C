@@ -2,7 +2,7 @@
 
 # Prelude.
 AC_PREREQ([2.59])
-AC_INIT([polypasshash], [1.0], [torresariass@gmail.com])
+AC_INIT([polypasswordhasher], [1.0], [torresariass@gmail.com])
 
 
 # place to put some extra build scripts installed

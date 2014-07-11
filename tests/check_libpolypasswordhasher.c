@@ -1,7 +1,7 @@
-/* Check libpolypasshash core, no thresholdless accounts and no partial bytes 
+/* Check libpolypasswordhasher core, no thresholdless accounts and no partial bytes 
  *
  * This suite is designed to test all of the core functionalities of the 
- * libpolypasshash module without its extensions. 
+ * libpolypasswordhasher module without its extensions. 
  *
  * @author  Santiago Torres
  * @date    10/03/2014
@@ -11,7 +11,7 @@
 
 #include<check.h>
 #include"libgfshare.h"
-#include"libpolypasshash.h"
+#include"libpolypasswordhasher.h"
 #include<stdlib.h>
 #include<strings.h>
 
@@ -1152,7 +1152,7 @@ START_TEST(test_pph_unlock_password_data_full_range) {
 
 
 // Define the suite.
-Suite * polypasshash_suite(void)
+Suite * polypasswordhasher_suite(void)
 {
   Suite *s = suite_create ("buildup");
 
@@ -1209,7 +1209,7 @@ Suite * polypasshash_suite(void)
 int main (void)
 {
   int number_failed;
-  Suite *s =  polypasshash_suite();
+  Suite *s =  polypasswordhasher_suite();
   SRunner *sr = srunner_create (s);
   srunner_run_all (sr, CK_VERBOSE);
   number_failed = srunner_ntests_failed (sr);

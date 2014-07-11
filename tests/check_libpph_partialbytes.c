@@ -1,6 +1,6 @@
-/* Check libpolypasshash with partial bytes. 
+/* Check libpolypasswordhasher with partial bytes. 
  *
- * check the partial bytes extension of the libpolypasshash module. 
+ * check the partial bytes extension of the libpolypasswordhasher module. 
  *
  * @author  Santiago Torres
  * @date    10/03/2014
@@ -10,7 +10,7 @@
 
 #include<check.h>
 #include"libgfshare.h"
-#include"libpolypasshash.h"
+#include"libpolypasswordhasher.h"
 #include<stdlib.h>
 #include<strings.h>
 
@@ -374,7 +374,7 @@ END_TEST
 
 
 // suite definition
-Suite * polypasshash_partial_bytes_suite(void)
+Suite * polypasswordhasher_partial_bytes_suite(void)
 {
   
   
@@ -400,7 +400,7 @@ Suite * polypasshash_partial_bytes_suite(void)
 int main (void)
 {
   int number_failed;
-  Suite *s =  polypasshash_partial_bytes_suite();
+  Suite *s =  polypasswordhasher_partial_bytes_suite();
   SRunner *sr = srunner_create (s);
   srunner_run_all (sr, CK_VERBOSE);
   number_failed = srunner_ntests_failed (sr);

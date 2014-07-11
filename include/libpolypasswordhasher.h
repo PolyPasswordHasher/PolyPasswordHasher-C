@@ -141,7 +141,7 @@ typedef struct _pph_account_node{
 
 
 
-// The context structure defines all of what's needed to handle a polypasshash
+// The context structure defines all of what's needed to handle a polypasswordhasher
 // store.
 typedef struct _pph_context{
   
@@ -299,7 +299,7 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 * NAME :            pph_create_account
 *
 * DESCRIPTION :     given a context and some other data, create a user
-*                   entry in the polypasshash context with the desired 
+*                   entry in the polypasswordhasher context with the desired 
 *                   information.
 *
 * INPUTS :

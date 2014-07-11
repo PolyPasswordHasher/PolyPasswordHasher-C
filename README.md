@@ -1,13 +1,13 @@
-PolyPassHash for C  
+PolyPasswordHasher for C  
 ============
 
-The C implementation for the [PolyPassHash password storage
-scheme](https://github.com/JustinCappos/PolyPassHash). This repository provides
-a C library to manage a polypasshash store.
+The C implementation for the [PolyPasswordHasher password storage
+scheme](https://github.com/JustinCappos/PolyPasswordHasher). This repository provides
+a C library to manage a polypasswordhasher store.
 
-A polypasshash store uses Shamir shares to obscure the password's hashes in 
+A polypasswordhasher store uses Shamir shares to obscure the password's hashes in 
 order to make them unfeasible to crack. More details about this scheme can 
-be seen [here](https://github.com/JustinCappos/PolyPassHash)
+be seen [here](https://github.com/JustinCappos/PolyPasswordHasher)
 
 
 What's in here?
@@ -23,7 +23,7 @@ make check will run all of the test suites.
 Index
 ========
 * [Building instructions](#building_instructions)
-* [Compiling against polypasshash](#compiling)
+* [Compiling against polypasswordhasher](#compiling)
 * [Example Implementation](#example)
 * [API Reference](#api)
 
@@ -68,18 +68,18 @@ The installation script will copy the header files to /usr/local/include and
 the shared library into /usr/local/lib. 
 
 <a name="compiling">
-Compiling a program with libpolypasshash
+Compiling a program with libpolypasswordhasher
 ========================================
 After the installation has been done successfully, you can complile programs by
-including the header inside your C implementation (#include <libpolypasshash.h>)
+including the header inside your C implementation (#include <libpolypasswordhasher.h>)
 
 Compilation is done the following way:
 ```bash
-  gcc -o polypasshash_example.out polypasshash_example.c -lcrypto -lpolypasshash
+  gcc -o polypasswordhasher_example.out polypasswordhasher_example.c -lcrypto -lpolypasswordhasher
 ```
 
 
-Running a program with libpolypasshash installed
+Running a program with libpolypasswordhasher installed
 ===============================================
 Since the shared object is not installed in the standard library path, in order
 to run such programs you will need to export LD_LIBRARY_PATH before running, 
@@ -88,7 +88,7 @@ you are not familiar with these types of installations:
 
 ```Bash
   export $LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-  ./polypasshash_example.out
+  ./polypasswordhasher_example.out
 ```
 
 <a name="example">
@@ -99,7 +99,7 @@ An example implementation
 In order to keep things simple, we are going to produce a vault with some 
 accounts, store it, reload it and unlock it. 
 
-In order to explain some of the features of libpolypasshash we will add
+In order to explain some of the features of libpolypasswordhasher we will add
 both, threshold and thresholdless accounts. The  library supports 
 thresholdless accounts, which are, in essence, user accounts
 that cannot unlock the store (imagine normal users vs super users). 
@@ -112,7 +112,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
 
 ...
 
-#include<libpolypasshash.h>
+#include<libpolypasswordhasher.h>
 
 ...
 
@@ -235,7 +235,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
 <a name="api">
 API reference
 =========
-The API is a simple set of functions to aid you in the creation and management of a PolyPassHash scheme. 
+The API is a simple set of functions to aid you in the creation and management of a PolyPasswordHasher scheme. 
 
 * [data structures](#data_structures)
 * [functions](#functions)
@@ -279,7 +279,7 @@ specific shares. As a user of this library, you won't need to address them.
 
 <a name="functions"/>
 ## Functions
-Functions in the libpolypasshash library are divided in user management or context management. User management functions carry the role of user adding and login check. Context management functions are oriented to the maintenance and operation of the whole polypasshash scheme. 
+Functions in the libpolypasswordhasher library are divided in user management or context management. User management functions carry the role of user adding and login check. Context management functions are oriented to the maintenance and operation of the whole polypasswordhasher scheme. 
 
 ====
 
@@ -292,7 +292,7 @@ Functions in the libpolypasshash library are divided in user management or conte
 
 <a name="pph_init_context"/>
 #### pph\_init\_context
-Initializes a polypasshash context structure with everything needed in order to work. This is a one-time only initialization, pph_store_context and pph_reload_context will provide a persistent context after initialization.
+Initializes a polypasswordhasher context structure with everything needed in order to work. This is a one-time only initialization, pph_store_context and pph_reload_context will provide a persistent context after initialization.
 ##### parameters:
   
 * Threshold : the minimum number of shares (or username accounts) to provide in order for it to unlock
@@ -455,7 +455,7 @@ An error code indicating if the login attempt was successful.
 #### PHS
 Hash an input string with the given arguments.
 
-This function is a mere demonstration of the resulting hashes inside a polypasshash store.
+This function is a mere demonstration of the resulting hashes inside a polypasswordhasher store.
 The motivation behind this function is to showcase the safety of the polyhashed passwords. This function is aimed for the Password Hashing Competition.
 
 ###### parameters
