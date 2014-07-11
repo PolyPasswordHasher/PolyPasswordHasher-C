@@ -2,7 +2,7 @@ PolyPasswordHasher for C
 ============
 
 The C implementation for the [PolyPasswordHasher password storage
-scheme](https://github.com/JustinCappos/PolyPasswordHasher). This repository provides
+scheme](https://github.com/PolyPasswordHasher/PolyPasswordHasher). This repository provides
 a C library to manage a polypasswordhasher store.
 
 A polypasswordhasher store uses Shamir shares to obscure the password's hashes in 
