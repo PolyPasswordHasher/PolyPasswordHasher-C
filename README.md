@@ -44,9 +44,7 @@ the following requirements:
 ## How to build.
 In order to build, we have to setup the project by running:
 ```Bash
-  aclocal
-  autoreconf
-  automake --add-missing
+  autoreconf --install
   ./configure
   make
 ```

@@ -1,4 +1,5 @@
-AM_CFLAGS = -I$(top_builddir)/include -lcrypto
+AM_CFLAGS = -I$(top_builddir)/include 
+AM_LDFLAGS = -lcrypto
 
 TESTS = check_libgfshare check_libpolypasswordhasher check_libpph_thresholdless\
 				check_libpph_partialbytes check_libpph_phc
