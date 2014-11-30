@@ -433,7 +433,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   // fall inside this loop for shielded accounts since shares is 0.
   last_entry = NULL;
 
-  for(i=0;i<shares;i++){
+  for(i = 0; i < shares; i++) {
     
     // 3) Allocate entries for each account
     // get a new share value
@@ -457,7 +457,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // share in a round robin fashion
     entry_node->share_number = ctx->next_entry;
     ctx->next_entry++;
-    if(ctx->next_entry==0 || ctx->next_entry>=MAX_NUMBER_OF_SHARES){
+    if(ctx->next_entry==0 || ctx->next_entry >= MAX_NUMBER_OF_SHARES) {
       ctx->next_entry=1;
     }   
 
@@ -587,7 +587,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   uint8 share_data[SHARE_LENGTH];  
   
   // we will calculate a "proposed hash" in this buffer  
-  uint8 resulting_hash[DIGEST_LENGTH];
+  uint8 resulting_hash[DIGEST_LENGTH], icb_digest_temp[DIGEST_LENGTH];
   uint8 salted_password[MAX_SALT_LENGTH+MAX_PASSWORD_LENGTH]; 
                                                       
   uint8 xored_hash[SHARE_LENGTH];
@@ -695,6 +695,11 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
         current_entry->password_length);
     _calculate_digest(resulting_hash, salted_password, 
        current_entry->salt_length + password_length);
+
+    for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
+      memcpy(icb_digest_temp, resulting_hash, DIGEST_LENGTH);
+      _calculate_digest(resulting_hash, icb_digest_temp, DIGEST_LENGTH);
+    }
 
     // only compare the bytes that are not obscured by either AES or the 
     // share, we start from share_length-isolated_check_bits to share_length. 
@@ -1431,7 +1436,8 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
     password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
     unsigned int share_length, unsigned int isolated_check_bits){
 
-
+  uint8 icb_digest[DIGEST_LENGTH], icb_digest_temp[DIGEST_LENGTH];
+  unsigned int i;
   pph_entry *entry_node = NULL;
   
   // we hold a buffer for the salted password.
@@ -1478,11 +1484,18 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
   // hash the salted password
   _calculate_digest(entry_node->protector_value, salted_password,
         salt_length + password_length);
-  
+ 
+  // store the icb's
+  memcpy(icb_digest, entry_node->protector_value, DIGEST_LENGTH);
+  for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
+    memcpy(icb_digest_temp, icb_digest, DIGEST_LENGTH);
+    _calculate_digest(icb_digest, icb_digest_temp, DIGEST_LENGTH);
+  }
+  memcpy(entry_node->isolated_check_bits, icb_digest,
+          isolated_check_bits);
+ 
   // xor the whole thing, with the share, we are doing operations in-place
   // to make everything faster
-  memcpy(entry_node->isolated_check_bits, entry_node->protector_value,
-          isolated_check_bits);
   _xor_share_with_digest(entry_node->protector_value, share,
         entry_node->protector_value, share_length);
   
@@ -1503,6 +1516,8 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
 
 
   pph_entry *entry_node = NULL;
+  uint8 icb_digest[DIGEST_LENGTH], icb_digest_temp[DIGEST_LENGTH];
+  unsigned int i;
   uint8 salted_password[MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH];
 
   // openssl encryption contexts
@@ -1554,7 +1569,12 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
       salt_length + password_length); 
 
   // store the icb's
-  memcpy(entry_node->isolated_check_bits, entry_node->protector_value,
+  memcpy(icb_digest, entry_node->protector_value, DIGEST_LENGTH);
+  for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
+    memcpy(icb_digest_temp, icb_digest, DIGEST_LENGTH);
+    _calculate_digest(icb_digest, icb_digest_temp, DIGEST_LENGTH);
+  }
+  memcpy(entry_node->isolated_check_bits, icb_digest,
           isolated_check_bits);
 
   // encrypt the generated digest

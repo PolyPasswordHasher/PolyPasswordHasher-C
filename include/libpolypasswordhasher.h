@@ -59,6 +59,7 @@
 #define SIGNATURE_HASH_BYTE_LENGTH 4
 #define SIGNATURE_RANDOM_BYTE_LENGTH DIGEST_LENGTH-SIGNATURE_HASH_BYTE_LENGTH
 #define SIGNATURE_HASH_ITERATIONS 10000 /* The number of iterations should be set higher */
+#define ICB_HASH_ITERATIONS 10000
 
 
 /* Custom types */ 
