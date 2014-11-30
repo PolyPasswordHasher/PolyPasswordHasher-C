@@ -12,15 +12,15 @@ int main(void)
   // to attempt unlocking. 
   uint8 threshold = 2;    
                           
-  // partial bytes will be set to two, so users can login after any reboot
+  // isolated-check-bits will be set to two, so users can login after any reboot
   // event.
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
                          
 
 
   // setup the context, this will generate us the shares, setup information 
   // needed to operate and initialize all of the data structures.
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   
   
   // add some users, we send the context, a username, a password and a number
@@ -64,8 +64,8 @@ int main(void)
   // context is locked after loading from disk.
   context = pph_reload_context("securepasswords");
   
-  // at this point we can still provide a login service, thanks to the partial 
-  // bytes extension. But in order to create accounts and to provide full login
+  // at this point we can still provide a login service, thanks to the isolated 
+  // validation extension. But in order to create accounts and to provide full login
   // functionality, we should unlock the store.
   if(pph_check_login(context, "Alice",strlen("alice"), "i'm.trudy", 
                                           strlen("i'm.trudy")) == PPH_ERROR_OK){
@@ -106,7 +106,7 @@ int main(void)
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
                                                         strlen("verysafe"),0);
   
-  // we can now check accounts using the full feature also (non-partial bytes)
+  // we can now check accounts using the full feature also (non-isolated-check-bits)
   if(pph_check_login(context, "carl", strlen("carl"), "verysafe",
                                           strlen("verysafe")) == PPH_ERROR_OK){
     printf("welcome back carl\n"); 

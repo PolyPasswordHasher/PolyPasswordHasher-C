@@ -162,9 +162,9 @@ typedef struct _pph_context{
   uint8 *AES_key;                
   uint8 *secret;                 
 
-  // This is the number of partial bytes associated with the context.
-  // If partial bytes is 0, partial verification is disabled. 
-  uint8 partial_bytes;           
+  // This is the number of isolated-check-bits associated with the context.
+  // If isolated-check-bits is 0, isolated validation is disabled. 
+  uint8 isolated_check_bits;           
   
   // this points to the account nodes currently available.  
   pph_account_node* account_data;
@@ -192,7 +192,7 @@ typedef struct _pph_context{
 *                     bool is_unlocked;               = true   
 *                     uint8 *AES_key;                 = will point to secret       
 *                     uint8 *secret;                  = generated secret
-*                     uint8 partial_bytes;            = partial_bytes
+*                     uint8 isolated_check_bits;            = isolated_check_bits
 *                     pph_account_node* account_data; = NULL
 *                   } pph_context;
 *                
@@ -206,11 +206,12 @@ typedef struct _pph_context{
 *                                 threshold go from 1 to MAX_NUMBER_OF_SHARES;
 *                                 however, a value of 1 is a bad idea.
 *
-*     uint8 partial_bytes:        The number of hashed-bytes to leak in order 
-*                                 to perform partial verification. If 
-*                                 partial_bytes = 0, partial verification is 
-*                                 disabled. Partial bytes should range from 0
-*                                 to DIGEST_LENGTH. 
+*     uint8 isolated_check_bits:  The number of hashed-bytes to leak in order 
+*                                 to perform isolated validation. If 
+*                                 isolated_check_bits = 0, isolated validation
+*                                 is disabled. isolated-check-bits should range
+*                                 from 0 to DIGEST_LENGTH, but a value from 0 to
+*                                 4 is recommended.
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -234,7 +235,7 @@ typedef struct _pph_context{
 *     21/04/2014: secret is no longer a parameter
 */
 
-pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes);
+pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits);
 
 
 
@@ -257,7 +258,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes);
 *                     bool is_unlocked;               = 
 *                     uint8 *AES_key;                 = needs freeing      
 *                     uint8 *secret;                  = needs freeing
-*                     uint8 partial_bytes;            = 
+*                     uint8 isolated_check_bits;            = 
 *                     pph_account_node* account_data; = needs freeing
 *                   } pph_context;
 
@@ -418,7 +419,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *     1) Sanitize data and return errors
 *     2) try to find username in the context
 *     3) if found, decide how to verify his information based on the status
-*         of the context (shielded, partial verif, etc.)
+*         of the context (shielded, isolated validation, etc.)
 *     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
@@ -685,7 +686,7 @@ PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length,
 
 pph_entry *create_protector_entry(uint8 *password, unsigned int
     password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
-    unsigned int share_length, unsigned int partial_bytes);
+    unsigned int share_length, unsigned int isolated_check_bits);
 
 
 
@@ -695,7 +696,7 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
 
 pph_entry *create_shielded_entry(uint8 *password, unsigned int
     password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
-    unsigned int key_length, unsigned int partial_bytes);
+    unsigned int key_length, unsigned int isolated_check_bits);
 
 
 

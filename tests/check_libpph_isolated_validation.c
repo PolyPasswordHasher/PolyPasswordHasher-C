@@ -1,6 +1,6 @@
-/* Check libpolypasswordhasher with partial bytes. 
+/* Check libpolypasswordhasher with isolated bytes. 
  *
- * check the partial bytes extension of the libpolypasswordhasher module. 
+ * check the isolated bytes extension of the libpolypasswordhasher module. 
  *
  * @author  Santiago Torres
  * @date    10/03/2014
@@ -18,39 +18,39 @@
 
 
 
-// we test that init context will provide a correct value with the partial 
+// we test that init context will provide a correct value with the isolated 
 // bytes value set to something different than 0
-START_TEST(test_pph_init_context_partial_bytes)
+START_TEST(test_pph_init_context_isolated_check_bits)
 { 
   
   
   pph_context *context; 
   uint8 threshold = 2;  
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
 
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
 
   ck_assert_msg( context != NULL, " couldn't initialize the pph context" );
   ck_assert_msg( context->AES_key != NULL, "the key wansn't generated properly");
-  ck_assert_msg( context->partial_bytes == partial_bytes,
-      "didn't set partial bytes properly");
+  ck_assert_msg( context->isolated_check_bits == isolated_check_bits,
+      "didn't set isolated bytes properly");
 
 }
 END_TEST
 
 // we check that destroy context is working too. This shouldn't be a problem.
-START_TEST(test_pph_destroy_context_partial_bytes)
+START_TEST(test_pph_destroy_context_isolated_check_bits)
 {
   
   
   pph_context *context;
   PPH_ERROR error;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
                           
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL, " shouldn't break here");
 
   error = pph_destroy_context(context);
@@ -63,7 +63,7 @@ END_TEST
 
 
 
-// Test create accounts with shielded accounts and partial bytes. 
+// Test create accounts with shielded accounts and isolated bytes. 
 START_TEST(test_pph_create_accounts)
 {
 
@@ -71,7 +71,7 @@ START_TEST(test_pph_create_accounts)
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
@@ -79,11 +79,11 @@ START_TEST(test_pph_create_accounts)
   unsigned int i;
 
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  // create a shielded account with partial bytes.
+  // create a shielded account with isolated bytes.
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 0); 
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -124,19 +124,19 @@ END_TEST
 
 
 // We check for both, shielded accounts and threshold accounts under 
-// partial bytes setup.
+// isolated bytes setup.
 START_TEST(test_create_account_mixed_accounts) {
   
   
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
   
   
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -177,7 +177,7 @@ START_TEST(test_check_login_shielded) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
   unsigned char anotheruser[] = "0anotheruser";
@@ -185,7 +185,7 @@ START_TEST(test_check_login_shielded) {
 
   
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -238,16 +238,16 @@ END_TEST
 
 
 
-// we test partial verification, we use a seemingly locked context and try to
+// we test isolated verification, we use a seemingly locked context and try to
 // login. We don't care if the account is shielded or threshold, since
-// we only check for the leaked partial bytes. 
-START_TEST(test_pph_partial_verification_and_unlock) {
+// we only check for the leaked isolated bytes. 
+START_TEST(test_pph_isolated_verification_and_unlock) {
 
 
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
                          
   unsigned int i;
   unsigned int username_count=5;
@@ -286,7 +286,7 @@ START_TEST(test_pph_partial_verification_and_unlock) {
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -303,7 +303,7 @@ START_TEST(test_pph_partial_verification_and_unlock) {
   context->secret = NULL;
   context->share_context= NULL;
 
-  // now try to login properly with partial verification
+  // now try to login properly with isolated verification
   error = pph_check_login(context, usernames[0], strlen(usernames[0]), 
         passwords[0], strlen(passwords[0]));
   ck_assert(error == PPH_ERROR_OK);
@@ -374,21 +374,21 @@ END_TEST
 
 
 // suite definition
-Suite * polypasswordhasher_partial_bytes_suite(void)
+Suite * polypasswordhasher_isolated_check_bits_suite(void)
 {
   
   
-  Suite *s = suite_create ("partial_bytes");
+  Suite *s = suite_create ("isolated_check_bits");
 
-  /*partial bytes case */
-  TCase *tc_partial = tcase_create ("partial");
-  tcase_add_test (tc_partial,test_pph_init_context_partial_bytes);
-  tcase_add_test (tc_partial,test_pph_destroy_context_partial_bytes);
-  tcase_add_test (tc_partial,test_pph_create_accounts);
-  tcase_add_test (tc_partial,test_create_account_mixed_accounts);
-  tcase_add_test (tc_partial,test_check_login_shielded);
-  tcase_add_test (tc_partial,test_pph_partial_verification_and_unlock);
-  suite_add_tcase (s, tc_partial);
+  /* isolated validation case */
+  TCase *tc_isolated = tcase_create ("isolated");
+  tcase_add_test (tc_isolated,test_pph_init_context_isolated_check_bits);
+  tcase_add_test (tc_isolated,test_pph_destroy_context_isolated_check_bits);
+  tcase_add_test (tc_isolated,test_pph_create_accounts);
+  tcase_add_test (tc_isolated,test_create_account_mixed_accounts);
+  tcase_add_test (tc_isolated,test_check_login_shielded);
+  tcase_add_test (tc_isolated,test_pph_isolated_verification_and_unlock);
+  suite_add_tcase (s, tc_isolated);
 
   return s;
 }
@@ -400,7 +400,7 @@ Suite * polypasswordhasher_partial_bytes_suite(void)
 int main (void)
 {
   int number_failed;
-  Suite *s =  polypasswordhasher_partial_bytes_suite();
+  Suite *s =  polypasswordhasher_isolated_check_bits_suite();
   SRunner *sr = srunner_create (s);
   srunner_run_all (sr, CK_VERBOSE);
   number_failed = srunner_ntests_failed (sr);

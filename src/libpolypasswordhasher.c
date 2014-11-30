@@ -46,7 +46,7 @@
 *                     bool is_unlocked;               = true   
 *                     uint8 *AES_key;                 = will point to secret       
 *                     uint8 *secret;                  = generated secret
-*                     uint8 partial_bytes;            = partial_bytes
+*                     uint8 isolated_check_bits;            = isolated_check_bits
 *                     pph_account_node* account_data; = NULL
 *                   } pph_context;
 *                
@@ -60,11 +60,11 @@
 *                                 threshold go from 1 to MAX_NUMBER_OF_SHARES;
 *                                 however, a value of 1 is a bad idea.
 *
-*     uint8 partial_bytes:        The number of hashed-bytes to leak in order 
-*                                 to perform partial verification. If 
-*                                 partial_bytes = 0, partial verification is 
-*                                 disabled. Partial bytes should range from 0
-*                                 to DIGEST_LENGTH
+*     uint8 isolated_check_bits:  The number of hashed-bytes to leak in order 
+*                                 to perform isolated validation. If
+*                                 isolated_check_bits = 0, isolated validation
+*                                 is disabled. Isolated_check_bts should range
+*                                 from 0 to DIGEST_LENGTH
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -89,7 +89,7 @@
 *     21/04/2014: secret is no longer a parameter
 */
 
-pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
+pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
 
 
   pph_context *context;
@@ -108,7 +108,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
 
   }
 
-  if(partial_bytes > DIGEST_LENGTH) {
+  if(isolated_check_bits > DIGEST_LENGTH) {
     
     return NULL;
     
@@ -125,9 +125,9 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
 
   context->threshold=threshold;
   
-  // initialize the partial bytes offset, this will be used to limit the
+  // initialize the isolated-check-bits offset, this will be used to limit the
   // length of the shares, and the length of the digest to xor/encrypt.
-  context->partial_bytes=partial_bytes;
+  context->isolated_check_bits=isolated_check_bits;
 
 
 
@@ -135,7 +135,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
   // half of the 16 byte hash to the end of it, we have chosen to use
   // only four hash bytes in order to have more random bytes. 
   context->secret = generate_pph_secret(
-      SIGNATURE_RANDOM_BYTE_LENGTH-partial_bytes,
+      SIGNATURE_RANDOM_BYTE_LENGTH-isolated_check_bits,
       SIGNATURE_HASH_BYTE_LENGTH);
   if(context->secret == NULL) {
     free(context);
@@ -168,12 +168,12 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
   }
 
   // Update the share context, the size of the shares is reduced by the number
-  // or partial bytes.
+  // or isolated-check-bits.
   context->share_context = NULL;
   context->share_context = gfshare_ctx_init_enc( share_numbers,
                                                  MAX_NUMBER_OF_SHARES-1,
                                                  context->threshold,
-                                                 SHARE_LENGTH-partial_bytes);
+                                                 SHARE_LENGTH-isolated_check_bits);
   if(context->share_context == NULL) {
     free(context->secret);
     free(context);
@@ -211,7 +211,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
 *                     bool is_unlocked;               = 
 *                     uint8 *AES_key;                 = needs freeing      
 *                     uint8 *secret;                  = needs freeing
-*                     uint8 partial_bytes;            = 
+*                     uint8 isolated_check_bits;            = 
 *                     pph_account_node* account_data; = needs freeing
 *                   } pph_context;
 *
@@ -446,7 +446,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 
     // Try to get a new entry.
     entry_node=create_protector_entry(password, password_length, salt_buffer,
-        MAX_SALT_LENGTH, share_data, SHARE_LENGTH, ctx->partial_bytes);
+        MAX_SALT_LENGTH, share_data, SHARE_LENGTH, ctx->isolated_check_bits);
     if(entry_node == NULL){
       _destroy_entry_list(last_entry);
     
@@ -478,7 +478,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // generate the entry
     entry_node = create_shielded_entry(password, password_length,
         salt_buffer, MAX_SALT_LENGTH, ctx->AES_key, DIGEST_LENGTH,
-        ctx->partial_bytes);
+        ctx->isolated_check_bits);
 
     if(entry_node == NULL){
     
@@ -568,7 +568,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *     1) Sanitize data and return errors
 *     2) try to find username in the context
 *     3) if found, decide how to verify his information based on the status
-*         of the context (shielded, partial verif, etc.)
+*         of the context (shielded, isolated validation, etc.)
 *     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
@@ -598,8 +598,8 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   pph_entry *current_entry;
   unsigned int i;
 
-  // this will hold an offset value for partial verification.
-  unsigned int partial_bytes_offset;
+  // this will hold an offset value for isolated validation.
+  unsigned int isolated_check_bits_offset;
 
   // openSSL managers.
   EVP_CIPHER_CTX de_ctx;
@@ -628,17 +628,17 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     
   }
 
-  // check if the context is locked and we lack partial bytes to check. If we
-  // do not have enough partial bytes (at least one), we cannot do partial
-  // verification
-  if(ctx->is_unlocked != true && ctx->partial_bytes == 0){
+  // check if the context is locked and we lack isolated-check-bits to check. If we
+  // do not have enough isolated-check-bits (at least one), we cannot do isolated
+  // validation
+  if(ctx->is_unlocked != true && ctx->isolated_check_bits == 0){
     
     return PPH_CONTEXT_IS_LOCKED;
     
   }
 
   // check we have a shielded key
-  if(ctx->AES_key == NULL && ctx->partial_bytes == 0){
+  if(ctx->AES_key == NULL && ctx->isolated_check_bits == 0){
     
     return PPH_CONTEXT_IS_LOCKED;
     
@@ -686,13 +686,13 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // thorough and check for each, but it looks like an overkill
   current_entry = target->account.entries;
   sharenumber = current_entry->share_number;
-  partial_bytes_offset = DIGEST_LENGTH - ctx->partial_bytes;
+  isolated_check_bits_offset = DIGEST_LENGTH - ctx->isolated_check_bits;
   
   
-  // if the context is not unlocked, we can only provide partial verification  
+  // if the context is not unlocked, we can only provide isolated validation 
   if(ctx->is_unlocked != true){
 
-    // partial bytes check
+    // isolated-check-bits check
     // calculate the proposed digest, this means, calculate the hash with
     // the information just provided about the user. 
     memcpy(salted_password,current_entry->salt,current_entry->salt_length);
@@ -702,10 +702,10 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
        current_entry->salt_length + password_length);
    
     // only compare the bytes that are not obscured by either AES or the 
-    // share, we start from share_length-partial_bytes to share_length. 
-    if(memcmp(resulting_hash+partial_bytes_offset,
-          target->account.entries->protector_value+partial_bytes_offset,
-          ctx->partial_bytes)){
+    // share, we start from share_length-isolated_check_bits to share_length. 
+    if(memcmp(resulting_hash+isolated_check_bits_offset,
+          target->account.entries->protector_value+isolated_check_bits_offset,
+          ctx->isolated_check_bits)){
     
       return PPH_ACCOUNT_IS_INVALID;
     
@@ -727,11 +727,11 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       EVP_CIPHER_CTX_init(&de_ctx);
       EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
       EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len, 
-          current_entry->protector_value, partial_bytes_offset);
+          current_entry->protector_value, isolated_check_bits_offset);
       EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
       EVP_CIPHER_CTX_cleanup(&de_ctx);
 
-      // append the unencrypted bytes if we have partial bytes. 
+      // append the unencrypted bytes if we have isolated-check-bits. 
       for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
         xored_hash[i] = current_entry->protector_value[i];
       }
@@ -770,10 +770,10 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       
       // xor the thing back to normal
       _xor_share_with_digest(xored_hash,current_entry->protector_value,
-          share_data, partial_bytes_offset);
+          share_data, isolated_check_bits_offset);
       
-      // add the partial bytes to the end of the digest.
-      for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
+      // add the isolated-check-bits to the end of the digest.
+      for(i=DIGEST_LENGTH-ctx->isolated_check_bits;i<DIGEST_LENGTH;i++){
         xored_hash[i] = target->account.entries->protector_value[i];
       }
       
@@ -896,7 +896,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   
   // initialize a recombination context
   G = gfshare_ctx_init_dec( share_numbers, MAX_NUMBER_OF_SHARES-1,
-     SHARE_LENGTH-ctx->partial_bytes);
+     SHARE_LENGTH-ctx->isolated_check_bits);
 
 
   // traverse our possible users
@@ -932,7 +932,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
             // xor the obtained digest with the protector value to obtain
             // our share.
             _xor_share_with_digest(estimated_share,entry->protector_value,
-                estimated_digest,SHARE_LENGTH-ctx->partial_bytes);
+                estimated_digest,SHARE_LENGTH-ctx->isolated_check_bits);
          
             // give share to the recombinator. 
             share_numbers[entry->share_number] = entry->share_number+1;
@@ -954,7 +954,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_dec_extract(G, secret);
 
   // verify that we got a proper secret back.
-  if(check_pph_secret(secret, SIGNATURE_RANDOM_BYTE_LENGTH-ctx->partial_bytes,
+  if(check_pph_secret(secret, SIGNATURE_RANDOM_BYTE_LENGTH-ctx->isolated_check_bits,
         SIGNATURE_HASH_BYTE_LENGTH) != PPH_ERROR_OK){
     
     return PPH_ACCOUNT_IS_INVALID;
@@ -964,9 +964,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   // else, we have a correct secret and we will copy it back to the provided
   // context.
   if(ctx->secret == NULL){
-    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH-ctx->partial_bytes);
+    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH-ctx->isolated_check_bits);
   }
-  memcpy(ctx->secret,secret,SHARE_LENGTH-ctx->partial_bytes);
+  memcpy(ctx->secret,secret,SHARE_LENGTH-ctx->isolated_check_bits);
 
   // if the share context is not initialized, initialize one with the
   // information we have about our context. 
@@ -977,7 +977,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     ctx->share_context = gfshare_ctx_init_enc( share_numbers,
                                                MAX_NUMBER_OF_SHARES-1,
                                                ctx->threshold,
-                                               SHARE_LENGTH-ctx->partial_bytes);
+                                               SHARE_LENGTH-ctx->isolated_check_bits);
   }
   
   // we have an initialized share context, we set the recombined secret to it 
@@ -1327,7 +1327,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
   }
 
   // remember, in our case, tcost maps directly to the threshold value, we also
-  // decided to leave no partial bytes to have the whole hash protected by the
+  // decided to leave no isolated-check-bits to have the whole hash protected by the
   // shares 
   context = pph_init_context(tcost,0);
 
@@ -1340,7 +1340,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 
   // generate an entry.
   generated_entry = create_protector_entry( in, inlen, salt, saltlen,
-      share, DIGEST_LENGTH, context->partial_bytes);
+      share, DIGEST_LENGTH, context->isolated_check_bits);
 
   // copy the resulting polyhash to the output
   memcpy(out, generated_entry->protector_value, outlen);
@@ -1471,7 +1471,7 @@ PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length,
 
 pph_entry *create_protector_entry(uint8 *password, unsigned int
     password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
-    unsigned int share_length, unsigned int partial_bytes){
+    unsigned int share_length, unsigned int isolated_check_bits){
 
 
   pph_entry *entry_node = NULL;
@@ -1494,7 +1494,7 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
   }
 
   // check for valid lengths on the share information
-  if(share_length > SHARE_LENGTH || partial_bytes > SHARE_LENGTH){
+  if(share_length > SHARE_LENGTH || isolated_check_bits > SHARE_LENGTH){
     
     return NULL;
     
@@ -1524,7 +1524,7 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
   // xor the whole thing, with the share, we are doing operations in-place
   // to make everything faster
   _xor_share_with_digest(entry_node->protector_value, share,
-        entry_node->protector_value, share_length-partial_bytes);
+        entry_node->protector_value, share_length-isolated_check_bits);
     
   return entry_node;
     
@@ -1539,7 +1539,7 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
 
 pph_entry *create_shielded_entry(uint8 *password, unsigned int
     password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
-    unsigned int key_length, unsigned int partial_bytes){
+    unsigned int key_length, unsigned int isolated_check_bits){
 
 
   pph_entry *entry_node = NULL;
@@ -1566,10 +1566,10 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
   }
 
   // we check that the key is shorter than the digest we are using for
-  // ctr mode, but we could omit this, partial bytes should be shorter
+  // ctr mode, but we could omit this, isolated-check-bits should be shorter
   // than the digest length since we cannot reveal more bytes than the ones
   // we have.
-  if(key_length > DIGEST_LENGTH || partial_bytes > DIGEST_LENGTH){
+  if(key_length > DIGEST_LENGTH || isolated_check_bits > DIGEST_LENGTH){
     
     return NULL;
     
@@ -1597,7 +1597,7 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
   EVP_CIPHER_CTX_init(&en_ctx);
   EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, NULL);
   EVP_EncryptUpdate(&en_ctx, entry_node->protector_value, &c_len,
-      entry_node->protector_value, DIGEST_LENGTH-partial_bytes);
+      entry_node->protector_value, DIGEST_LENGTH-isolated_check_bits);
   EVP_EncryptFinal_ex(&en_ctx, entry_node->protector_value+c_len, &f_len);
   EVP_CIPHER_CTX_cleanup(&en_ctx);
 

@@ -1,4 +1,4 @@
-/* Check libpolypasswordhasher core, no shielded accounts and no partial bytes 
+/* Check libpolypasswordhasher core, no shielded accounts and no isolated bytes 
  *
  * This suite is designed to test all of the core functionalities of the 
  * libpolypasswordhasher module without its extensions. 
@@ -148,16 +148,16 @@ START_TEST(test_pph_init_context_wrong_threshold)
   pph_context *context;
   uint8 threshold = 0; // this is, obviously, the only wrong threshold value
                               
-  uint8 partial_bytes = 0;// this function is part of the non-partial bytes
+  uint8 isolated_check_bits = 0;// this function is part of the non-isolated bytes
                           
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
 
   ck_assert_msg(context == NULL,
       "the context returned upon a wrong threshold value should be NULL");
 
   // test for over-extension of the threshold value
   threshold =MAX_NUMBER_OF_SHARES+1;
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
 
   ck_assert_msg(context == NULL);
   
@@ -168,22 +168,22 @@ END_TEST
 
 
 
-// Test an initialization with proper values, asking for 0 partial bytes.
-START_TEST(test_pph_init_context_no_partial_bytes)
+// Test an initialization with proper values, asking for 0 isolated bytes.
+START_TEST(test_pph_init_context_no_isolated_check_bits)
 {
   
   
   pph_context *context;
   PPH_ERROR error;
-  // set the correct threshold and partial bytes this time
+  // set the correct threshold and isolated bytes this time
   uint8 threshold = 2;
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
 
-  //test for a over-extended value for partial bytes first
+  //test for a over-extended value for isolated bytes first
   context = pph_init_context(threshold,DIGEST_LENGTH+1);
   ck_assert_msg(context == NULL);  
 
-  context = pph_init_context(threshold,partial_bytes);
+  context = pph_init_context(threshold,isolated_check_bits);
 
   ck_assert_msg(context != NULL, "this was a good initialization");
   
@@ -225,7 +225,7 @@ START_TEST(test_create_account_usernames) {
   pph_context *context;
   PPH_ERROR error;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                         
   unsigned char username[MAX_USERNAME_LENGTH+1];
   unsigned int i;
@@ -239,7 +239,7 @@ START_TEST(test_create_account_usernames) {
   username[MAX_USERNAME_LENGTH] = '\0';
 
   // initialize a correct context from scratch
-  context = pph_init_context(threshold,partial_bytes);
+  context = pph_init_context(threshold,isolated_check_bits);
   
   // sending bogus information to the create user function.
   error = pph_create_account(context, username, strlen(username),
@@ -266,12 +266,12 @@ START_TEST(test_create_account_passwords) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned char password[MAX_PASSWORD_LENGTH+1];
   unsigned int i;
 
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
 
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
@@ -323,7 +323,7 @@ START_TEST(test_create_account_entry_consistency) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
@@ -339,7 +339,7 @@ START_TEST(test_create_account_entry_consistency) {
   uint8 share_result[SHARE_LENGTH];
 
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
  
@@ -410,7 +410,7 @@ START_TEST(test_check_login_input_sanity) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
@@ -426,7 +426,7 @@ START_TEST(test_check_login_input_sanity) {
   ck_assert_msg(error == PPH_BAD_PTR, "expected PPH_BAD_PTR");
 
   // we will send a wrong username pointer now
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   error = pph_check_login(context, NULL, 0, password, 0);
@@ -461,7 +461,7 @@ START_TEST(test_check_login_input_sanity) {
   
   // finally, check it returns the proper error code if the vault is locked
   // still. We set the unlocked flag to false to lock the context, and we also
-  // know that partial bytes is 0 and won't provide any login functionality. 
+  // know that isolated bytes is 0 and won't provide any login functionality. 
   context->is_unlocked = false; 
 
   error=pph_check_login(context,username,strlen(username), password,
@@ -485,7 +485,7 @@ START_TEST(test_check_login_wrong_username) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
@@ -494,7 +494,7 @@ START_TEST(test_check_login_wrong_username) {
 
   
   // setup the context 
-  context = pph_init_context(threshold,partial_bytes);
+  context = pph_init_context(threshold,isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -547,7 +547,7 @@ START_TEST(test_check_login_wrong_password) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2;
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
@@ -556,7 +556,7 @@ START_TEST(test_check_login_wrong_password) {
 
 
   // setup the context 
-  context = pph_init_context(threshold,partial_bytes);
+  context = pph_init_context(threshold,isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -607,7 +607,7 @@ START_TEST(test_check_login_proper_data) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
@@ -616,7 +616,7 @@ START_TEST(test_check_login_proper_data) {
 
 
   // setup the context 
-  context = pph_init_context(threshold,partial_bytes);
+  context = pph_init_context(threshold,isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -666,11 +666,11 @@ START_TEST(test_pph_create_and_check_login_full_range) {
   uint8 password_buffer[MAX_PASSWORD_LENGTH];
   unsigned int i;
   uint8 threshold = 2;
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   PPH_ERROR error;
 
 
-  context = pph_init_context( threshold, partial_bytes);
+  context = pph_init_context( threshold, isolated_check_bits);
   ck_assert(context != NULL);
 
   // we will iterate all of the lengths of the username fields and generate 
@@ -710,7 +710,7 @@ START_TEST(test_pph_unlock_password_data_input_sanity) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
   unsigned int i;
   unsigned int username_count=5;
@@ -740,7 +740,7 @@ START_TEST(test_pph_unlock_password_data_input_sanity) {
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -792,7 +792,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
   unsigned int i;
   unsigned int username_count=5;
@@ -830,7 +830,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   
   
   // setup the context 
-  context = pph_init_context(threshold,partial_bytes);
+  context = pph_init_context(threshold,isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -904,7 +904,7 @@ START_TEST(test_pph_store_context_input_sanity) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned int i;
 
   // wrong context pointer test
@@ -913,7 +913,7 @@ START_TEST(test_pph_store_context_input_sanity) {
 
   // initialize a context because we are going to give a valid pointer from now
   // on
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   
   // wrong filename
   error = pph_store_context(context, NULL);
@@ -938,7 +938,7 @@ START_TEST(test_pph_reload_context_input_sanity) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned int i;
 
 
@@ -954,7 +954,7 @@ START_TEST(test_pph_reload_context_input_sanity) {
   context = pph_reload_context("pph.db");
   ck_assert_msg(context != NULL, " this should have produced a valid pointer");
   ck_assert_msg(context->threshold == 2, " threshold didn't match the one set");
-  ck_assert_msg(context->partial_bytes == 0, "partial bytes don't match");
+  ck_assert_msg(context->isolated_check_bits == 0, "isolated bytes don't match");
   ck_assert_msg(context->secret == NULL, " didn't store null for secret");
   ck_assert_msg(context->is_unlocked == false, " loaded an unlocked context");
   
@@ -974,7 +974,7 @@ START_TEST(test_pph_store_and_reload_with_users) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   uint8 secret[DIGEST_LENGTH]; 
   unsigned int i;
   unsigned int username_count=5;
@@ -1007,7 +1007,7 @@ START_TEST(test_pph_store_and_reload_with_users) {
                                     "password26"};
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   for(i=0;i<username_count;i++) {
@@ -1078,13 +1078,13 @@ START_TEST(test_pph_unlock_password_data_full_range) {
   unsigned int i;
   PPH_ERROR error;
   uint8 threshold = 2;
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   pph_context *context;
 
   // initialize the buffers
   username_lengths = malloc(sizeof(*username_lengths)*MAX_USERNAME_LENGTH);
 
-  context = pph_init_context( threshold, partial_bytes);
+  context = pph_init_context( threshold, isolated_check_bits);
   ck_assert(context != NULL);
   
   // initialize a username password pair of each length of a random value
@@ -1156,32 +1156,32 @@ Suite * polypasswordhasher_suite(void)
 {
   Suite *s = suite_create ("buildup");
 
-  /* no partial bytes case */
-  TCase *tc_non_partial = tcase_create ("non-partial");
+  /* no isolated verification case */
+  TCase *tc_non_isolated = tcase_create ("non-isolated");
 
   // generating and checking secrets
-  tcase_add_test (tc_non_partial, test_generate_pph_secret_input_sanity);
-  tcase_add_test (tc_non_partial, test_check_pph_secret_input_sanity);
-  tcase_add_test (tc_non_partial, test_generate_and_check_pph_secret_mixed);
+  tcase_add_test (tc_non_isolated, test_generate_pph_secret_input_sanity);
+  tcase_add_test (tc_non_isolated, test_check_pph_secret_input_sanity);
+  tcase_add_test (tc_non_isolated, test_generate_and_check_pph_secret_mixed);
   
   // initializing contexts
-  tcase_add_test (tc_non_partial,test_pph_init_context_wrong_threshold);
-  tcase_add_test (tc_non_partial,test_pph_init_context_no_partial_bytes);
+  tcase_add_test (tc_non_isolated,test_pph_init_context_wrong_threshold);
+  tcase_add_test (tc_non_isolated,test_pph_init_context_no_isolated_check_bits);
   
   // creating an account 
-  tcase_add_test (tc_non_partial,test_create_account_context);
-  tcase_add_test (tc_non_partial,test_create_account_usernames);
-  tcase_add_test (tc_non_partial,test_create_account_passwords);
-  tcase_add_test (tc_non_partial,test_create_account_sharenumbers);
-  tcase_add_test (tc_non_partial,test_create_account_entry_consistency);
+  tcase_add_test (tc_non_isolated,test_create_account_context);
+  tcase_add_test (tc_non_isolated,test_create_account_usernames);
+  tcase_add_test (tc_non_isolated,test_create_account_passwords);
+  tcase_add_test (tc_non_isolated,test_create_account_sharenumbers);
+  tcase_add_test (tc_non_isolated,test_create_account_entry_consistency);
 
   // checking for an existing account
-  tcase_add_test (tc_non_partial,test_check_login_input_sanity);
-  tcase_add_test (tc_non_partial,test_check_login_wrong_username);
-  tcase_add_test (tc_non_partial,test_check_login_wrong_password);
-  tcase_add_test (tc_non_partial,test_check_login_proper_data);
-  tcase_add_test (tc_non_partial,test_pph_create_and_check_login_full_range);
-  suite_add_tcase (s, tc_non_partial);
+  tcase_add_test (tc_non_isolated,test_check_login_input_sanity);
+  tcase_add_test (tc_non_isolated,test_check_login_wrong_username);
+  tcase_add_test (tc_non_isolated,test_check_login_wrong_password);
+  tcase_add_test (tc_non_isolated,test_check_login_proper_data);
+  tcase_add_test (tc_non_isolated,test_pph_create_and_check_login_full_range);
+  suite_add_tcase (s, tc_non_isolated);
 
   /* vault unlocking (for both cases) */
   TCase *tc_unlock_shamir = tcase_create ("unlock_shamir");

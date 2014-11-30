@@ -27,10 +27,10 @@ START_TEST(test_pph_init_context_AES_key)
 
   pph_context *context; 
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
 
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
 
   ck_assert_msg( context != NULL, " couldn't initialize the pph context" );
   ck_assert_msg( context->AES_key != NULL, "the key wansn't generated properly");
@@ -51,10 +51,10 @@ START_TEST(test_pph_destroy_context_AES_key)
   pph_context *context;
   PPH_ERROR error;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
 
   ck_assert_msg(context != NULL, " shouldn't break here");
   ck_assert_msg(context->AES_key != NULL, " the key wasn't generated properly");
@@ -77,12 +77,12 @@ START_TEST(test_pph_create_accounts)
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
   
   
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
  
@@ -131,7 +131,7 @@ START_TEST(test_create_account_mixed_accounts) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
@@ -141,7 +141,7 @@ START_TEST(test_create_account_mixed_accounts) {
   uint8 share_result[SHARE_LENGTH];
 
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -180,7 +180,7 @@ START_TEST(test_check_login_shielded) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
   unsigned char anotheruser[] = "0anotheruser";
@@ -188,7 +188,7 @@ START_TEST(test_check_login_shielded) {
 
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -249,7 +249,7 @@ START_TEST(test_pph_unlock_password_data) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned int i;
   unsigned int username_count=5;
   const uint8 *usernames[] = {"username1",
@@ -287,7 +287,7 @@ START_TEST(test_pph_unlock_password_data) {
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -380,7 +380,7 @@ START_TEST(test_pph_shielded_full_lifecycle){
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned int i;
   unsigned int username_count=5;
   const uint8 *usernames[] = {"username1",
@@ -418,7 +418,7 @@ START_TEST(test_pph_shielded_full_lifecycle){
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -485,16 +485,16 @@ Suite * polypasswordhasher_thl_suite(void)
   Suite *s = suite_create ("shielded");
 
 
-  /* no partial bytes with shielded accounts case */
-  TCase *tc_non_partial = tcase_create ("non-partial");
-  tcase_add_test (tc_non_partial, test_pph_init_context_AES_key);
-  tcase_add_test (tc_non_partial, test_pph_destroy_context_AES_key);
-  tcase_add_test (tc_non_partial, test_pph_create_accounts);
-  tcase_add_test (tc_non_partial, test_create_account_mixed_accounts);
-  tcase_add_test (tc_non_partial, test_check_login_shielded);
-  tcase_add_test (tc_non_partial, test_pph_unlock_password_data);
-  tcase_add_test (tc_non_partial, test_pph_shielded_full_lifecycle);
-  suite_add_tcase (s, tc_non_partial);
+  /* no isolated validation with shielded accounts case */
+  TCase *tc_non_isolated = tcase_create ("non-isolated");
+  tcase_add_test (tc_non_isolated, test_pph_init_context_AES_key);
+  tcase_add_test (tc_non_isolated, test_pph_destroy_context_AES_key);
+  tcase_add_test (tc_non_isolated, test_pph_create_accounts);
+  tcase_add_test (tc_non_isolated, test_create_account_mixed_accounts);
+  tcase_add_test (tc_non_isolated, test_check_login_shielded);
+  tcase_add_test (tc_non_isolated, test_pph_unlock_password_data);
+  tcase_add_test (tc_non_isolated, test_pph_shielded_full_lifecycle);
+  suite_add_tcase (s, tc_non_isolated);
 
   return s;
 }

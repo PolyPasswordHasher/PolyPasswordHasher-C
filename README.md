@@ -102,9 +102,10 @@ both, threshold and shielded accounts. The  library supports
 shielded accounts, which are, in essence, user accounts
 that cannot unlock the store (imagine normal users vs super users). 
 
-We will also configure the context for two partial bytes. Partial bytes aid
-us in providing a login capability even if the store is locked. The store
-is usually locked upon reboot, since the shares are not stored anywhere in disk. 
+We will also configure the context for two isolated-check-bits. Isolated-check
+bits aid us in providing a login capability even if the store is locked. The
+store is usually locked upon reboot, since the shares are not stored anywhere
+in disk. 
 
 ```C
 
@@ -122,15 +123,15 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // to attempt unlocking. 
   uint8 threshold = 2;    
                           
-  // partial bytes will be set to two, so users can login after any reboot
+  // isolated-check-bits will be set to two, so users can login after any reboot
   // event.
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
                          
 
 
   // setup the context, this will generate us the shares, setup information 
   // needed to operate and initialize all of the data structures.
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   
   
   // add some users, we send the context, a username, a password and a number
@@ -174,7 +175,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   // context is locked after loading from disk.
   context = pph_reload_context("securepasswords");
   
-  // at this point we can still provide a login service, thanks to the partial 
+  // at this point we can still provide a login service, thanks to the isolated 
   // bytes extension. But in order to create accounts and to provide full login
   // functionality, we should unlock the store.
   if(pph_check_login(context, "Alice",strlen("alice"), "i'm.trudy", 
@@ -216,7 +217,7 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
                                                         strlen("verysafe"),0);
   
-  // we can now check accounts using the full feature also (non-partial bytes)
+  // we can now check accounts using the full feature also (non-isolated-check-bits)
   if(pph_check_login(context, "carl", strlen("carl"), "verysafe",
                                           strlen("verysafe")) == PPH_ERROR_OK){
     printf("welcome back carl\n"); 
@@ -262,7 +263,7 @@ The pph context is oriented to facilitate the bookkeeping of changes in the cont
                                  //  the secret is known.
   uint8 *AES_key;                // a randomly generated AES key of SHARE_LENGTH
   uint8 *secret;                 // secret data, generated at initialization
-  uint8 partial_bytes;           // partial bytes, if 0, partial verification is
+  uint8 isolated_check_bits;           // isolated-check-bits, if 0, isolated verification is
                                  //   disabled
   pph_account_node* account_data;// we will hold a reference to the account
                                  //  data in here
@@ -295,7 +296,7 @@ Initializes a polypasswordhasher context structure with everything needed in ord
   
 * Threshold : the minimum number of shares (or username accounts) to provide in order for it to unlock
 
-* patial_bytes : how many bytes are non-obscured by either the AES key or the shamir secret in order to provide partial verification.
+* isolated_check_bits: how many bytes are non-obscured by either the AES key or the shamir secret in order to provide isolated verification.
 
 ##### returns 
 An initialized pph_context
@@ -348,7 +349,7 @@ reason for failure.
 After successfull context-storage, you can reload the context into memory by 
 using this function. A reloaded context is locked until the pph_unlock_password_data
 function is called. A locked context may not operate for creating accounts, and can
-only verify logins if the partial bytes argument provided was non-zero.
+only verify logins if the isolated-check-bits argument provided was non-zero.
 
 ###### Parameters
 
