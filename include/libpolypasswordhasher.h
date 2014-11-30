@@ -95,7 +95,7 @@ typedef enum{
 
 /* structure definitions */
 
-// this will help us keeping the code tidier, a pph_entry is a polyhashed 
+// this will help us keeping the code tidier, a pph_entry is a protector 
 // value, it's associated sharenumber, the salt length and the salt for it. 
 typedef struct _pph_entry{
   
@@ -109,7 +109,7 @@ typedef struct _pph_entry{
   // information about the password, this is either the xored hash of the 
   // password or the encrypted hash of the password.
   unsigned int password_length;
-  uint8 polyhashed_value[DIGEST_LENGTH];
+  uint8 protector_value[DIGEST_LENGTH];
 
   struct _pph_entry *next;
 
@@ -418,7 +418,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *     1) Sanitize data and return errors
 *     2) try to find username in the context
 *     3) if found, decide how to verify his information based on the status
-*         of the context (thresholdless, partial verif, etc.)
+*         of the context (shielded, partial verif, etc.)
 *     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
@@ -647,8 +647,8 @@ pph_context *pph_reload_context(const unsigned char *filename);
 * PROCESS 
 *     1) verify the input. 
 *     2) Generate a pph_context if there is none in memory
-*     3) Generate a polyhashed entry
-*     4) Copy the polyhashed value to the output buffer
+*     3) Generate a protector entry
+*     4) Copy the protector value to the output buffer
 *     5) Return.
 *
 * CHANGES :
@@ -681,9 +681,9 @@ PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length,
 
 
 
-// this function provides a polyhashed entry given the input
+// this function provides a protector entry given the input
 
-pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
+pph_entry *create_protector_entry(uint8 *password, unsigned int
     password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
     unsigned int share_length, unsigned int partial_bytes);
 
@@ -691,9 +691,9 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
 
 
 // this other function is the equivalent to the one in the top, but for
-// thresholdless accounts.
+// shielded accounts.
 
-pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
+pph_entry *create_shielded_entry(uint8 *password, unsigned int
     password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
     unsigned int key_length, unsigned int partial_bytes);
 

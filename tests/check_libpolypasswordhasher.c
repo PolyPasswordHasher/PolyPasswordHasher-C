@@ -1,4 +1,4 @@
-/* Check libpolypasswordhasher core, no thresholdless accounts and no partial bytes 
+/* Check libpolypasswordhasher core, no shielded accounts and no partial bytes 
  *
  * This suite is designed to test all of the core functionalities of the 
  * libpolypasswordhasher module without its extensions. 
@@ -359,7 +359,7 @@ START_TEST(test_create_account_entry_consistency) {
       MAX_SALT_LENGTH);
   _calculate_digest(password_digest, salted_password, 
       MAX_SALT_LENGTH + strlen(password));
-  digest_result=context->account_data->account.entries->polyhashed_value;
+  digest_result=context->account_data->account.entries->protector_value;
 
 
   gfshare_ctx_enc_getshare(context->share_context, 1, share_result);

@@ -1,11 +1,11 @@
 AM_CFLAGS = -I$(top_builddir)/include 
 AM_LDFLAGS = -lcrypto
 
-TESTS = check_libgfshare check_libpolypasswordhasher check_libpph_thresholdless\
+TESTS = check_libgfshare check_libpolypasswordhasher check_libpph_shielded\
 				check_libpph_partialbytes check_libpph_phc
 
 check_PROGRAMS = check_libgfshare check_libpolypasswordhasher\
-								 check_libpph_thresholdless check_libpph_partialbytes\
+								 check_libpph_shielded check_libpph_partialbytes\
 								 check_libpph_phc
 
 check_libgfshare_SOURCES = check_libgfshare.c\
@@ -22,12 +22,12 @@ check_libpolypasswordhasher_LDADD = $(top_builddir)/lib/libgfshare.la\
 															$(top_builddir)/src/libpolypasswordhasher.la\
 															@CHECK_LIBS@
 
-check_libpph_thresholdless_SOURCES = check_libpph_thresholdless.c\
+check_libpph_shielded_SOURCES = check_libpph_shielded.c\
 																$(top_builddir)/include/libgfshare.h\
 																$(top_builddir)/include/libpolypasswordhasher.h
 
-check_libpph_thresholdless_CFLAGS= @CHECK_CFLAGS@ -I$(top_builddir)/include
-check_libpph_thresholdless_LDADD = $(top_builddir)/lib/libgfshare.la\
+check_libpph_shielded_CFLAGS= @CHECK_CFLAGS@ -I$(top_builddir)/include
+check_libpph_shielded_LDADD = $(top_builddir)/lib/libgfshare.la\
 																	 $(top_builddir)/src/libpolypasswordhasher.la\
 																	 @CHECK_LIBS@
 

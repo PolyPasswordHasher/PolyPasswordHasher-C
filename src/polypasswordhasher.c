@@ -31,8 +31,8 @@ int main(void)
   pph_create_account(context, "Bob", strlen("Bob"),
                        "i.secretly.love.eve",strlen("i.secretly.love.eve"),1);
   
-  // when creating a user with no shares, we get a *thresholdless* account. 
-  // Thresholdless accounts have their hash encrypted and are unable to 
+  // when creating a user with no shares, we get a *shielded* account. 
+  // Shielded accounts have their hash encrypted and are unable to 
   // unlock a context
   pph_create_account(context,"Eve", strlen("Eve"),
                                    "i'm.all.ears", strlen("i'm.all.ears"), 0);

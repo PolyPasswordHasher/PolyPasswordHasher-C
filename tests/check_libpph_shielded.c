@@ -1,6 +1,6 @@
-/* Check libpolypasswordhasher with the thresholdless extension
+/* Check libpolypasswordhasher with the shielded extension
  *
- * The thresholdless extension is tested in this suite
+ * The shielded extension is tested in this suite
  *
  * @author  Santiago Torres
  * @date    10/03/2014
@@ -69,7 +69,7 @@ END_TEST
 
 
 
-// We will test some account creation, with only thresholdless accounts. 
+// We will test some account creation, with only shielded accounts. 
 START_TEST(test_pph_create_accounts)
 {
 
@@ -86,7 +86,7 @@ START_TEST(test_pph_create_accounts)
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
  
-  // attempt to create a thresholdless account now. 
+  // attempt to create a shielded account now. 
   error = pph_create_account(context, username, strlen(username),
       password, strlen(password), 0);  
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -94,7 +94,7 @@ START_TEST(test_pph_create_accounts)
   context->account_data->account.username[strlen(username)]='\0';
   ck_assert_str_eq(username,context->account_data->account.username);
 
-  // now lets check there are collisions between threshold and thresholdless
+  // now lets check there are collisions between threshold and shielded
   // accounts
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 1);
@@ -123,7 +123,7 @@ END_TEST
 
 
 
-// this test is intended to check that we can have both, thresholdless accounts
+// this test is intended to check that we can have both, shielded accounts
 // and threshold accounts in a same context and working properly.
 START_TEST(test_create_account_mixed_accounts) {
 
@@ -145,7 +145,7 @@ START_TEST(test_create_account_mixed_accounts) {
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  // Create a thresholdless account
+  // Create a shielded account
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 0); 
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -174,7 +174,7 @@ END_TEST
 
 // This checks for a proper behavior when providing an existing username, 
 // first, as the first and only username, then after having many on the list
-START_TEST(test_check_login_thresholdless) {
+START_TEST(test_check_login_shielded) {
 
 
   PPH_ERROR error;
@@ -370,11 +370,11 @@ END_TEST
 
 
 
-// We are going to test the full application lifecycle with a thresholdless
+// We are going to test the full application lifecycle with a shielded
 // account, by generating a new context, creating threshold accounts, creating
-// a thresholdless account, saving the context, reloading the context, unlocking
-// the context and logging as a thresholdless account
-START_TEST(test_pph_thresholdless_full_lifecycle){
+// a shielded account, saving the context, reloading the context, unlocking
+// the context and logging as a shielded account
+START_TEST(test_pph_shielded_full_lifecycle){
 
 
   PPH_ERROR error;
@@ -433,14 +433,14 @@ START_TEST(test_pph_thresholdless_full_lifecycle){
   }
 
 
-  // create a thresholdless account
-  error = pph_create_account( context, "thresholdless", strlen("thresholdless"),
-      "thresholdlesspw", strlen("thresholdlesspw"), 0);
+  // create a shielded account
+  error = pph_create_account( context, "shielded", strlen("shielded"),
+      "shieldedpw", strlen("shieldedpw"), 0);
   ck_assert( error == PPH_ERROR_OK);
 
-  // check that we can login with the thresholdless account
-  error = pph_check_login(context, "thresholdless", strlen("thresholdless"),
-      "thresholdlesspw", strlen("thresholdlesspw"));
+  // check that we can login with the shielded account
+  error = pph_check_login(context, "shielded", strlen("shielded"),
+      "shieldedpw", strlen("shieldedpw"));
   ck_assert( error == PPH_ERROR_OK);
 
 
@@ -464,9 +464,9 @@ START_TEST(test_pph_thresholdless_full_lifecycle){
     strlen(usernames_subset[0]),password_subset[0], strlen(password_subset[0]));
   ck_assert(error == PPH_ERROR_OK);
 
-  // check that we can login with the thresholdless account
-  error = pph_check_login(context, "thresholdless", strlen("thresholdless"),
-      "thresholdlesspw", strlen("thresholdlesspw"));
+  // check that we can login with the shielded account
+  error = pph_check_login(context, "shielded", strlen("shielded"),
+      "shieldedpw", strlen("shieldedpw"));
   ck_assert( error == PPH_ERROR_OK);
 
   pph_destroy_context(context);
@@ -482,18 +482,18 @@ Suite * polypasswordhasher_thl_suite(void)
 {
 
 
-  Suite *s = suite_create ("thresholdless");
+  Suite *s = suite_create ("shielded");
 
 
-  /* no partial bytes with thresholdless accounts case */
+  /* no partial bytes with shielded accounts case */
   TCase *tc_non_partial = tcase_create ("non-partial");
   tcase_add_test (tc_non_partial, test_pph_init_context_AES_key);
   tcase_add_test (tc_non_partial, test_pph_destroy_context_AES_key);
   tcase_add_test (tc_non_partial, test_pph_create_accounts);
   tcase_add_test (tc_non_partial, test_create_account_mixed_accounts);
-  tcase_add_test (tc_non_partial, test_check_login_thresholdless);
+  tcase_add_test (tc_non_partial, test_check_login_shielded);
   tcase_add_test (tc_non_partial, test_pph_unlock_password_data);
-  tcase_add_test (tc_non_partial, test_pph_thresholdless_full_lifecycle);
+  tcase_add_test (tc_non_partial, test_pph_shielded_full_lifecycle);
   suite_add_tcase (s, tc_non_partial);
 
   return s;

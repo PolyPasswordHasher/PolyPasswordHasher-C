@@ -63,7 +63,7 @@ END_TEST
 
 
 
-// Test create accounts with thresholdless accounts and partial bytes. 
+// Test create accounts with shielded accounts and partial bytes. 
 START_TEST(test_pph_create_accounts)
 {
 
@@ -83,7 +83,7 @@ START_TEST(test_pph_create_accounts)
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  // create a thresholdless account with partial bytes.
+  // create a shielded account with partial bytes.
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 0); 
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -93,7 +93,7 @@ START_TEST(test_pph_create_accounts)
   context->account_data->account.username[strlen(username)]='\0';
   ck_assert_str_eq(username,context->account_data->account.username);
 
-  // now lets check there are collisions between threshold and thresholdless
+  // now lets check there are collisions between threshold and shielded
   // accounts
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 1);
@@ -123,7 +123,7 @@ END_TEST
 
 
 
-// We check for both, thresholdless accounts and threshold accounts under 
+// We check for both, shielded accounts and threshold accounts under 
 // partial bytes setup.
 START_TEST(test_create_account_mixed_accounts) {
   
@@ -140,7 +140,7 @@ START_TEST(test_create_account_mixed_accounts) {
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  // create a thresholdless account.
+  // create a shielded account.
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 0); // THL account. 
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -171,7 +171,7 @@ END_TEST
 
 // This checks for a proper behavior when providing an existing username, 
 // first, as the first and only username, then after having many on the list
-START_TEST(test_check_login_thresholdless) {
+START_TEST(test_check_login_shielded) {
 
 
   PPH_ERROR error;
@@ -239,7 +239,7 @@ END_TEST
 
 
 // we test partial verification, we use a seemingly locked context and try to
-// login. We don't care if the account is thresholdless or threshold, since
+// login. We don't care if the account is shielded or threshold, since
 // we only check for the leaked partial bytes. 
 START_TEST(test_pph_partial_verification_and_unlock) {
 
@@ -386,7 +386,7 @@ Suite * polypasswordhasher_partial_bytes_suite(void)
   tcase_add_test (tc_partial,test_pph_destroy_context_partial_bytes);
   tcase_add_test (tc_partial,test_pph_create_accounts);
   tcase_add_test (tc_partial,test_create_account_mixed_accounts);
-  tcase_add_test (tc_partial,test_check_login_thresholdless);
+  tcase_add_test (tc_partial,test_check_login_shielded);
   tcase_add_test (tc_partial,test_pph_partial_verification_and_unlock);
   suite_add_tcase (s, tc_partial);
 

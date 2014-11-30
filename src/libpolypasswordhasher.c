@@ -152,7 +152,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes) {
   // since this is a new context, it should be unlocked.
   context->is_unlocked = true; 
 
-  // We are using the secret to encrypt thresholdless accounts, so we set the 
+  // We are using the secret to encrypt shielded accounts, so we set the 
   // AES key to be the same as the secret. 
   context->AES_key = context->secret;
 
@@ -390,7 +390,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     
   }
 
-  // check share numbers, we don't check for 0 since that means thresholdless
+  // check share numbers, we don't check for 0 since that means shielded
   // accounts
   if(shares>MAX_NUMBER_OF_SHARES){
     
@@ -430,8 +430,8 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 
   // 2) check for the type of account requested.
   
-  // this will generate a share list for threshold accounts, we won't 
-  // fall inside this loop for thresholdless accounts since shares is 0.
+  // this will generate a share list for protector accounts, we won't 
+  // fall inside this loop for shielded accounts since shares is 0.
   last_entry = NULL;
 
   for(i=0;i<shares;i++){
@@ -445,7 +445,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     get_random_bytes(MAX_SALT_LENGTH, salt_buffer);
 
     // Try to get a new entry.
-    entry_node=create_polyhashed_entry(password, password_length, salt_buffer,
+    entry_node=create_protector_entry(password, password_length, salt_buffer,
         MAX_SALT_LENGTH, share_data, SHARE_LENGTH, ctx->partial_bytes);
     if(entry_node == NULL){
       _destroy_entry_list(last_entry);
@@ -467,7 +467,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     last_entry=entry_node;
   }
 
-  // This if will check for thresholdless accounts, and will build a single 
+  // This if will check for shielded accounts, and will build a single 
   // entry for them.
   if(shares == 0){
   
@@ -476,7 +476,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     get_random_bytes(MAX_SALT_LENGTH, salt_buffer); 
  
     // generate the entry
-    entry_node = create_thresholdless_entry(password, password_length,
+    entry_node = create_shielded_entry(password, password_length,
         salt_buffer, MAX_SALT_LENGTH, ctx->AES_key, DIGEST_LENGTH,
         ctx->partial_bytes);
 
@@ -568,7 +568,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *     1) Sanitize data and return errors
 *     2) try to find username in the context
 *     3) if found, decide how to verify his information based on the status
-*         of the context (thresholdless, partial verif, etc.)
+*         of the context (shielded, partial verif, etc.)
 *     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
@@ -637,7 +637,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     
   }
 
-  // check we have a thresholdless key
+  // check we have a shielded key
   if(ctx->AES_key == NULL && ctx->partial_bytes == 0){
     
     return PPH_CONTEXT_IS_LOCKED;
@@ -704,7 +704,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     // only compare the bytes that are not obscured by either AES or the 
     // share, we start from share_length-partial_bytes to share_length. 
     if(memcmp(resulting_hash+partial_bytes_offset,
-          target->account.entries->polyhashed_value+partial_bytes_offset,
+          target->account.entries->protector_value+partial_bytes_offset,
           ctx->partial_bytes)){
     
       return PPH_ACCOUNT_IS_INVALID;
@@ -717,23 +717,23 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
   // we are unlocked and hence we can provide full verification.
   else{ 
-    // first, check if the account is a threshold or thresholdless account.
+    // first, check if the account is a threshold or shielded account.
     if(sharenumber == 0){
       
-      // if the sharenumber is 0 then we have a thresholdless account
+      // if the sharenumber is 0 then we have a shielded account
       
       // now we should calculate the expected hash by deciphering the
       // information inside the context.
       EVP_CIPHER_CTX_init(&de_ctx);
       EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
       EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len, 
-          current_entry->polyhashed_value, partial_bytes_offset);
+          current_entry->protector_value, partial_bytes_offset);
       EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
       EVP_CIPHER_CTX_cleanup(&de_ctx);
 
       // append the unencrypted bytes if we have partial bytes. 
       for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
-        xored_hash[i] = current_entry->polyhashed_value[i];
+        xored_hash[i] = current_entry->protector_value[i];
       }
 
       // calculate the proposed digest with the parameters provided in
@@ -756,7 +756,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     
     }else{
     
-      // we have a non thresholdless account instead, since the sharenumber is 
+      // we have a non shielded account instead, since the sharenumber is 
       // not 0
       gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
 
@@ -769,12 +769,12 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
           current_entry->salt_length + password_length);
       
       // xor the thing back to normal
-      _xor_share_with_digest(xored_hash,current_entry->polyhashed_value,
+      _xor_share_with_digest(xored_hash,current_entry->protector_value,
           share_data, partial_bytes_offset);
       
       // add the partial bytes to the end of the digest.
       for(i=DIGEST_LENGTH-ctx->partial_bytes;i<DIGEST_LENGTH;i++){
-        xored_hash[i] = target->account.entries->polyhashed_value[i];
+        xored_hash[i] = target->account.entries->protector_value[i];
       }
       
       // compare both.
@@ -915,10 +915,10 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
         // this is an existing user
         entry = current_user->account.entries;
         
-        // check if he is a threshold account.
+        // check if he is a protector account.
         if(entry->share_number != 0){
         
-          // if he is a threshold account, we must attempt to reconstruct the
+          // if he is a protector account, we must attempt to reconstruct the
           // shares using their information, traverse his entries
           while(entry!=NULL){
 
@@ -929,9 +929,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
             _calculate_digest(estimated_digest,salted_password,
              MAX_SALT_LENGTH + current_user->account.entries->password_length);
 
-            // xor the obtained digest with the polyhashed value to obtain
+            // xor the obtained digest with the protector value to obtain
             // our share.
-            _xor_share_with_digest(estimated_share,entry->polyhashed_value,
+            _xor_share_with_digest(estimated_share,entry->protector_value,
                 estimated_digest,SHARE_LENGTH-ctx->partial_bytes);
          
             // give share to the recombinator. 
@@ -1275,8 +1275,8 @@ pph_context *pph_reload_context(const unsigned char *filename){
 * PROCESS :
 *     1) verify the input. 
 *     2) Generate a pph_context if there is none in memory
-*     3) Generate a polyhashed entry
-*     4) Copy the polyhashed value to the output buffer
+*     3) Generate a protector entry
+*     4) Copy the protector value to the output buffer
 *     5) Return.
 *
 * CHANGES :
@@ -1339,11 +1339,11 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
   }
 
   // generate an entry.
-  generated_entry = create_polyhashed_entry( in, inlen, salt, saltlen,
+  generated_entry = create_protector_entry( in, inlen, salt, saltlen,
       share, DIGEST_LENGTH, context->partial_bytes);
 
   // copy the resulting polyhash to the output
-  memcpy(out, generated_entry->polyhashed_value, outlen);
+  memcpy(out, generated_entry->protector_value, outlen);
 
   // free the generated entry
   free(generated_entry);
@@ -1467,9 +1467,9 @@ PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length,
 
 
 
-// this function provides a polyhashed entry given the input
+// this function provides a protector entry given the input
 
-pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
+pph_entry *create_protector_entry(uint8 *password, unsigned int
     password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
     unsigned int share_length, unsigned int partial_bytes){
 
@@ -1518,13 +1518,13 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
   memcpy(salted_password+salt_length, password, password_length);
 
   // hash the salted password
-  _calculate_digest(entry_node->polyhashed_value, salted_password,
+  _calculate_digest(entry_node->protector_value, salted_password,
         salt_length + password_length);
   
   // xor the whole thing, with the share, we are doing operations in-place
   // to make everything faster
-  _xor_share_with_digest(entry_node->polyhashed_value, share,
-        entry_node->polyhashed_value, share_length-partial_bytes);
+  _xor_share_with_digest(entry_node->protector_value, share,
+        entry_node->protector_value, share_length-partial_bytes);
     
   return entry_node;
     
@@ -1535,9 +1535,9 @@ pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
 
 
 // this other function is the equivalent to the one in the top, but for
-// thresholdless accounts.
+// shielded accounts.
 
-pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
+pph_entry *create_shielded_entry(uint8 *password, unsigned int
     password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
     unsigned int key_length, unsigned int partial_bytes){
 
@@ -1590,22 +1590,22 @@ pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
   // prepend the salt to the password and generate a digest
   memcpy(salted_password,entry_node->salt,salt_length);
   memcpy(salted_password+MAX_SALT_LENGTH, password, password_length); 
-  _calculate_digest(entry_node->polyhashed_value,salted_password, 
+  _calculate_digest(entry_node->protector_value,salted_password, 
       salt_length + password_length); 
 
   // encrypt the generated digest
   EVP_CIPHER_CTX_init(&en_ctx);
   EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, NULL);
-  EVP_EncryptUpdate(&en_ctx, entry_node->polyhashed_value, &c_len,
-      entry_node->polyhashed_value, DIGEST_LENGTH-partial_bytes);
-  EVP_EncryptFinal_ex(&en_ctx, entry_node->polyhashed_value+c_len, &f_len);
+  EVP_EncryptUpdate(&en_ctx, entry_node->protector_value, &c_len,
+      entry_node->protector_value, DIGEST_LENGTH-partial_bytes);
+  EVP_EncryptFinal_ex(&en_ctx, entry_node->protector_value+c_len, &f_len);
   EVP_CIPHER_CTX_cleanup(&en_ctx);
 
 
-  // thresholdless accounts have this value defaulted to 0;
+  // shielded accounts have this value defaulted to 0;
   entry_node->share_number = 0;
 
-  // thresholdless accounts should have only one entry
+  // shielded accounts should have only one entry
   entry_node->next = NULL;
 
   return entry_node;  

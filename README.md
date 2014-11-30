@@ -98,8 +98,8 @@ In order to keep things simple, we are going to produce a vault with some
 accounts, store it, reload it and unlock it. 
 
 In order to explain some of the features of libpolypasswordhasher we will add
-both, threshold and thresholdless accounts. The  library supports 
-thresholdless accounts, which are, in essence, user accounts
+both, threshold and shielded accounts. The  library supports 
+shielded accounts, which are, in essence, user accounts
 that cannot unlock the store (imagine normal users vs super users). 
 
 We will also configure the context for two partial bytes. Partial bytes aid
@@ -141,8 +141,8 @@ is usually locked upon reboot, since the shares are not stored anywhere in disk.
   pph_create_account(context, "Bob", strlen("Bob"),
                        "i.secretly.love.eve",strlen("i.secretly.love.eve"),1);
   
-  // when creating a user with no shares, we get a *thresholdless* account. 
-  // Thresholdless accounts have their hash encrypted and are unable to 
+  // when creating a user with no shares, we get a *shielded* account. 
+  // Shielded accounts have their hash encrypted and are unable to 
   // unlock a context
   pph_create_account(context,"Eve", strlen("Eve"),
                                    "i'm.all.ears", strlen("i'm.all.ears"), 0);
@@ -454,7 +454,7 @@ An error code indicating if the login attempt was successful.
 Hash an input string with the given arguments.
 
 This function is a mere demonstration of the resulting hashes inside a polypasswordhasher store.
-The motivation behind this function is to showcase the safety of the polyhashed passwords. This function is aimed for the Password Hashing Competition.
+The motivation behind this function is to showcase the safety of the protector passwords. This function is aimed for the Password Hashing Competition.
 
 ###### parameters
 
