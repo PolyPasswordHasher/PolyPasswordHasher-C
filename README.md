@@ -100,7 +100,7 @@ accounts, store it, reload it and unlock it.
 In order to explain some of the features of libpolypasswordhasher we will add
 both, threshold and shielded accounts. The  library supports 
 shielded accounts, which are, in essence, user accounts
-that cannot unlock the store (imagine normal users vs super users). 
+that cannot bootstrap the store (imagine normal users vs super users). 
 
 We will also configure the context for two isolated-check-bits. Isolated-check
 bits aid us in providing a login capability even if the store is locked. The
@@ -120,7 +120,7 @@ in disk.
   pph_context *context;
 
   // Setting a theshold of two means that we are going to need two accounts 
-  // to attempt unlocking. 
+  // to attempt bootstrapping. 
   uint8 threshold = 2;    
                           
   // isolated-check-bits will be set to two, so users can login after any reboot
@@ -144,11 +144,11 @@ in disk.
   
   // when creating a user with no shares, we get a *shielded* account. 
   // Shielded accounts have their hash encrypted and are unable to 
-  // unlock a context
+  // bootstrap a context
   pph_create_account(context,"Eve", strlen("Eve"),
                                    "i'm.all.ears", strlen("i'm.all.ears"), 0);
   
-  // to check a login we must have an unlocked context, we send the credentials and 
+  // to check a login we must have an bootstrapped context, we send the credentials and 
   // receive an error in return
   if(pph_check_login(context, "Alice", strlen("Alice"), "I.love.bob",
          strlen("I.love.bob")) == PPH_ERROR_OK){
@@ -159,7 +159,7 @@ in disk.
 
   // We can, then store a context to work with it later, have in mind the 
   // context will be stored in a locked state and alice and bob will have 
-  // to unlock it. 
+  // to bootstrap it. 
   pph_store_context(context,"securepasswords");
   
   // We should destroy a context when we finish to free sensible data, such as
@@ -177,7 +177,7 @@ in disk.
   
   // at this point we can still provide a login service, thanks to the isolated 
   // bytes extension. But in order to create accounts and to provide full login
-  // functionality, we should unlock the store.
+  // functionality, we should bootstrap the store.
   if(pph_check_login(context, "Alice",strlen("alice"), "i'm.trudy", 
                                           strlen("i'm.trudy")) == PPH_ERROR_OK){
     printf("welcome alice!\n"); // this won't happen
@@ -210,10 +210,10 @@ in disk.
   
   
   // if the information provided was correct, the pph_unlock_password_data
-  // returns PPH_ERROR_OK, unlocks the vault and recovers the secrets.
+  // returns PPH_ERROR_OK, transitions to normal operation and recovers the shares.
   pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
 
-  // now the data us unlocked. We can create accounts now.
+  // now the data is unlocked. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
                                                         strlen("verysafe"),0);
   
@@ -259,7 +259,7 @@ The pph context is oriented to facilitate the bookkeeping of changes in the cont
   gfshare_ctx *share_context;    // this is a pointer to the libgfshare engine
   uint8 threshold;               // the threshold set to the libgfshare engine
   uint8 available_shares;        // this is the number of available shares
-  uint8 is_unlocked;             // this is a boolean flag indicating whether 
+  uint8 is_bootstrapped;             // this is a boolean flag indicating whether 
                                  //  the secret is known.
   uint8 *AES_key;                // a randomly generated AES key of SHARE_LENGTH
   uint8 *secret;                 // secret data, generated at initialization
@@ -294,7 +294,7 @@ Functions in the libpolypasswordhasher library are divided in user management or
 Initializes a polypasswordhasher context structure with everything needed in order to work. This is a one-time only initialization, pph_store_context and pph_reload_context will provide a persistent context after initialization.
 ##### parameters:
   
-* Threshold : the minimum number of shares (or username accounts) to provide in order for it to unlock
+* Threshold : the minimum number of shares (or username accounts) to provide in order for it to transition from bootstrapping to normal operation.
 
 * isolated_check_bits: how many bytes are non-obscured by either the AES key or the shamir secret in order to provide isolated verification.
 
@@ -370,11 +370,11 @@ context data structure.
 
 ###### parameters
 
-* context : the context to attempt unlocking
+* context : the context to attempt transition with.
 
 * username_count : the number of accounts provided
 
-* usernames : an array of usernames to attempt unlocking
+* usernames : an array of usernames to attempt secret-recombination
 
 * username_lengths: an array containing the length of each specific username
 
@@ -397,7 +397,7 @@ An error indicating if the attempt was successful or not.
 
 <a name="pph\_create\_account"/>
 #### pph\_create\_account
-Given some credentials and an unlocked context, store the user data inside a 
+Given some credentials and an normal-operating context, store the user data inside a 
 context. 
 
 ###### parameters

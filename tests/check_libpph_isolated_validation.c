@@ -103,7 +103,7 @@ START_TEST(test_pph_create_accounts)
   // finally, check it returns the proper error code if the vault is locked
   // still, we will set the key to null and the locked flag to 0 to simulate
   // this.
-  context->is_unlocked = false; 
+  context->is_bootstrapped = false; 
   context->AES_key = NULL;
 
   // we will check for the existing account error handler now...
@@ -241,7 +241,7 @@ END_TEST
 // we test isolated verification, we use a seemingly locked context and try to
 // login. We don't care if the account is shielded or threshold, since
 // we only check for the leaked isolated bytes. 
-START_TEST(test_pph_isolated_verification_and_unlock) {
+START_TEST(test_pph_isolated_verification_and_bootstrapping) {
 
 
   PPH_ERROR error;
@@ -298,7 +298,7 @@ START_TEST(test_pph_isolated_verification_and_unlock) {
   }
   
   // let's pretend all is broken
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context= NULL;
@@ -346,7 +346,7 @@ START_TEST(test_pph_isolated_verification_and_unlock) {
   ck_assert(context->AES_key != NULL);
 
   // let's imagine it's all broken (Again).
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context = NULL;
@@ -387,7 +387,7 @@ Suite * polypasswordhasher_isolated_check_bits_suite(void)
   tcase_add_test (tc_isolated,test_pph_create_accounts);
   tcase_add_test (tc_isolated,test_create_account_mixed_accounts);
   tcase_add_test (tc_isolated,test_check_login_shielded);
-  tcase_add_test (tc_isolated,test_pph_isolated_verification_and_unlock);
+  tcase_add_test (tc_isolated,test_pph_isolated_verification_and_bootstrapping);
   suite_add_tcase (s, tc_isolated);
 
   return s;

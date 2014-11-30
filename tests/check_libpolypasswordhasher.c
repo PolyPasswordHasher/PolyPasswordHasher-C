@@ -380,7 +380,7 @@ START_TEST(test_create_account_entry_consistency) {
 
   // finally, check it returns the proper error code if the vault is locked
   // still, we will simulate account locking by unsetting the flag. 
-  context->is_unlocked = false; 
+  context->is_bootstrapped = false; 
                            
   
   // we will check for the locked context error now...
@@ -460,9 +460,9 @@ START_TEST(test_check_login_input_sanity) {
       "expected PASSWORD_IS_TOO_LONG");
   
   // finally, check it returns the proper error code if the vault is locked
-  // still. We set the unlocked flag to false to lock the context, and we also
+  // still. We set the bootstrapped flag to false to lock the context, and we also
   // know that isolated bytes is 0 and won't provide any login functionality. 
-  context->is_unlocked = false; 
+  context->is_bootstrapped = false; 
 
   error=pph_check_login(context,username,strlen(username), password,
       strlen(password));
@@ -745,7 +745,7 @@ START_TEST(test_pph_unlock_password_data_input_sanity) {
       "this was a good initialization, go tell someone");
   
   // let's imagine it's all broken
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
   
   // now give a wrong username count, below the threshold.
   error = pph_unlock_password_data(context, 0, usernames, username_lengths,
@@ -784,7 +784,7 @@ END_TEST
 
 
 
-// we check that the unlock password data cannot unlock the valut provided w
+// we check that the unlock password data cannot bootstrap the valut provided 
 // wrong information. 
 START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   
@@ -837,7 +837,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   //backup the secret
   memcpy(secret,context->secret,DIGEST_LENGTH);
 
-  // create some usernames so we can unlock the context.
+  // create some usernames so we can bootstrap the context.
   for(i=0;i<username_count;i++) {
     pph_create_account(context,usernames[i], strlen(usernames[i]), passwords[i],
           strlen(passwords[i]),1);
@@ -845,7 +845,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
 
 
   // let's imagine it's all broken
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
   strcpy(context->secret,"thiswasnotthesecretstring");
 
   // now give a correct full account information, we expect to have our secret
@@ -857,7 +857,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   }
 
   // let's imagine it's all broken (Again)
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
   strcpy(context->secret,"thiswasnotthesecretstring");
 
   // now give a correct full account information, we expect to have our secret
@@ -869,8 +869,8 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   }
 
 
-  // and last but not least, create a superuser account and unlock it 
-  // by himself, note how he's got three shares assigned to his account.
+  // and last but not least, create a superuser account and bootstrap the
+  // server by himself, note how he's got three shares assigned to his account.
   pph_create_account(context,"ipicklocks", strlen("ipicklocks"),"ipickpockets",
       strlen("ipickpockets"), 3);
   error = pph_unlock_password_data(context, 1 ,strdup("ipicklocks"),
@@ -880,9 +880,9 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
     ck_assert(secret[i] ==  context->secret[i]);
   }
   
-  // attempt to unlock the vault with  wrong passwords
+  // attempt to bootstrap the store with wrong passwords
   free(context->secret);
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
 
   error = pph_unlock_password_data(context, 2, usernames_subset,
      username_lengths_subset, bad_passwords);
@@ -956,7 +956,7 @@ START_TEST(test_pph_reload_context_input_sanity) {
   ck_assert_msg(context->threshold == 2, " threshold didn't match the one set");
   ck_assert_msg(context->isolated_check_bits == 0, "isolated bytes don't match");
   ck_assert_msg(context->secret == NULL, " didn't store null for secret");
-  ck_assert_msg(context->is_unlocked == false, " loaded an unlocked context");
+  ck_assert_msg(context->is_bootstrapped == false, " loaded a bootstrapped context");
   
   pph_destroy_context(context);
 
@@ -967,7 +967,7 @@ START_TEST(test_pph_reload_context_input_sanity) {
 
 
 // do a full lifecycle test, in other words, create a context with accounts, 
-// store it, reload it, unlock it and provide login and creation service. 
+// store it, reload it, bootstrap to provide full login and creation service. 
 START_TEST(test_pph_store_and_reload_with_users) {
   
   
@@ -1065,7 +1065,7 @@ END_TEST
 
 
 
-// we will check for a full input range unlocking procedure using random
+// we will check for a full input range bootstrap procedure using random
 // username-password combinations of various lengths, the procedure should
 // yield a correct secret and an incorrect secret when prompted with one bad
 // password
@@ -1112,14 +1112,14 @@ START_TEST(test_pph_unlock_password_data_full_range) {
   }
 
   // lock the context
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
   
-  // unlock the context
+  // unlock (bootstrap) the context
   error = pph_unlock_password_data( context, MAX_USERNAME_LENGTH -1, usernames,
       username_lengths, passwords);
   ck_assert( error == PPH_ERROR_OK );
 
-  // check we can login after unlocking
+  // check we can login after boostrapping 
   for(i = 0; i < MAX_USERNAME_LENGTH-1; i++){
   
     error = pph_check_login( context, usernames[i], username_lengths[i],
@@ -1128,8 +1128,8 @@ START_TEST(test_pph_unlock_password_data_full_range) {
 
   }
 
-  // now, fail to unlock the context, 
-  context->is_unlocked = false;
+  // now, fail to bootstrap the context, 
+  context->is_bootstrapped = false;
   passwords[0][0] = ~passwords[0][0];
 
   error = pph_unlock_password_data( context, MAX_USERNAME_LENGTH -1, usernames,
@@ -1183,7 +1183,7 @@ Suite * polypasswordhasher_suite(void)
   tcase_add_test (tc_non_isolated,test_pph_create_and_check_login_full_range);
   suite_add_tcase (s, tc_non_isolated);
 
-  /* vault unlocking (for both cases) */
+  /* bootsrapping (for both cases) */
   TCase *tc_unlock_shamir = tcase_create ("unlock_shamir");
   tcase_add_test (tc_unlock_shamir, test_pph_unlock_password_data_input_sanity);
   tcase_add_test (tc_unlock_shamir, 

@@ -9,7 +9,7 @@ int main(void)
   pph_context *context;
 
   // Setting a theshold of two means that we are going to need two accounts 
-  // to attempt unlocking. 
+  // to attempt bootstrapping. 
   uint8 threshold = 2;    
                           
   // isolated-check-bits will be set to two, so users can login after any reboot
@@ -33,12 +33,12 @@ int main(void)
   
   // when creating a user with no shares, we get a *shielded* account. 
   // Shielded accounts have their hash encrypted and are unable to 
-  // unlock a context
+  // bootstrap a context
   pph_create_account(context,"Eve", strlen("Eve"),
                                    "i'm.all.ears", strlen("i'm.all.ears"), 0);
   
-  // to check a login we must have an unlocked context, we send the credentials and 
-  // receive an error in return
+  // to fully check a login we must have a bootstrapped context, we send the
+  // credentials and receive an error in return
   if(pph_check_login(context, "Alice", strlen("Alice"), "I.love.bob",
          strlen("I.love.bob")) == PPH_ERROR_OK){
     printf("welcome alice\n");
@@ -48,7 +48,7 @@ int main(void)
 
   // We can, then store a context to work with it later, have in mind the 
   // context will be stored in a locked state and alice and bob will have 
-  // to unlock it. 
+  // to bootstrap it. 
   pph_store_context(context,"securepasswords");
   
   // We should destroy a context when we finish to free sensible data, such as
@@ -66,7 +66,7 @@ int main(void)
   
   // at this point we can still provide a login service, thanks to the isolated 
   // validation extension. But in order to create accounts and to provide full login
-  // functionality, we should unlock the store.
+  // functionality, we should bootstrap the store.
   if(pph_check_login(context, "Alice",strlen("alice"), "i'm.trudy", 
                                           strlen("i'm.trudy")) == PPH_ERROR_OK){
     printf("welcome alice!\n"); // this won't happen
@@ -82,7 +82,7 @@ int main(void)
     printf("!!! This shouldn't happen\n");
   }
   
-  // In order to be able to create accounts, we must unlock the vault.
+  // In order to be able to create protector accounts, we must bootstrap the.
   // for this, we setup an array of username strings and an array of password 
   // strings.
   char **usernames = malloc(sizeof(*usernames)*2);
@@ -99,10 +99,10 @@ int main(void)
   
   
   // if the information provided was correct, the pph_unlock_password_data
-  // returns PPH_ERROR_OK, unlocks the vault and recovers the secrets.
+  // returns PPH_ERROR_OK, bootstraps the vault and recovers the shares.
   pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
 
-  // now the data us unlocked. We can create accounts now.
+  // now the data is available. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
                                                         strlen("verysafe"),0);
   

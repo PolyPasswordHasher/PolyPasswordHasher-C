@@ -103,7 +103,7 @@ START_TEST(test_pph_create_accounts)
   
   // finally, check it returns the proper error code if the vault is locked
   // still
-  context->is_unlocked = false; 
+  context->is_bootstrapped = false; 
   context->AES_key = NULL;
   
   // we will check for the existing account error handler now...
@@ -302,7 +302,7 @@ START_TEST(test_pph_unlock_password_data) {
   }
 
   // let's pretend all is broken
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context= NULL;
@@ -341,7 +341,7 @@ START_TEST(test_pph_unlock_password_data) {
 
 
   // let's imagine it's all broken (Again)
-  context->is_unlocked = false;
+  context->is_bootstrapped = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context = NULL;
@@ -357,7 +357,7 @@ START_TEST(test_pph_unlock_password_data) {
     ck_assert(key_backup[i] == context->AES_key[i]);
   } 
 
-  // check that we can login with an unlocked context.
+  // check that we can login with a bootstrapped context.
   error = pph_check_login(context, usernames_subset[0], 
     strlen(usernames_subset[0]),password_subset[0], strlen(password_subset[0]));
   ck_assert(error == PPH_ERROR_OK);
@@ -372,7 +372,7 @@ END_TEST
 
 // We are going to test the full application lifecycle with a shielded
 // account, by generating a new context, creating threshold accounts, creating
-// a shielded account, saving the context, reloading the context, unlocking
+// a shielded account, saving the context, reloading the context, bootstrapping 
 // the context and logging as a shielded account
 START_TEST(test_pph_shielded_full_lifecycle){
 
@@ -459,7 +459,7 @@ START_TEST(test_pph_shielded_full_lifecycle){
   ck_assert_msg(error == PPH_ERROR_OK," EXPECTED PPH_ERROR_OK");
 
 
-  // check that we can login with an unlocked context.
+  // check that we can login with a bootstrapped context.
   error = pph_check_login(context, usernames_subset[0], 
     strlen(usernames_subset[0]),password_subset[0], strlen(password_subset[0]));
   ck_assert(error == PPH_ERROR_OK);

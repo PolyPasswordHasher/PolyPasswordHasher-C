@@ -43,7 +43,7 @@
 *                     uint8 threshold                 = threshold
 *                     uint8 available_shares;         = MAX_NUMBER_OF_SHARES
 *                     uint8 next_entry;               = 1
-*                     bool is_unlocked;               = true   
+*                     bool is_bootstrapped;               = true   
 *                     uint8 *AES_key;                 = will point to secret       
 *                     uint8 *secret;                  = generated secret
 *                     uint8 isolated_check_bits;            = isolated_check_bits
@@ -55,7 +55,7 @@
 *   PARAMETERS:
 *     uint8 threshold:            The threshold for this specific
 *                                 password storage. This is, the minimum
-*                                 number of shares needed to unlock the 
+*                                 number of shares needed to bootstrap the 
 *                                 upon reloading. The valid ranges for the 
 *                                 threshold go from 1 to MAX_NUMBER_OF_SHARES;
 *                                 however, a value of 1 is a bad idea.
@@ -149,8 +149,8 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
   // 4) Initialize the rest of the values.
   context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
 
-  // since this is a new context, it should be unlocked.
-  context->is_unlocked = true; 
+  // since this is a new context, we are under normal operation.
+  context->is_bootstrapped = true; 
 
   // We are using the secret to encrypt shielded accounts, so we set the 
   // AES key to be the same as the secret. 
@@ -208,7 +208,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
 *                     uint8 threshold                 = 
 *                     uint8 available_shares;         = 
 *                     uint8 next_entry;               = 
-*                     bool is_unlocked;               = 
+*                     bool is_bootstrapped;               = 
 *                     uint8 *AES_key;                 = needs freeing      
 *                     uint8 *secret;                  = needs freeing
 *                     uint8 isolated_check_bits;            = 
@@ -406,7 +406,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   }
 
   // check if we are able to get shares from the context vault
-  if(ctx->is_unlocked != true || ctx->AES_key == NULL){
+  if(ctx->is_bootstrapped != true || ctx->AES_key == NULL){
     
     return PPH_CONTEXT_IS_LOCKED;
     
@@ -631,7 +631,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // check if the context is locked and we lack isolated-check-bits to check. If we
   // do not have enough isolated-check-bits (at least one), we cannot do isolated
   // validation
-  if(ctx->is_unlocked != true && ctx->isolated_check_bits == 0){
+  if(ctx->is_bootstrapped != true && ctx->isolated_check_bits == 0){
     
     return PPH_CONTEXT_IS_LOCKED;
     
@@ -689,8 +689,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   isolated_check_bits_offset = DIGEST_LENGTH - ctx->isolated_check_bits;
   
   
-  // if the context is not unlocked, we can only provide isolated validation 
-  if(ctx->is_unlocked != true){
+  // if the context is not bootstrapped, we can only provide isolated validation 
+  // and bootstrap account creation.
+  if(ctx->is_bootstrapped != true){
 
     // isolated-check-bits 
     // calculate the proposed digest, this means, calculate the hash with
@@ -715,7 +716,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     
   }
 
-  // we are unlocked and hence we can provide full verification.
+  // we are under normal operation and hence we can provide full verification.
   else{ 
     // first, check if the account is a threshold or shielded account.
     if(sharenumber == 0){
@@ -802,7 +803,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 * NAME :          pph_unlock_password_data 
 *
 * DESCRIPTION :   given a context and pairs of usernames and passwords,
-*                 unlock the password secret. 
+*                 transition from bootstrapping to normal operation. 
 *
 * INPUTS :
 *   PARAMETERS:
@@ -850,7 +851,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *     4) give shares to the recombination context
 *     5) attempt recombination
 *     6) verify correct recombination.
-*     7) if successful, unlock the store
+*     7) if successful, transition from bootstrapping to normal operation.
 *     8) return error code
 *
 * CHANGES :
@@ -981,9 +982,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   }
   
   // we have an initialized share context, we set the recombined secret to it 
-  // and set the unlock flag to one so it is ready to use.
+  // and set the is_bootstrapped flag to one so it is ready to use.
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
-  ctx->is_unlocked = true;
+  ctx->is_bootstrapped = true;
   ctx->AES_key = ctx->secret;
   
   return PPH_ERROR_OK;
@@ -1068,7 +1069,7 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   context_to_store.account_data = NULL;
 
   // set this context's information to locked.
-  context_to_store.is_unlocked = false; 
+  context_to_store.is_bootstrapped = false; 
 
 
   // 2) open selected file

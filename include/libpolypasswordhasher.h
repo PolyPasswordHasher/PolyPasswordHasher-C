@@ -156,10 +156,10 @@ typedef struct _pph_context{
   uint8 next_entry;             
  
   // this is a boolean flag to indicate if the secret is available.  
-  bool is_unlocked;             
+  bool is_bootstrapped;             
   
-  // if the context is unlocked, these will point to the secret and the AES
-  // key
+  // if the context is under normal operation, these will point to the secret
+  // and the AES key
   uint8 *AES_key;                
   uint8 *secret;                 
 
@@ -190,7 +190,7 @@ typedef struct _pph_context{
 *                     uint8 threshold                 = threshold
 *                     uint8 available_shares;         = MAX_NUMBER_OF_SHARES
 *                     uint8 next_entry;               = 1
-*                     bool is_unlocked;               = true   
+*                     bool is_bootstrapped;               = true   
 *                     uint8 *AES_key;                 = will point to secret       
 *                     uint8 *secret;                  = generated secret
 *                     uint8 isolated_check_bits;            = isolated_check_bits
@@ -202,9 +202,10 @@ typedef struct _pph_context{
 *   PARAMETERS:
 *     uint8 threshold:            The threshold for this 
 *                                 password storage. This is, the minimum
-*                                 number of shares needed to unlock the 
-*                                 upon reloading. The valid ranges for the
-*                                 threshold go from 1 to MAX_NUMBER_OF_SHARES;
+*                                 number of shares needed to transition to
+*                                 normal operation upon reloading. The valid
+*                                 ranges for the threshold go from 1 to
+*                                 MAX_NUMBER_OF_SHARES;
 *                                 however, a value of 1 is a bad idea.
 *
 *     uint8 isolated_check_bits:  The number of hashed-bytes to leak in order 
@@ -256,7 +257,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits);
 *                     uint8 threshold                 = 
 *                     uint8 available_shares;         = 
 *                     uint8 next_entry;               = 
-*                     bool is_unlocked;               = 
+*                     bool is_bootstrapped;               = 
 *                     uint8 *AES_key;                 = needs freeing      
 *                     uint8 *secret;                  = needs freeing
 *                     uint8 isolated_check_bits;            = 
@@ -487,7 +488,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *     4) give shares to the recombination context
 *     5) attempt recombination
 *     6) verify correct recombination.
-*     7) if successful, unlock the store
+*     7) if successful, transition from bootstrapping to normal operation.
 *     8) return error code
 *
 * CHANGES :
