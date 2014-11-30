@@ -730,11 +730,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
       EVP_CIPHER_CTX_cleanup(&de_ctx);
 
-      // append the unencrypted bytes if we have isolated-check-bits. 
-      for(i=p_len+f_len;i<DIGEST_LENGTH;i++){
-        xored_hash[i] = current_entry->protector_value[i];
-      }
-
       // calculate the proposed digest with the parameters provided in
       // this function.
       memcpy(salted_password,current_entry->salt, current_entry->salt_length);
