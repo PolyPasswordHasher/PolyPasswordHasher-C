@@ -692,7 +692,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // if the context is not unlocked, we can only provide isolated validation 
   if(ctx->is_unlocked != true){
 
-    // isolated-check-bits check
+    // isolated-check-bits 
     // calculate the proposed digest, this means, calculate the hash with
     // the information just provided about the user. 
     memcpy(salted_password,current_entry->salt,current_entry->salt_length);
@@ -1370,7 +1370,8 @@ uint8 *generate_pph_secret(unsigned int stream_length,
   
 
   uint8 *secret;
-  uint8 stream_digest[DIGEST_LENGTH];
+  uint8 stream_digest[DIGEST_LENGTH], temp_digest[DIGEST_LENGTH];
+  int i;
 
   // sanitize data
   if(stream_length > DIGEST_LENGTH || stream_length < 1){
@@ -1402,8 +1403,12 @@ uint8 *generate_pph_secret(unsigned int stream_length,
   // generate a random stream
   get_random_bytes(stream_length, secret);
  
-  // hash the rest of the 
+  // hash the rest of the secret
   _calculate_digest(stream_digest, secret, stream_length);
+  for (i = 0; i < SIGNATURE_HASH_ITERATIONS - 1; i++){
+    memcpy(temp_digest, stream_digest, stream_length);
+    _calculate_digest(stream_digest, temp_digest, stream_length);
+  }
   memcpy(secret + stream_length, stream_digest, hash_length);
 
   return secret;
@@ -1420,8 +1425,8 @@ uint8 *generate_pph_secret(unsigned int stream_length,
 PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
     unsigned int hash_bytes){
   
-  uint8 stream_digest[DIGEST_LENGTH];
-
+  uint8 stream_digest[DIGEST_LENGTH], temp_digest[DIGEST_LENGTH];
+  int i;
 
   // sanitize data
   if(stream_length > DIGEST_LENGTH || stream_length < 1){
@@ -1449,8 +1454,13 @@ PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length,
   }
 
 
-  // generate the digest for the stream.
+  // generate the digest for the stream, we will iterate
+  // a high number of times to slow down the attacker
   _calculate_digest(stream_digest, secret, stream_length);
+  for (i = 0; i < SIGNATURE_HASH_ITERATIONS-1; i++){
+    memcpy(temp_digest, stream_digest, stream_length);
+    _calculate_digest(stream_digest, temp_digest, stream_length);
+  }
   
   // compare both digests
   if(memcmp(stream_digest, secret+stream_length, hash_bytes) == 0){
