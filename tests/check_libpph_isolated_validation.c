@@ -199,8 +199,7 @@ START_TEST(test_check_login_shielded) {
   // 2) ask for it, providing correct credentials
   error = pph_check_login(context, username, strlen(username), password,
       strlen(password));
-  ck_assert_msg(error == PPH_ERROR_OK, 
-      "expected OK");
+  ck_assert_msg(error == PPH_ERROR_OK, "expected OK");
   
   
   // lets add a whole bunch of users and check for an existing one again
@@ -238,10 +237,10 @@ END_TEST
 
 
 
-// we test isolated verification, we use a seemingly locked context and try to
+// we test isolated validation, we use a seemingly locked context and try to
 // login. We don't care if the account is shielded or threshold, since
 // we only check for the leaked isolated bytes. 
-START_TEST(test_pph_isolated_verification_and_bootstrapping) {
+START_TEST(test_pph_isolated_validation_and_bootstrapping) {
 
 
   PPH_ERROR error;
@@ -290,7 +289,7 @@ START_TEST(test_pph_isolated_verification_and_bootstrapping) {
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  // store the accounts
+  // create the accounts
   for(i=0;i<username_count;i++) {
     error = pph_create_account(context, usernames[i], strlen(usernames[i]),
         passwords[i], strlen(passwords[i]),1);
@@ -387,7 +386,7 @@ Suite * polypasswordhasher_isolated_check_bits_suite(void)
   tcase_add_test (tc_isolated,test_pph_create_accounts);
   tcase_add_test (tc_isolated,test_create_account_mixed_accounts);
   tcase_add_test (tc_isolated,test_check_login_shielded);
-  tcase_add_test (tc_isolated,test_pph_isolated_verification_and_bootstrapping);
+  tcase_add_test (tc_isolated,test_pph_isolated_validation_and_bootstrapping);
   suite_add_tcase (s, tc_isolated);
 
   return s;

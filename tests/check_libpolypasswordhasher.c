@@ -23,34 +23,15 @@
 // we are going to check secrets check for proper input
 START_TEST(test_generate_pph_secret_input_sanity) {
 
-
-  uint8 *secret;
-
-  // we are going to generate a half stream and half hash secret
-  unsigned int stream_length = DIGEST_LENGTH/2;
-  unsigned int hash_bytes = DIGEST_LENGTH/2;
-
-
+  uint8 *secret, secret_integrity[DIGEST_LENGTH];
 
   // check 0 values, remember that without at least one byte of each
   // it is imposible to verify the secret is a valid one
-  secret = generate_pph_secret(0,hash_bytes);
-  ck_assert(secret == NULL);
-
-  secret = generate_pph_secret(stream_length, 0);
-  ck_assert(secret == NULL);
-
-  // check for very large values, we are defaulting the max length of the 
-  // secret to be of DIGEST_LENGTH, but it could be changed to a specific
-  // macro or even a variable in the context initialization.
-  secret = generate_pph_secret(DIGEST_LENGTH+1, hash_bytes);
-  ck_assert(secret == NULL);
-
-  secret = generate_pph_secret(stream_length, DIGEST_LENGTH + 1);
+  secret = generate_pph_secret(NULL);
   ck_assert(secret == NULL);
 
   // now check for a valid construction.
-  secret = generate_pph_secret(stream_length, hash_bytes);
+  secret = generate_pph_secret(secret_integrity);
   ck_assert(secret != NULL);
 
   free(secret);
@@ -67,33 +48,21 @@ START_TEST(test_check_pph_secret_input_sanity) {
   // we are not going to provide a valid secret for this function, so we 
   // don't care about the return value for invalid secrets, instead, we will 
   // generate a bogus stream of uninitialized data.
-  uint8 secret[DIGEST_LENGTH];
+  uint8 secret[DIGEST_LENGTH], secret_integrity[DIGEST_LENGTH];
   unsigned int stream_length = DIGEST_LENGTH/2;
   unsigned int hash_bytes = DIGEST_LENGTH/2;
   PPH_ERROR error;
 
-
-  // check for 0's in stream length or hashed bytes
-  error = check_pph_secret(secret, stream_length, 0);
-  ck_assert(error == PPH_VALUE_OUT_OF_RANGE);
-
-  error = check_pph_secret(secret, 0, hash_bytes);
-  ck_assert(error == PPH_VALUE_OUT_OF_RANGE);
-
   // now check for NULL pointers in the secret
-  error = check_pph_secret(NULL, stream_length, hash_bytes);
+  error = check_pph_secret(NULL, secret_integrity);
   ck_assert(error == PPH_BAD_PTR);
 
-  // now check for oversized length arguments
-  error = check_pph_secret(secret, DIGEST_LENGTH+1, hash_bytes);
-  ck_assert(error == PPH_VALUE_OUT_OF_RANGE);
-
-  error = check_pph_secret(secret, stream_length, DIGEST_LENGTH+1);
-  ck_assert(error == PPH_VALUE_OUT_OF_RANGE);
+  error = check_pph_secret(secret, NULL);
+  ck_assert(error == PPH_BAD_PTR);
 
   //finally, do a good initialization, and expect something either right or
   //wrong, but signals of a good computation.
-  error = check_pph_secret(secret, stream_length, hash_bytes);
+  error = check_pph_secret(secret, secret_integrity);
   ck_assert(error == PPH_ERROR_OK || error == PPH_SECRET_IS_INVALID);
 
 }END_TEST
@@ -108,7 +77,7 @@ START_TEST(test_check_pph_secret_input_sanity) {
 START_TEST(test_generate_and_check_pph_secret_mixed) {
 
   uint8 *secret;
-
+  uint8 secret_integrity[DIGEST_LENGTH];
   // this time, we expect to get a valid secret, and then modify it so we get
   // an error.
   unsigned int stream_length = DIGEST_LENGTH;
@@ -119,19 +88,20 @@ START_TEST(test_generate_and_check_pph_secret_mixed) {
   // we will check all of the possible ranges for this
   for(i=1;i<DIGEST_LENGTH;i++){
     // check that the function returns a valid secret.
-    secret = generate_pph_secret(stream_length-i, i);
+    secret = generate_pph_secret(secret_integrity);
     ck_assert(secret != NULL);
 
     // check that with the proper values we get a correct secret check
-    error = check_pph_secret(secret, stream_length-i, i);
+    error = check_pph_secret(secret, secret_integrity);
     ck_assert(error == PPH_ERROR_OK);
 
     // check that with some modification to the secret we get a non-valid
-    // secret, we will prove this by inverting the first byte. 
+    // secret, we will prove this by inverting the first byte. This often
+    // fails when the secret-stream length is 1 byte
     secret[0] = ~secret[0]; 
-    error = check_pph_secret(secret, stream_length-i, i);
+    error = check_pph_secret(secret, secret_integrity);
     ck_assert(error == PPH_SECRET_IS_INVALID);
-  
+
     free(secret);
   }
 }END_TEST

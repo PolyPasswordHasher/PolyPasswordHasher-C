@@ -111,6 +111,7 @@ typedef struct _pph_entry{
   // password or the encrypted hash of the password.
   unsigned int password_length;
   uint8 protector_value[DIGEST_LENGTH];
+  uint8 isolated_check_bits[DIGEST_LENGTH];
 
   struct _pph_entry *next;
 
@@ -161,7 +162,8 @@ typedef struct _pph_context{
   // if the context is under normal operation, these will point to the secret
   // and the AES key
   uint8 *AES_key;                
-  uint8 *secret;                 
+  uint8 *secret;
+  uint8 secret_integrity[DIGEST_LENGTH]; /* we will store the whole integrity check now */
 
   // This is the number of isolated-check-bits associated with the context.
   // If isolated-check-bits is 0, isolated validation is disabled. 
@@ -667,21 +669,14 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 
 
 
-// this generates a random secret of the form [stream][streamhash], the 
-// parameters are the length of each section of the secret
-
-uint8 *generate_pph_secret(unsigned int stream_length,
-    unsigned int hash_length);
+// used to generate a random secret and add its hash
+uint8 *generate_pph_secret( uint8 *integrity_check);
 
 
 
-// this checks whether a given secret complies with the pph_secret prototype
-// ([stream][streamhash])
-
-PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
-    unsigned int hash_bytes);
-
-
+// this checks whether a given secret matches the given integrity check (stored
+// in the context) at certain number of iterations
+PPH_ERROR check_pph_secret(uint8 *secret, uint8 *secret_integrity);
 
 
 // this function provides a protector entry given the input

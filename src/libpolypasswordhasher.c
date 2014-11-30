@@ -134,9 +134,8 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
   // 3) generate random secret, we generate a random byte stream and append
   // half of the 16 byte hash to the end of it, we have chosen to use
   // only four hash bytes in order to have more random bytes. 
-  context->secret = generate_pph_secret(
-      SIGNATURE_RANDOM_BYTE_LENGTH-isolated_check_bits,
-      SIGNATURE_HASH_BYTE_LENGTH);
+  context->secret = generate_pph_secret(context->secret_integrity);
+
   if(context->secret == NULL) {
     free(context);
     
@@ -173,7 +172,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
   context->share_context = gfshare_ctx_init_enc( share_numbers,
                                                  MAX_NUMBER_OF_SHARES-1,
                                                  context->threshold,
-                                                 SHARE_LENGTH-isolated_check_bits);
+                                                 SHARE_LENGTH);
   if(context->share_context == NULL) {
     free(context->secret);
     free(context);
@@ -598,9 +597,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   pph_entry *current_entry;
   unsigned int i;
 
-  // this will hold an offset value for isolated validation.
-  unsigned int isolated_check_bits_offset;
-
   // openSSL managers.
   EVP_CIPHER_CTX de_ctx;
   int p_len,f_len;
@@ -686,8 +682,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // thorough and check for each, but it looks like an overkill
   current_entry = target->account.entries;
   sharenumber = current_entry->share_number;
-  isolated_check_bits_offset = DIGEST_LENGTH - ctx->isolated_check_bits;
-  
   
   // if the context is not bootstrapped, we can only provide isolated validation 
   // and bootstrap account creation.
@@ -701,13 +695,12 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
         current_entry->password_length);
     _calculate_digest(resulting_hash, salted_password, 
        current_entry->salt_length + password_length);
-   
+
     // only compare the bytes that are not obscured by either AES or the 
     // share, we start from share_length-isolated_check_bits to share_length. 
-    if(memcmp(resulting_hash+isolated_check_bits_offset,
-          target->account.entries->protector_value+isolated_check_bits_offset,
+    if(memcmp(resulting_hash,
+          target->account.entries->isolated_check_bits,
           ctx->isolated_check_bits)){
-    
       return PPH_ACCOUNT_IS_INVALID;
     
     }
@@ -728,7 +721,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       EVP_CIPHER_CTX_init(&de_ctx);
       EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
       EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len, 
-          current_entry->protector_value, isolated_check_bits_offset);
+          current_entry->protector_value, DIGEST_LENGTH);
       EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
       EVP_CIPHER_CTX_cleanup(&de_ctx);
 
@@ -771,12 +764,8 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       
       // xor the thing back to normal
       _xor_share_with_digest(xored_hash,current_entry->protector_value,
-          share_data, isolated_check_bits_offset);
+          share_data, DIGEST_LENGTH);
       
-      // add the isolated-check-bits to the end of the digest.
-      for(i=DIGEST_LENGTH-ctx->isolated_check_bits;i<DIGEST_LENGTH;i++){
-        xored_hash[i] = target->account.entries->protector_value[i];
-      }
       
       // compare both.
       if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
@@ -896,9 +885,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   }
   
   // initialize a recombination context
-  G = gfshare_ctx_init_dec( share_numbers, MAX_NUMBER_OF_SHARES-1,
-     SHARE_LENGTH-ctx->isolated_check_bits);
-
+  G = gfshare_ctx_init_dec( share_numbers, MAX_NUMBER_OF_SHARES-1, SHARE_LENGTH);
 
   // traverse our possible users
   current_user=ctx->account_data;
@@ -933,7 +920,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
             // xor the obtained digest with the protector value to obtain
             // our share.
             _xor_share_with_digest(estimated_share,entry->protector_value,
-                estimated_digest,SHARE_LENGTH-ctx->isolated_check_bits);
+                estimated_digest, SHARE_LENGTH);
          
             // give share to the recombinator. 
             share_numbers[entry->share_number] = entry->share_number+1;
@@ -955,9 +942,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_dec_extract(G, secret);
 
   // verify that we got a proper secret back.
-  if(check_pph_secret(secret, SIGNATURE_RANDOM_BYTE_LENGTH-ctx->isolated_check_bits,
-        SIGNATURE_HASH_BYTE_LENGTH) != PPH_ERROR_OK){
-    
+  if(check_pph_secret(secret, ctx->secret_integrity) != PPH_ERROR_OK){
     return PPH_ACCOUNT_IS_INVALID;
     
   }
@@ -965,9 +950,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   // else, we have a correct secret and we will copy it back to the provided
   // context.
   if(ctx->secret == NULL){
-    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH-ctx->isolated_check_bits);
+    ctx->secret = calloc(sizeof(ctx->secret),SHARE_LENGTH);
   }
-  memcpy(ctx->secret,secret,SHARE_LENGTH-ctx->isolated_check_bits);
+  memcpy(ctx->secret,secret,SHARE_LENGTH);
 
   // if the share context is not initialized, initialize one with the
   // information we have about our context. 
@@ -978,11 +963,11 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     ctx->share_context = gfshare_ctx_init_enc( share_numbers,
                                                MAX_NUMBER_OF_SHARES-1,
                                                ctx->threshold,
-                                               SHARE_LENGTH-ctx->isolated_check_bits);
+                                               SHARE_LENGTH);
   }
   
   // we have an initialized share context, we set the recombined secret to it 
-  // and set the is_bootstrapped flag to one so it is ready to use.
+  // and set the flag to one so it is ready to use.
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   ctx->is_bootstrapped = true;
   ctx->AES_key = ctx->secret;
@@ -1366,31 +1351,16 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 // this generates a random secret of the form [stream][streamhash], the 
 // parameters are the length of each section of the secret
 
-uint8 *generate_pph_secret(unsigned int stream_length,
-    unsigned int hash_length){
+uint8 *generate_pph_secret(uint8 *integrity_check)
+{
   
 
   uint8 *secret;
   uint8 stream_digest[DIGEST_LENGTH], temp_digest[DIGEST_LENGTH];
   int i;
 
-  // sanitize data
-  if(stream_length > DIGEST_LENGTH || stream_length < 1){
-    
+  if (integrity_check == NULL) {
     return NULL;
-    
-  }
-
-  if(hash_length > DIGEST_LENGTH || hash_length < 1){
-    
-    return NULL;
-    
-  }
-
-  if(hash_length + stream_length > DIGEST_LENGTH){
-    
-    return NULL;
-    
   }
 
   // allocate memory
@@ -1402,15 +1372,15 @@ uint8 *generate_pph_secret(unsigned int stream_length,
   }
 
   // generate a random stream
-  get_random_bytes(stream_length, secret);
+  get_random_bytes(DIGEST_LENGTH, secret);
  
-  // hash the rest of the secret
-  _calculate_digest(stream_digest, secret, stream_length);
+  // Calculate the integrity check
+  _calculate_digest(stream_digest, secret, DIGEST_LENGTH);
   for (i = 0; i < SIGNATURE_HASH_ITERATIONS - 1; i++){
-    memcpy(temp_digest, stream_digest, stream_length);
-    _calculate_digest(stream_digest, temp_digest, stream_length);
+    memcpy(temp_digest, stream_digest, DIGEST_LENGTH);
+    _calculate_digest(stream_digest, temp_digest, DIGEST_LENGTH);
   }
-  memcpy(secret + stream_length, stream_digest, hash_length);
+  memcpy(integrity_check, stream_digest, DIGEST_LENGTH);
 
   return secret;
     
@@ -1423,51 +1393,28 @@ uint8 *generate_pph_secret(unsigned int stream_length,
 // this checks whether a given secret complies with the pph_secret prototype
 // ([stream][streamhash])
 
-PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
-    unsigned int hash_bytes){
+PPH_ERROR check_pph_secret(uint8 *secret, uint8 *secret_integrity)
+{
   
   uint8 stream_digest[DIGEST_LENGTH], temp_digest[DIGEST_LENGTH];
   int i;
 
-  // sanitize data
-  if(stream_length > DIGEST_LENGTH || stream_length < 1){
-    
-    return PPH_VALUE_OUT_OF_RANGE;
-    
-  }
-
-  if(hash_bytes > DIGEST_LENGTH || hash_bytes < 1){
-    
-    return PPH_VALUE_OUT_OF_RANGE;
-    
-  }
-
-  if(hash_bytes + stream_length > DIGEST_LENGTH){
-    
-    return PPH_VALUE_OUT_OF_RANGE;
-    
-  }
-
-  if(secret == NULL){
+  if(secret == NULL || secret_integrity == NULL){
     
     return PPH_BAD_PTR;
     
   }
 
-
   // generate the digest for the stream, we will iterate
   // a high number of times to slow down the attacker
-  _calculate_digest(stream_digest, secret, stream_length);
+  _calculate_digest(stream_digest, secret, DIGEST_LENGTH);
   for (i = 0; i < SIGNATURE_HASH_ITERATIONS-1; i++){
-    memcpy(temp_digest, stream_digest, stream_length);
-    _calculate_digest(stream_digest, temp_digest, stream_length);
+    memcpy(temp_digest, stream_digest, DIGEST_LENGTH);
+    _calculate_digest(stream_digest, temp_digest, DIGEST_LENGTH);
   }
-  
-  // compare both digests
-  if(memcmp(stream_digest, secret+stream_length, hash_bytes) == 0){
-    
+
+  if(memcmp(stream_digest, secret_integrity, DIGEST_LENGTH) == 0){
     return PPH_ERROR_OK;
-    
   }
 
   return PPH_SECRET_IS_INVALID;
@@ -1534,9 +1481,11 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
   
   // xor the whole thing, with the share, we are doing operations in-place
   // to make everything faster
+  memcpy(entry_node->isolated_check_bits, entry_node->protector_value,
+          isolated_check_bits);
   _xor_share_with_digest(entry_node->protector_value, share,
-        entry_node->protector_value, share_length-isolated_check_bits);
-    
+        entry_node->protector_value, share_length);
+  
   return entry_node;
     
 }
@@ -1604,11 +1553,15 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
   _calculate_digest(entry_node->protector_value,salted_password, 
       salt_length + password_length); 
 
+  // store the icb's
+  memcpy(entry_node->isolated_check_bits, entry_node->protector_value,
+          isolated_check_bits);
+
   // encrypt the generated digest
   EVP_CIPHER_CTX_init(&en_ctx);
   EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, NULL);
   EVP_EncryptUpdate(&en_ctx, entry_node->protector_value, &c_len,
-      entry_node->protector_value, DIGEST_LENGTH-isolated_check_bits);
+      entry_node->protector_value, DIGEST_LENGTH);
   EVP_EncryptFinal_ex(&en_ctx, entry_node->protector_value+c_len, &f_len);
   EVP_CIPHER_CTX_cleanup(&en_ctx);
 
