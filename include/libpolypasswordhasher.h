@@ -32,6 +32,7 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <openssl/aes.h>
+#include <openssl/rand.h>
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -725,13 +726,6 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
 // bootstrapping.
 pph_entry *create_bootstrap_entry(uint8 *password, unsigned int password_length, 
         uint8 *salt, unsigned int salt_length);
-
-
-// This produces a salt string, warning, this only generates a 
-// PRINTABLE salt
-
-void get_random_bytes(unsigned int length, uint8 *dest);
-
 
 
 

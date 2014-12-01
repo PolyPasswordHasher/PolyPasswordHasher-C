@@ -465,7 +465,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
         share_data);
 
     // get a salt for the password
-    get_random_bytes(MAX_SALT_LENGTH, salt_buffer);
+    RAND_bytes(salt_buffer, MAX_SALT_LENGTH); 
 
     // Try to get a new entry.
     entry_node=create_protector_entry(password, password_length, salt_buffer,
@@ -497,7 +497,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   
     // 3) allocate an entry for each account
     // get a salt for the password
-    get_random_bytes(MAX_SALT_LENGTH, salt_buffer); 
+    RAND_bytes(salt_buffer, MAX_SALT_LENGTH); 
  
     // generate the entry we generate bootstrap accounts when the 
     // context is bootstrapping
@@ -1537,7 +1537,7 @@ uint8 *generate_pph_secret(uint8 *integrity_check)
   }
 
   // generate a random stream
-  get_random_bytes(DIGEST_LENGTH, secret);
+  RAND_bytes(secret, DIGEST_LENGTH);
  
   // Calculate the integrity check
   _calculate_digest(stream_digest, secret, DIGEST_LENGTH);
@@ -1792,21 +1792,3 @@ pph_entry *create_bootstrap_entry(uint8 *password, unsigned int password_length,
  
   return entry_node;
 }
-// This is a private helper that produces a salt string,
-
-void get_random_bytes(unsigned int length, uint8 *dest){
-    
-    
-  unsigned int i=0;
-  int fp;
-
-    
-  fp = open("/dev/urandom",O_RDONLY);
-  while(i<length){
-    i += read(fp,dest,length);
-  }
-  close(fp);
-
-}
-
-

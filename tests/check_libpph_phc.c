@@ -118,7 +118,7 @@ START_TEST(test_PHS_input_ranges)
 
 
   // test with a random password
-  get_random_bytes(MAX_PASSWORD_LENGTH, password);
+  RAND_bytes(password, MAX_PASSWORD_LENGTH);
 
   // precompute the hash to produce.
   memcpy(salted_password, salt, MAX_SALT_LENGTH);
@@ -169,7 +169,7 @@ START_TEST(test_PHS_input_ranges)
  
   
   // add random salt
-  get_random_bytes(MAX_SALT_LENGTH, salt);
+  RAND_bytes(salt, MAX_SALT_LENGTH);
 
   // precompute the hash to produce.
   memcpy(salted_password, salt, MAX_SALT_LENGTH);
@@ -195,7 +195,7 @@ START_TEST(test_PHS_input_ranges)
   // testing for different tcost values.
   for(i = 1; i < MAX_NUMBER_OF_SHARES; i++) {
     // add random salt
-    get_random_bytes(MAX_SALT_LENGTH, salt);
+    RAND_bytes(salt, MAX_SALT_LENGTH);
 
     // precompute the hash to produce.
     memcpy(salted_password, salt, MAX_SALT_LENGTH);
@@ -236,8 +236,8 @@ START_TEST(test_PHS_tcost_values)
 
 
   // initialize the values
-  get_random_bytes(MAX_SALT_LENGTH, salt);
-  get_random_bytes(MAX_PASSWORD_LENGTH, password);
+  RAND_bytes(salt, MAX_SALT_LENGTH);
+  RAND_bytes(password, MAX_PASSWORD_LENGTH);
 
 
   // test all possible values for tcost.

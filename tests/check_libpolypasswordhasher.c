@@ -653,8 +653,8 @@ START_TEST(test_pph_create_and_check_login_full_range) {
   for( i = 1; i < MAX_USERNAME_LENGTH; i++){
     
     // generate a username and a password of length i
-    get_random_bytes(i, username_buffer);
-    get_random_bytes(i, password_buffer);
+    RAND_bytes(username_buffer, i);
+    RAND_bytes(password_buffer, i);
 
     // create an account with those credentials
     error = pph_create_account( context, username_buffer, i, password_buffer, 
@@ -1070,8 +1070,8 @@ START_TEST(test_pph_unlock_password_data_full_range) {
     ck_assert( usernames[i] != NULL);
     ck_assert( passwords[i] != NULL);
 
-    get_random_bytes( i+1, usernames[i]);
-    get_random_bytes( i+1, passwords[i]);
+    RAND_bytes(usernames[i], i + 1);
+    RAND_bytes(passwords[i], i + 1);
     
    
     username_lengths[i]= i + 1;
