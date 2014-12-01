@@ -740,7 +740,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
   // if the account is a bootstrap account, verify it first
   if (current_entry->share_number == BOOTSTRAP_ACCOUNT) {
-    if (memcmp(resulting_hash, current_entry->protector_value, DIGEST_LENGTH))
+    if (memcmp(resulting_hash, current_entry->sharexorhash, DIGEST_LENGTH))
         return PPH_ACCOUNT_IS_INVALID;
 
     return PPH_ERROR_OK;
@@ -797,7 +797,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       _encrypt_digest(xored_hash, resulting_hash, ctx->AES_key);
 
       // 3) compare both, and they should match.
-      if(memcmp(xored_hash, current_entry->protector_value, DIGEST_LENGTH)){
+      if(memcmp(xored_hash, current_entry->sharexorhash, DIGEST_LENGTH)){
 
         /* If they didn't, ensure that the icb's don't match (raise an alarm if
          * they do) */
@@ -826,7 +826,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
 
       // xor the thing back to normal
-      _xor_share_with_digest(xored_hash,current_entry->protector_value,
+      _xor_share_with_digest(xored_hash,current_entry->sharexorhash,
           share_data, DIGEST_LENGTH);
       
       
@@ -998,7 +998,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 
             // xor the obtained digest with the protector value to obtain
             // our share.
-            _xor_share_with_digest(estimated_share,entry->protector_value,
+            _xor_share_with_digest(estimated_share,entry->sharexorhash,
                 estimated_digest, SHARE_LENGTH);
          
             // give share to the recombinator. 
@@ -1058,7 +1058,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     entry = bootstrap_update_entry->entry;
 
     /* calculate and add the isolated-check bits */
-    memcpy(icb_digest_buffer, entry->protector_value, DIGEST_LENGTH);
+    memcpy(icb_digest_buffer, entry->sharexorhash, DIGEST_LENGTH);
     for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
       memcpy(estimated_digest, icb_digest_buffer, DIGEST_LENGTH);
       _calculate_digest(icb_digest_buffer, estimated_digest, DIGEST_LENGTH);
@@ -1066,7 +1066,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     memcpy(entry->isolated_check_bits, icb_digest_buffer, ctx->isolated_check_bits);
 
     /* encrypt the original entry */
-    _encrypt_digest(entry->protector_value, entry->protector_value, ctx->AES_key);
+    _encrypt_digest(entry->sharexorhash, entry->sharexorhash, ctx->AES_key);
 
     /* update sharenumbers */
     entry->share_number = SHIELDED_ACCOUNT;
@@ -1097,7 +1097,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
               DIGEST_LENGTH);
     }
 
-    if (memcmp(estimated_digest, this_login->entry->protector_value,
+    if (memcmp(estimated_digest, this_login->entry->sharexorhash,
                   DIGEST_LENGTH)){
 
       printf("Isolated verification passes, but full verification failed\n");
@@ -1494,7 +1494,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
       share, DIGEST_LENGTH, context->isolated_check_bits);
 
   // copy the resulting polyhash to the output
-  memcpy(out, generated_entry->protector_value, outlen);
+  memcpy(out, generated_entry->sharexorhash, outlen);
 
   // free the generated entry
   free(generated_entry);
@@ -1642,11 +1642,11 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
   memcpy(salted_password+salt_length, password, password_length);
 
   // hash the salted password
-  _calculate_digest(entry_node->protector_value, salted_password,
+  _calculate_digest(entry_node->sharexorhash, salted_password,
         salt_length + password_length);
  
   // store the icb's
-  memcpy(icb_digest, entry_node->protector_value, DIGEST_LENGTH);
+  memcpy(icb_digest, entry_node->sharexorhash, DIGEST_LENGTH);
   for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
     memcpy(icb_digest_temp, icb_digest, DIGEST_LENGTH);
     _calculate_digest(icb_digest, icb_digest_temp, DIGEST_LENGTH);
@@ -1656,8 +1656,8 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
  
   // xor the whole thing, with the share, we are doing operations in-place
   // to make everything faster
-  _xor_share_with_digest(entry_node->protector_value, share,
-        entry_node->protector_value, share_length);
+  _xor_share_with_digest(entry_node->sharexorhash, share,
+        entry_node->sharexorhash, share_length);
   
   return entry_node;
     
@@ -1719,11 +1719,11 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
   // prepend the salt to the password and generate a digest
   memcpy(salted_password,entry_node->salt,salt_length);
   memcpy(salted_password+MAX_SALT_LENGTH, password, password_length); 
-  _calculate_digest(entry_node->protector_value,salted_password, 
+  _calculate_digest(entry_node->sharexorhash,salted_password, 
       salt_length + password_length); 
 
   // store the icb's
-  memcpy(icb_digest, entry_node->protector_value, DIGEST_LENGTH);
+  memcpy(icb_digest, entry_node->sharexorhash, DIGEST_LENGTH);
   for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
     memcpy(icb_digest_temp, icb_digest, DIGEST_LENGTH);
     _calculate_digest(icb_digest, icb_digest_temp, DIGEST_LENGTH);
@@ -1732,7 +1732,7 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
           isolated_check_bits);
 
   // encrypt the generated digest
-  _encrypt_digest(entry_node->protector_value, entry_node->protector_value,
+  _encrypt_digest(entry_node->sharexorhash, entry_node->sharexorhash,
           AES_key);
 
   // shielded accounts have this value defaulted to 0;
@@ -1783,7 +1783,7 @@ pph_entry *create_bootstrap_entry(uint8 *password, unsigned int password_length,
   // prepend the salt to the password and generate a digest
   memcpy(salted_password,entry_node->salt,salt_length);
   memcpy(salted_password+MAX_SALT_LENGTH, password, password_length); 
-  _calculate_digest(entry_node->protector_value,salted_password, 
+  _calculate_digest(entry_node->sharexorhash,salted_password, 
       salt_length + password_length); 
 
   // bootstrap accounts have their sharenumber set to bootstrap

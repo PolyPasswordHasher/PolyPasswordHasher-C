@@ -329,7 +329,7 @@ START_TEST(test_create_account_entry_consistency) {
       MAX_SALT_LENGTH);
   _calculate_digest(password_digest, salted_password, 
       MAX_SALT_LENGTH + strlen(password));
-  digest_result=context->account_data->account.entries->protector_value;
+  digest_result=context->account_data->account.entries->sharexorhash;
 
 
   gfshare_ctx_enc_getshare(context->share_context, 1, share_result);
