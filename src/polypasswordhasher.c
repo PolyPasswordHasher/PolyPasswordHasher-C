@@ -85,11 +85,11 @@ int main(void)
   // In order to be able to create protector accounts, we must bootstrap the.
   // for this, we setup an array of username strings and an array of password 
   // strings.
-  char **usernames = malloc(sizeof(*usernames)*2);
+  const uint8 **usernames = malloc(sizeof(*usernames)*2);
   usernames[0] = strdup("Alice");
   usernames[1] = strdup("Bob");
   
-  char **passwords = malloc(sizeof(*passwords)*2);
+  const uint8  **passwords = malloc(sizeof(*passwords)*2);
   passwords[0] = strdup("I.love.bob");
   passwords[1] = strdup("i.secretly.love.eve");
 

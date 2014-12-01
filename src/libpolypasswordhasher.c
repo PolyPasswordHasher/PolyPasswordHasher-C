@@ -156,8 +156,9 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
   context->AES_key = context->secret;
 
   // initialize the rest
-  context->next_entry=1;
-  context->account_data=NULL;
+  context->next_entry = 1;
+  context->account_data = NULL;
+  context->previous_logins = NULL;
 
 
 
@@ -245,6 +246,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 
 
   pph_account_node *current,*next;
+  pph_previous_login *logins, *current_login;
 
 
   // check that we are given a valid pointer
@@ -277,6 +279,15 @@ PPH_ERROR pph_destroy_context(pph_context *context){
     gfshare_ctx_free(context->share_context);
   }
   
+  // free the previous logins
+  logins = context->previous_logins;
+  while(logins != NULL) {
+
+    current_login = logins;
+    logins = logins->next;
+    free(current_login);
+
+  }
   
   // now it is safe to free the context
   free(context);
@@ -358,9 +369,9 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 */
 
 PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
-                        const unsigned int username_length, 
-                        const uint8 *password, 
-                        const unsigned int password_length, uint8 shares){
+                        unsigned int username_length, uint8 *password, 
+                        unsigned int password_length, uint8 shares)
+{
 
 
   pph_account_node *node,*next;
@@ -446,6 +457,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // Try to get a new entry.
     entry_node=create_protector_entry(password, password_length, salt_buffer,
         MAX_SALT_LENGTH, share_data, SHARE_LENGTH, ctx->isolated_check_bits);
+
     if(entry_node == NULL){
       _destroy_entry_list(last_entry);
     
@@ -582,6 +594,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // this will be used to iterate all the users 
   pph_account_node *search;
   pph_account_node *target = NULL; 
+  pph_previous_login *previous_login, *this_login;
   
   // we will store the current share in this buffer for xor'ing   
   uint8 share_data[SHARE_LENGTH];  
@@ -589,12 +602,12 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // we will calculate a "proposed hash" in this buffer  
   uint8 resulting_hash[DIGEST_LENGTH], icb_digest_temp[DIGEST_LENGTH];
   uint8 salted_password[MAX_SALT_LENGTH+MAX_PASSWORD_LENGTH]; 
-                                                      
   uint8 xored_hash[SHARE_LENGTH];
 
   // these are value holders to improve readability
   uint8 sharenumber;
   pph_entry *current_entry;
+  pph_entry *challenge_entry;
   unsigned int i;
 
   // openSSL managers.
@@ -696,6 +709,16 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     _calculate_digest(resulting_hash, salted_password, 
        current_entry->salt_length + password_length);
 
+    // we should store this login for verification after bootstrapping;
+    this_login = malloc(sizeof(*this_login));
+
+    if (this_login == NULL)
+      printf("Couldn't store isolated validation for full verification later!\n");
+
+    memcpy(this_login->digest, resulting_hash, DIGEST_LENGTH);
+    this_login->entry = current_entry;
+    this_login->next = NULL;
+
     for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
       memcpy(icb_digest_temp, resulting_hash, DIGEST_LENGTH);
       _calculate_digest(resulting_hash, icb_digest_temp, DIGEST_LENGTH);
@@ -703,13 +726,25 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
     // only compare the bytes that are not obscured by either AES or the 
     // share, we start from share_length-isolated_check_bits to share_length. 
-    if(memcmp(resulting_hash,
-          target->account.entries->isolated_check_bits,
+    if(memcmp(resulting_hash, target->account.entries->isolated_check_bits,
           ctx->isolated_check_bits)){
+
+      free(this_login);
       return PPH_ACCOUNT_IS_INVALID;
     
     }
-    
+
+    // this login was successful, add it to the full verification list.
+    printf("Segfault!\n");
+    if (ctx->previous_logins == NULL) {
+        ctx->previous_logins = this_login;
+    } else{
+        previous_login = ctx->previous_logins;
+        while (previous_login->next != NULL)
+            previous_login = previous_login->next; 
+        previous_login->next = this_login;
+    }
+
     return PPH_ERROR_OK;
     
   }
@@ -741,6 +776,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       
       // 3) compare both, and they should match.
       if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
+        // TODO: check if isolated check bits matches and raise the alarm
     
         return PPH_ACCOUNT_IS_INVALID;
     
@@ -769,7 +805,8 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       
       // compare both.
       if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
-    
+        // TODO: check if partial bytes matches and raise the alarm
+        
         return PPH_ACCOUNT_IS_INVALID;
     
       }
@@ -862,6 +899,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   uint8 estimated_share[SHARE_LENGTH];
   pph_entry *entry; 
   pph_account_node *current_user;
+  pph_previous_login *this_login, *next_login;
   
 
   //sanitize the data.
@@ -966,12 +1004,47 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
                                                SHARE_LENGTH);
   }
   
-  // we have an initialized share context, we set the recombined secret to it 
-  // and set the flag to one so it is ready to use.
+  // we have an initialized share context, we set the recombined secret to the
+  // context's secret and set the flag to one so it is ready to use.
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   ctx->is_bootstrapped = true;
   ctx->AES_key = ctx->secret;
-  
+ 
+  // Finally, fully verify any bootstrap account
+  this_login = ctx->previous_logins;
+  while(this_login != NULL) {
+
+    next_login = this_login->next; 
+
+    if (this_login->entry->share_number == 0) {
+
+      _encrypt_digest(estimated_digest, this_login->digest, ctx->AES_key);
+
+    } else {
+
+      gfshare_ctx_enc_getshare(ctx->share_context, this_login->entry->share_number,
+              estimated_share);
+      _xor_share_with_digest(estimated_digest, this_login->digest, estimated_share, 
+              DIGEST_LENGTH);
+    }
+
+    if (memcmp(estimated_digest, this_login->entry->protector_value,
+                  DIGEST_LENGTH)){
+
+      printf("Isolated verification passes, but full verification failed\n");
+      printf("Possible break-in detected!\n");
+
+    }
+   
+
+    free(this_login);
+    this_login = next_login;
+
+  }
+
+  ctx->previous_logins = NULL;
+
+ 
   return PPH_ERROR_OK;
     
 }
@@ -1190,11 +1263,14 @@ pph_context *pph_reload_context(const unsigned char *filename){
       entries->next = last_entry;
       last_entry = entries;
     }
+
     accounts->account.entries = entries;
     accounts->next = last;
     last = accounts; 
   }
+
   loaded_context->account_data = accounts;
+  loaded_context->previous_logins = NULL;
   
 
   // 4) close the file.
@@ -1428,7 +1504,7 @@ PPH_ERROR check_pph_secret(uint8 *secret, uint8 *secret_integrity)
 // this function provides a protector entry given the input
 
 pph_entry *create_protector_entry(uint8 *password, unsigned int
-    password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
+    password_length, uint8 *salt, unsigned int salt_length, const void *share,
     unsigned int share_length, unsigned int isolated_check_bits){
 
   uint8 icb_digest[DIGEST_LENGTH], icb_digest_temp[DIGEST_LENGTH];
@@ -1502,7 +1578,7 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
 
 
 
-// this other function is the equivalent to the one in the top, but for
+// this other function is the equivalent to the one above, but for
 // shielded accounts.
 
 pph_entry *create_shielded_entry(uint8 *password, unsigned int
@@ -1512,14 +1588,8 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
 
   pph_entry *entry_node = NULL;
   uint8 icb_digest[DIGEST_LENGTH], icb_digest_temp[DIGEST_LENGTH];
-  unsigned int i;
   uint8 salted_password[MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH];
-
-  // openssl encryption contexts
-  EVP_CIPHER_CTX en_ctx;
-  int c_len,f_len;
-
-
+  unsigned int i;
 
   // check everything makes sense, nothing should point to null
   if(password == NULL || salt == NULL || AES_key == NULL){
@@ -1573,13 +1643,8 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
           isolated_check_bits);
 
   // encrypt the generated digest
-  EVP_CIPHER_CTX_init(&en_ctx);
-  EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, NULL);
-  EVP_EncryptUpdate(&en_ctx, entry_node->protector_value, &c_len,
-      entry_node->protector_value, DIGEST_LENGTH);
-  EVP_EncryptFinal_ex(&en_ctx, entry_node->protector_value+c_len, &f_len);
-  EVP_CIPHER_CTX_cleanup(&en_ctx);
-
+  _encrypt_digest(entry_node->protector_value, entry_node->protector_value,
+          AES_key);
 
   // shielded accounts have this value defaulted to 0;
   entry_node->share_number = 0;
@@ -1590,7 +1655,6 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
   return entry_node;  
 
 }
-
 
 
 

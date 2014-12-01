@@ -318,6 +318,7 @@ START_TEST(test_pph_isolated_validation_and_bootstrapping) {
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
       " Expected ACCOUNT_IS_INVALID");
 
+
   // do it again, more graphical... 
   error = pph_unlock_password_data(context, threshold -1, usernames, 
       username_lengths, passwords);

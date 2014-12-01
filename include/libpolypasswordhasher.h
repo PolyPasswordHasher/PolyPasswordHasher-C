@@ -142,6 +142,14 @@ typedef struct _pph_account_node{
 
 } pph_account_node;
 
+// we will have a data structure for previous logins
+typedef struct _pph_previous_login{
+  
+  pph_entry *entry;
+  uint8 digest[DIGEST_LENGTH];
+  struct _pph_previous_login *next;
+
+} pph_previous_login;
 
 
 // The context structure defines all of what's needed to handle a polypasswordhasher
@@ -172,6 +180,10 @@ typedef struct _pph_context{
   
   // this points to the account nodes currently available.  
   pph_account_node* account_data;
+
+  // we will populate a list of previous logins to fully verify after 
+  // bootstrapping
+  pph_previous_login *previous_logins;
 
 } pph_context;
 
@@ -313,16 +325,16 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 *     pph_context *ctx:                   This is the context in which the
 *                                         account will be created
 *     
-*     const uint8 *username:              This is the desired username for the
+*     uint8 *username:                    This is the desired username for the
 *                                         new entry
 *
-*     const unsigned int username_length: the length of the username field,
+*     unsigned int username_length:       The length of the username field,
 *                                         this value should not exceed 
 *                                         MAX_USERNAME_LENGTH.
 *
-*     const uint8 *password:              This is the password for the new entry
+*     uint8 *password:                    This is the password for the new entry
 *
-*     const unsgned int password_length:  The length of the password field, this
+*     unsgned int password_length:        The length of the password field, this
 *                                         value should not exceed 
 *                                         MAX_PASSWORD_LENGTH
 *
@@ -371,9 +383,9 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 */
 
 PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
-                        const unsigned int username_length, 
-                        const uint8 *password, 
-                        const unsigned int password_length, uint8 shares);
+                        unsigned int username_length, uint8 *password, 
+                        unsigned int password_length, uint8 shares);
+
 
 
 
@@ -498,10 +510,9 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *     (03/25/14): Secret consistency check was added. 
 */
 
-PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
-                          const uint8 *usernames[],
-                          unsigned int username_lengths[],
-                          const uint8 *passwords[]);
+PPH_ERROR pph_unlock_password_data(pph_context *ctx,
+        unsigned int username_count, const uint8 *usernames[], 
+        unsigned int username_lengths[], const uint8 *passwords[]);
                                   
 
 
@@ -683,7 +694,7 @@ PPH_ERROR check_pph_secret(uint8 *secret, uint8 *secret_integrity);
 // this function provides a protector entry given the input
 
 pph_entry *create_protector_entry(uint8 *password, unsigned int
-    password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
+    password_length, uint8 *salt, unsigned int salt_length, const void *share,
     unsigned int share_length, unsigned int isolated_check_bits);
 
 
@@ -761,6 +772,25 @@ inline void _calculate_digest(uint8 *digest, const uint8 *password,
   EVP_MD_CTX_cleanup(&mctx);
 
   return;
+
+}
+
+// we will use an inline to encrypt a digest to make everything cleaner also
+inline void _encrypt_digest(uint8 *result, uint8 *digest, uint8 *AES_key) {
+
+  EVP_CIPHER_CTX en_ctx;
+  int c_len,f_len;
+
+  // encrypt the generated digest
+  EVP_CIPHER_CTX_init(&en_ctx);
+  EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, NULL);
+  EVP_EncryptUpdate(&en_ctx, result, &c_len,
+      digest, DIGEST_LENGTH);
+  EVP_EncryptFinal_ex(&en_ctx, result+c_len, &f_len);
+  EVP_CIPHER_CTX_cleanup(&en_ctx);
+
+  return;
+
 
 }
 
