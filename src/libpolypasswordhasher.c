@@ -791,22 +791,27 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   else{ 
 
     // first, check if the account is a threshold or shielded account.
-    if(sharenumber == 0){
+    if(sharenumber == 0){ /* Shielded account */
       
-      // if the sharenumber is 0 then we have a shielded account
-      
-      // now we should calculate the expected hash by deciphering the
-      // information inside the context.
-      EVP_CIPHER_CTX_init(&de_ctx);
-      EVP_DecryptInit_ex(&de_ctx, EVP_aes_256_ctr(), NULL, ctx->AES_key, NULL);
-      EVP_DecryptUpdate(&de_ctx, xored_hash, &p_len, 
-          current_entry->protector_value, DIGEST_LENGTH);
-      EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
-      EVP_CIPHER_CTX_cleanup(&de_ctx);
+      // now we should calculate the expected hash by encrypting it
+      _encrypt_digest(xored_hash, resulting_hash, ctx->AES_key);
 
       // 3) compare both, and they should match.
-      if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
-        // TODO: check if isolated check bits matches and raise the alarm
+      if(memcmp(xored_hash, current_entry->protector_value, DIGEST_LENGTH)){
+
+        /* If they didn't, ensure that the icb's don't match (raise an alarm if
+         * they do) */
+        for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
+          memcpy(xored_hash, resulting_hash, DIGEST_LENGTH);
+          _calculate_digest(resulting_hash, xored_hash, DIGEST_LENGTH);
+        }
+
+        if (!memcmp(resulting_hash, current_entry->isolated_check_bits,
+                    ctx->isolated_check_bits)) {
+
+          printf("Invalid login with icb colission!\n Possible break-in detected\n");
+
+        }
     
         return PPH_ACCOUNT_IS_INVALID;
     
@@ -827,8 +832,20 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       
       // compare both.
       if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
-        // TODO: check if partial bytes matches and raise the alarm
-        
+
+         /* If they didn't match , ensure that the icb's don't match (raise an
+          * alarm if they do) */
+        for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
+          memcpy(xored_hash, resulting_hash, DIGEST_LENGTH);
+          _calculate_digest(resulting_hash, xored_hash, DIGEST_LENGTH);
+        }
+
+        if (!memcmp(resulting_hash, current_entry->isolated_check_bits,
+                    ctx->isolated_check_bits)) {
+
+          printf("Invalid login with icb colission!\n Possible break-in detected\n");
+
+        }
         return PPH_ACCOUNT_IS_INVALID;
     
       }
