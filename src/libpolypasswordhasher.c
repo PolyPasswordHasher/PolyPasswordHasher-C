@@ -88,7 +88,6 @@
 * CHANGES :
 *     21/04/2014: secret is no longer a parameter
 */
-
 pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
 
 
@@ -159,12 +158,12 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
   context->next_entry = 1;
   context->account_data = NULL;
   context->previous_logins = NULL;
-
+  context->bootstrap_entries = NULL;
 
 
   // 5) Initialize share context
   for(i=0;i<MAX_NUMBER_OF_SHARES;i++) {
-    share_numbers[i]=(unsigned char)i+1;
+    share_numbers[i] = (short)i+1;
   }
 
   // Update the share context, the size of the shares is reduced by the number
@@ -247,6 +246,7 @@ PPH_ERROR pph_destroy_context(pph_context *context){
 
   pph_account_node *current,*next;
   pph_previous_login *logins, *current_login;
+  pph_bootstrap_entry *this_bootstrap_entry, *next_bootstrap_entry;
 
 
   // check that we are given a valid pointer
@@ -262,7 +262,6 @@ PPH_ERROR pph_destroy_context(pph_context *context){
     free(context->secret);
   }
 
-
   if(context->account_data != NULL){
     next = context->account_data;
     while(next!=NULL){
@@ -275,10 +274,12 @@ PPH_ERROR pph_destroy_context(pph_context *context){
   }
 
 
+
   if(context->share_context!=NULL){
     gfshare_ctx_free(context->share_context);
   }
   
+
   // free the previous logins
   logins = context->previous_logins;
   while(logins != NULL) {
@@ -286,6 +287,15 @@ PPH_ERROR pph_destroy_context(pph_context *context){
     current_login = logins;
     logins = logins->next;
     free(current_login);
+
+  }
+
+  this_bootstrap_entry = context->bootstrap_entries;
+  while(this_bootstrap_entry != NULL){
+
+    next_bootstrap_entry = this_bootstrap_entry->next;
+    free(this_bootstrap_entry);
+    this_bootstrap_entry = next_bootstrap_entry;
 
   }
   
@@ -378,6 +388,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   unsigned int length;
   unsigned int i;
   pph_entry *entry_node,*last_entry;
+  pph_bootstrap_entry *bootstrap_entry_node;
   uint8 current_entry;
   uint8 share_data[SHARE_LENGTH];
   uint8 resulting_hash[DIGEST_LENGTH];
@@ -416,9 +427,11 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   }
 
   // check if we are able to get shares from the context vault
-  if(ctx->is_bootstrapped != true || ctx->AES_key == NULL){
-    
-    return PPH_CONTEXT_IS_LOCKED;
+  if(ctx->is_bootstrapped != true || ctx->AES_key == NULL) {
+   
+    // we can create bootstrap accounts now... 
+    if (shares != SHIELDED_ACCOUNT)
+      return PPH_CONTEXT_IS_LOCKED;
     
   }
 
@@ -469,7 +482,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // share in a round robin fashion
     entry_node->share_number = ctx->next_entry;
     ctx->next_entry++;
-    if(ctx->next_entry==0 || ctx->next_entry >= MAX_NUMBER_OF_SHARES) {
+    if(ctx->next_entry == 0 || ctx->next_entry >= MAX_NUMBER_OF_SHARES) {
       ctx->next_entry=1;
     }   
 
@@ -486,10 +499,28 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     // get a salt for the password
     get_random_bytes(MAX_SALT_LENGTH, salt_buffer); 
  
-    // generate the entry
-    entry_node = create_shielded_entry(password, password_length,
-        salt_buffer, MAX_SALT_LENGTH, ctx->AES_key, DIGEST_LENGTH,
-        ctx->isolated_check_bits);
+    // generate the entry we generate bootstrap accounts when the 
+    // context is bootstrapping
+    if (ctx->is_bootstrapped == false || ctx->AES_key == NULL) {
+      entry_node = create_bootstrap_entry(password, password_length,
+              salt_buffer, MAX_SALT_LENGTH);
+
+      // we need to populate a bootstrap account list for easy updating later...
+      bootstrap_entry_node = malloc(sizeof(*bootstrap_entry_node));
+      bootstrap_entry_node->entry = entry_node;
+      if (ctx->bootstrap_entries == NULL) {
+        ctx->bootstrap_entries = bootstrap_entry_node;
+        bootstrap_entry_node->next = NULL;
+      } else {
+        bootstrap_entry_node->next = ctx->bootstrap_entries; 
+        ctx->bootstrap_entries = bootstrap_entry_node;
+      }
+
+    } else {
+      entry_node = create_shielded_entry(password, password_length,
+          salt_buffer, MAX_SALT_LENGTH, ctx->AES_key, DIGEST_LENGTH,
+          ctx->isolated_check_bits);
+    }
 
     if(entry_node == NULL){
     
@@ -514,7 +545,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   }
 
   // fill with the user entry with the rest of the account information.
-  memcpy(node->account.username,username,username_length);
+  memcpy(node->account.username, username, username_length);
   node->account.number_of_entries = shares;
   node->account.username_length = username_length;
   node->account.entries = entry_node;
@@ -605,7 +636,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   uint8 xored_hash[SHARE_LENGTH];
 
   // these are value holders to improve readability
-  uint8 sharenumber;
+  short sharenumber;
   pph_entry *current_entry;
   pph_entry *challenge_entry;
   unsigned int i;
@@ -637,23 +668,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     
   }
 
-  // check if the context is locked and we lack isolated-check-bits to check. If we
-  // do not have enough isolated-check-bits (at least one), we cannot do isolated
-  // validation
-  if(ctx->is_bootstrapped != true && ctx->isolated_check_bits == 0){
-    
-    return PPH_CONTEXT_IS_LOCKED;
-    
-  }
-
-  // check we have a shielded key
-  if(ctx->AES_key == NULL && ctx->isolated_check_bits == 0){
-    
-    return PPH_CONTEXT_IS_LOCKED;
-    
-  }
-
-
   // 2) Try to find the user in our context.
   // search for our user, we search the entries with the same username length 
   // first, and then we check if the contents are the same. 
@@ -673,14 +687,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     return PPH_ACCOUNT_IS_INVALID;
     
   }
-
-  
-  // if we reach here, we should have enough resources to provide a login
-  // functionality to the user.
-  
-
-  // 3) Try to verify the proper password for him.
-  // first, check what type of account is this
   
   // this probably happens if data is inconsistent, but let's avoid
   // segmentation faults. 
@@ -696,18 +702,51 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   current_entry = target->account.entries;
   sharenumber = current_entry->share_number;
   
-  // if the context is not bootstrapped, we can only provide isolated validation 
-  // and bootstrap account creation.
-  if(ctx->is_bootstrapped != true){
+  // check if the context is locked and we lack isolated-check-bits to check. If we
+  // do not have enough isolated-check-bits (at least one), we cannot do isolated
+  // validation. We can also check bootstrap accounts, so let's verify that also.
+  if (current_entry ->share_number != BOOTSTRAP_ACCOUNT) {
+      if(ctx->is_bootstrapped != true && ctx->isolated_check_bits == 0){
+        
+        return PPH_CONTEXT_IS_LOCKED;
+        
+      }
 
-    // isolated-check-bits 
-    // calculate the proposed digest, this means, calculate the hash with
-    // the information just provided about the user. 
-    memcpy(salted_password,current_entry->salt,current_entry->salt_length);
-    memcpy(salted_password+current_entry->salt_length, password,
-        current_entry->password_length);
-    _calculate_digest(resulting_hash, salted_password, 
+      // check we have a shielded key
+      if(ctx->AES_key == NULL && ctx->isolated_check_bits == 0){
+        
+        return PPH_CONTEXT_IS_LOCKED;
+        
+      }
+  }
+  
+  // if we reach here, we should have enough resources to provide a login
+  // functionality to the user.
+  
+
+  // 3) Try to verify the proper password for him.
+  // first, check what type of account is this
+
+  // if the context is not bootstrapped, we can only provide isolated validation
+  // and bootstrap account verification.
+
+  // calculate the proposed digest with the salt from the account and
+  // the password in the argument.
+  memcpy(salted_password,current_entry->salt, current_entry->salt_length);
+  memcpy(salted_password+current_entry->salt_length, password, 
+      password_length); 
+  _calculate_digest(resulting_hash, salted_password, 
        current_entry->salt_length + password_length);
+
+  // if the account is a bootstrap account, verify it first
+  if (current_entry->share_number == BOOTSTRAP_ACCOUNT) {
+    if (memcmp(resulting_hash, current_entry->protector_value, DIGEST_LENGTH))
+        return PPH_ACCOUNT_IS_INVALID;
+
+    return PPH_ERROR_OK;
+  }
+
+  if(ctx->is_bootstrapped != true){
 
     // we should store this login for verification after bootstrapping;
     this_login = malloc(sizeof(*this_login));
@@ -735,7 +774,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     }
 
     // this login was successful, add it to the full verification list.
-    printf("Segfault!\n");
     if (ctx->previous_logins == NULL) {
         ctx->previous_logins = this_login;
     } else{
@@ -751,6 +789,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
   // we are under normal operation and hence we can provide full verification.
   else{ 
+
     // first, check if the account is a threshold or shielded account.
     if(sharenumber == 0){
       
@@ -765,15 +804,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       EVP_DecryptFinal_ex(&de_ctx, xored_hash+p_len, &f_len);
       EVP_CIPHER_CTX_cleanup(&de_ctx);
 
-      // calculate the proposed digest with the parameters provided in
-      // this function.
-      memcpy(salted_password,current_entry->salt, current_entry->salt_length);
-      memcpy(salted_password+current_entry->salt_length, password, 
-          password_length); 
-      _calculate_digest(resulting_hash, salted_password, 
-          current_entry->salt_length + password_length);
-
-      
       // 3) compare both, and they should match.
       if(memcmp(resulting_hash, xored_hash, DIGEST_LENGTH)){
         // TODO: check if isolated check bits matches and raise the alarm
@@ -790,14 +820,6 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
       // not 0
       gfshare_ctx_enc_getshare(ctx->share_context, sharenumber, share_data);
 
-      // calculate the proposed digest with the salt from the account and
-      // the password in the argument.
-      memcpy(salted_password,current_entry->salt, current_entry->salt_length);
-      memcpy(salted_password+current_entry->salt_length, password, 
-          password_length); 
-      _calculate_digest(resulting_hash, salted_password, 
-          current_entry->salt_length + password_length);
-      
       // xor the thing back to normal
       _xor_share_with_digest(xored_hash,current_entry->protector_value,
           share_data, DIGEST_LENGTH);
@@ -895,11 +917,12 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   unsigned int i;
   uint8 secret[SHARE_LENGTH];
   uint8 salted_password[MAX_USERNAME_LENGTH+MAX_SALT_LENGTH];
-  uint8 estimated_digest[DIGEST_LENGTH];
+  uint8 estimated_digest[DIGEST_LENGTH], icb_digest_buffer[DIGEST_LENGTH];
   uint8 estimated_share[SHARE_LENGTH];
   pph_entry *entry; 
   pph_account_node *current_user;
   pph_previous_login *this_login, *next_login;
+  pph_bootstrap_entry *bootstrap_update_entry, *bootstrap_node;
   
 
   //sanitize the data.
@@ -942,7 +965,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
         entry = current_user->account.entries;
         
         // check if he is a protector account.
-        if(entry->share_number != 0){
+        if(entry->share_number != SHIELDED_ACCOUNT && 
+                entry->share_number != BOOTSTRAP_ACCOUNT){
         
           // if he is a protector account, we must attempt to reconstruct the
           // shares using their information, traverse his entries
@@ -994,8 +1018,8 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 
   // if the share context is not initialized, initialize one with the
   // information we have about our context. 
-  if(ctx->share_context == NULL){
-    for(i=0;i<MAX_NUMBER_OF_SHARES;i++){
+  if(ctx->share_context == NULL) {
+    for(i = 0; i < MAX_NUMBER_OF_SHARES; i++) {
       share_numbers[i]=(unsigned char)i+1;
     }
     ctx->share_context = gfshare_ctx_init_enc( share_numbers,
@@ -1009,6 +1033,34 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
   ctx->is_bootstrapped = true;
   ctx->AES_key = ctx->secret;
+
+  /* update the bootstrap accounts */
+  bootstrap_update_entry = ctx->bootstrap_entries;
+  while(bootstrap_update_entry != NULL) {
+
+    entry = bootstrap_update_entry->entry;
+
+    /* calculate and add the isolated-check bits */
+    memcpy(icb_digest_buffer, entry->protector_value, DIGEST_LENGTH);
+    for (i = 0; i < ICB_HASH_ITERATIONS; i++) {
+      memcpy(estimated_digest, icb_digest_buffer, DIGEST_LENGTH);
+      _calculate_digest(icb_digest_buffer, estimated_digest, DIGEST_LENGTH);
+    }
+    memcpy(entry->isolated_check_bits, icb_digest_buffer, ctx->isolated_check_bits);
+
+    /* encrypt the original entry */
+    _encrypt_digest(entry->protector_value, entry->protector_value, ctx->AES_key);
+
+    /* update sharenumbers */
+    entry->share_number = SHIELDED_ACCOUNT;
+
+    bootstrap_node = bootstrap_update_entry->next;
+    free(bootstrap_update_entry);
+    bootstrap_update_entry = bootstrap_node;
+    
+  }
+  ctx->bootstrap_entries = NULL;
+
  
   // Finally, fully verify any bootstrap account
   this_login = ctx->previous_logins;
@@ -1016,14 +1068,14 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 
     next_login = this_login->next; 
 
-    if (this_login->entry->share_number == 0) {
+    if (this_login->entry->share_number == SHIELDED_ACCOUNT) {
 
       _encrypt_digest(estimated_digest, this_login->digest, ctx->AES_key);
 
     } else {
 
-      gfshare_ctx_enc_getshare(ctx->share_context, this_login->entry->share_number,
-              estimated_share);
+      gfshare_ctx_enc_getshare(ctx->share_context, 
+              (uint8)this_login->entry->share_number, estimated_share);
       _xor_share_with_digest(estimated_digest, this_login->digest, estimated_share, 
               DIGEST_LENGTH);
     }
@@ -1036,7 +1088,6 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 
     }
    
-
     free(this_login);
     this_login = next_login;
 
@@ -1125,6 +1176,7 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   context_to_store.AES_key = NULL;
   context_to_store.secret = NULL;
   context_to_store.account_data = NULL;
+  context_to_store.bootstrap_entries = NULL;
 
   // set this context's information to locked.
   context_to_store.is_bootstrapped = false; 
@@ -1216,6 +1268,7 @@ pph_context *pph_reload_context(const unsigned char *filename){
   pph_context *loaded_context;
   pph_account_node *accounts,*last,account_buffer;
   pph_entry *entries, *last_entry, entry_buffer;
+  pph_bootstrap_entry *bootstrap_entry_node;
   unsigned int i;
 
 
@@ -1255,13 +1308,32 @@ pph_context *pph_reload_context(const unsigned char *filename){
     accounts = malloc(sizeof(account_buffer));
     memcpy(accounts,&account_buffer,sizeof(account_buffer));
     last_entry = NULL;
-    for(i=0;i<account_buffer.account.number_of_entries;i++){
+
+    for (i = 0; i < account_buffer.account.number_of_entries; i++) {
       
       // allocate the entry list for this account
       entries = malloc(sizeof(*entries));
-      fread(entries,sizeof(*entries),1,fp);
+      fread(entries, sizeof(*entries), 1, fp);
       entries->next = last_entry;
       last_entry = entries;
+
+      // add bootstrap account queue for updating...
+      if (entries->share_number == BOOTSTRAP_ACCOUNT) {
+
+        bootstrap_entry_node = malloc(sizeof(*bootstrap_entry_node));
+        bootstrap_entry_node->entry = entries;
+
+        if (loaded_context->bootstrap_entries == NULL) {
+          loaded_context->bootstrap_entries = bootstrap_entry_node;
+          bootstrap_entry_node->next = NULL;
+        } else {
+          bootstrap_entry_node->next = loaded_context->bootstrap_entries;
+          loaded_context->bootstrap_entries = bootstrap_entry_node;
+        }
+
+      }
+
+
     }
 
     accounts->account.entries = entries;
@@ -1647,7 +1719,7 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
           AES_key);
 
   // shielded accounts have this value defaulted to 0;
-  entry_node->share_number = 0;
+  entry_node->share_number = SHIELDED_ACCOUNT;
 
   // shielded accounts should have only one entry
   entry_node->next = NULL;
@@ -1657,9 +1729,52 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
 }
 
 
+pph_entry *create_bootstrap_entry(uint8 *password, unsigned int password_length, 
+        uint8 *salt, unsigned int salt_length)
+{
 
+  pph_entry *entry_node = NULL;
+  uint8 salted_password[MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH];
+  unsigned int i;
 
+  // check everything makes sense, nothing should point to null
+  if(password == NULL || salt == NULL){
+    
+    return NULL;
+    
+  }
 
+  // check for password and pass lengths
+  if(password_length > MAX_PASSWORD_LENGTH || salt_length > MAX_SALT_LENGTH){
+    
+    return NULL;
+    
+  }
+
+  // allocate memory and fail if there is not memory available.
+  entry_node = malloc(sizeof(*entry_node));
+  if(entry_node==NULL){
+    
+    return NULL;
+    
+  }
+
+  // copy the salt into the pph_entry
+  memcpy(entry_node->salt, salt, salt_length);
+  entry_node->salt_length = salt_length;
+  
+  // prepend the salt to the password and generate a digest
+  memcpy(salted_password,entry_node->salt,salt_length);
+  memcpy(salted_password+MAX_SALT_LENGTH, password, password_length); 
+  _calculate_digest(entry_node->protector_value,salted_password, 
+      salt_length + password_length); 
+
+  // bootstrap accounts have their sharenumber set to bootstrap
+  entry_node->share_number = BOOTSTRAP_ACCOUNT;
+  entry_node->next = NULL;
+ 
+  return entry_node;
+}
 // This is a private helper that produces a salt string,
 
 void get_random_bytes(unsigned int length, uint8 *dest){

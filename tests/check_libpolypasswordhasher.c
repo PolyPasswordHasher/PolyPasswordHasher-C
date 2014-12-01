@@ -428,7 +428,12 @@ START_TEST(test_check_login_input_sanity) {
       too_big_password, strlen(too_big_password)); 
   ck_assert_msg(error == PPH_PASSWORD_IS_TOO_LONG,
       "expected PASSWORD_IS_TOO_LONG");
-  
+ 
+  // create an account for a proper account check
+  error = pph_create_account(context, username, strlen(username), password,
+         strlen(password), 1); 
+  ck_assert(error == PPH_ERROR_OK);
+
   // finally, check it returns the proper error code if the vault is locked
   // still. We set the bootstrapped flag to false to lock the context, and we also
   // know that isolated bytes is 0 and won't provide any login functionality. 

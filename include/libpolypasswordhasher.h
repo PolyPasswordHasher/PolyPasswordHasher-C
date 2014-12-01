@@ -61,6 +61,11 @@
 #define SIGNATURE_HASH_ITERATIONS 10000 /* The number of iterations should be set higher */
 #define ICB_HASH_ITERATIONS 10000
 
+// Account type defines, for readability
+#define SHIELDED_ACCOUNT 0
+#define BOOTSTRAP_ACCOUNT -1
+
+
 
 /* Custom types */ 
 typedef unsigned char uint8;
@@ -102,7 +107,7 @@ typedef enum{
 typedef struct _pph_entry{
   
   // the share number that belongs to this entry
-  uint8 share_number;
+  short share_number;
 
   // information about the salt  
   uint8 salt[MAX_SALT_LENGTH];      
@@ -151,6 +156,14 @@ typedef struct _pph_previous_login{
 
 } pph_previous_login;
 
+// we will have a data structure for bootstrap entries to update them
+// after bootstrapping.
+typedef struct _pph_bootstrap_entry {
+
+    pph_entry *entry;
+    struct _pph_bootstrap_entry *next;
+} pph_bootstrap_entry;
+
 
 // The context structure defines all of what's needed to handle a polypasswordhasher
 // store.
@@ -184,6 +197,9 @@ typedef struct _pph_context{
   // we will populate a list of previous logins to fully verify after 
   // bootstrapping
   pph_previous_login *previous_logins;
+
+  // this will contain entries to be updated after bootstrapping.
+  pph_bootstrap_entry *bootstrap_entries;
 
 } pph_context;
 
@@ -692,7 +708,6 @@ PPH_ERROR check_pph_secret(uint8 *secret, uint8 *secret_integrity);
 
 
 // this function provides a protector entry given the input
-
 pph_entry *create_protector_entry(uint8 *password, unsigned int
     password_length, uint8 *salt, unsigned int salt_length, const void *share,
     unsigned int share_length, unsigned int isolated_check_bits);
@@ -702,12 +717,14 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
 
 // this other function is the equivalent to the one in the top, but for
 // shielded accounts.
-
 pph_entry *create_shielded_entry(uint8 *password, unsigned int
     password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
     unsigned int key_length, unsigned int isolated_check_bits);
 
-
+// Finally, this function, creates an entry for an account that was created during
+// bootstrapping.
+pph_entry *create_bootstrap_entry(uint8 *password, unsigned int password_length, 
+        uint8 *salt, unsigned int salt_length);
 
 
 // This produces a salt string, warning, this only generates a 

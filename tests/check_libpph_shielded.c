@@ -106,12 +106,12 @@ START_TEST(test_pph_create_accounts)
   context->is_bootstrapped = false; 
   context->AES_key = NULL;
   
-  // we will check for the existing account error handler now...
+  // This will create a bootstrap account...
   error = pph_create_account(context, "someotherguy", strlen("someotherguy"),
     "came-here-asking-the-same-thing",strlen("came-here-asking-the-same-thing"),
     0);
-  ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED, 
-      "We should have gotten an error now that the vault is locked");
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should have gotten an error ok, since we created a bootstrap account");
  
   error = pph_destroy_context(context);
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -227,11 +227,23 @@ START_TEST(test_check_login_shielded) {
       strlen("i'mnotthere"));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, " how did we get in!?");
 
-  // 4) check if thresholdfull accounts can login (they should)
+  // 4) check if protector accounts can login (they should)
   error = pph_check_login(context, "0anotheruser", strlen("0anotheruser"), 
     "anotherpassword", strlen("anotherpassword"));
   ck_assert_msg(error == PPH_ERROR_OK,
       " we should have been able to login as a threshold account");
+
+  // 5) create a bootstrap account and log in.
+  free(context->secret);
+  context->secret = NULL;
+  context->is_bootstrapped = false;
+  error = pph_create_account(context, "specialusername", strlen("specialusername"),
+          "specialpassword", strlen("specialpassword"), 0);
+  ck_assert(error == PPH_ERROR_OK);
+  error = pph_check_login(context, "specialusername", strlen("specialusername"),
+          "specialpassword", strlen("specialpassword"));
+  ck_assert(error == PPH_ERROR_OK);
+
 
   // clean up our mess.
   pph_destroy_context(context);

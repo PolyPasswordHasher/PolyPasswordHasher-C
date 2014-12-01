@@ -106,12 +106,12 @@ START_TEST(test_pph_create_accounts)
   context->is_bootstrapped = false; 
   context->AES_key = NULL;
 
-  // we will check for the existing account error handler now...
+  // we will check for bootstrap account creation.
   error = pph_create_account(context, "someotherguy", strlen("someotherguy"),
    "came-here-asking-the-same-thing",strlen("came-here-asking-the-same-thing"),
    0);
-  ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED, 
-      "We should have gotten an error now that the vault is locked");
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should be able to create a bootstrap account!");
  
   error = pph_destroy_context(context);
   ck_assert_msg(error == PPH_ERROR_OK, 
