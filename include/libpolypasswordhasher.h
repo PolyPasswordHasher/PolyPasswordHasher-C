@@ -180,7 +180,7 @@ typedef struct _pph_context{
   uint8 next_entry;             
  
   // this is a boolean flag to indicate if the secret is available.  
-  bool is_bootstrapped;             
+  bool is_normal_operation;             
   
   // if the context is under normal operation, these will point to the secret
   // and the AES key
@@ -222,7 +222,7 @@ typedef struct _pph_context{
 *                     uint8 threshold                 = threshold
 *                     uint8 available_shares;         = MAX_NUMBER_OF_SHARES
 *                     uint8 next_entry;               = 1
-*                     bool is_bootstrapped;               = true   
+*                     bool is_normal_operation;       = true   
 *                     uint8 *AES_key;                 = will point to secret       
 *                     uint8 *secret;                  = generated secret
 *                     uint8 isolated_check_bits;            = isolated_check_bits
@@ -289,7 +289,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits);
 *                     uint8 threshold                 = 
 *                     uint8 available_shares;         = 
 *                     uint8 next_entry;               = 
-*                     bool is_bootstrapped;               = 
+*                     bool is_normal_operation;       = 
 *                     uint8 *AES_key;                 = needs freeing      
 *                     uint8 *secret;                  = needs freeing
 *                     uint8 isolated_check_bits;            = 

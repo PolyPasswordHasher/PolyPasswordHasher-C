@@ -43,7 +43,7 @@
 *                     uint8 threshold                 = threshold
 *                     uint8 available_shares;         = MAX_NUMBER_OF_SHARES
 *                     uint8 next_entry;               = 1
-*                     bool is_bootstrapped;               = true   
+*                     bool is_normal_operation;       = true   
 *                     uint8 *AES_key;                 = will point to secret       
 *                     uint8 *secret;                  = generated secret
 *                     uint8 isolated_check_bits;            = isolated_check_bits
@@ -148,7 +148,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
   context->available_shares = (uint8)MAX_NUMBER_OF_SHARES;
 
   // since this is a new context, we are under normal operation.
-  context->is_bootstrapped = true; 
+  context->is_normal_operation = true; 
 
   // We are using the secret to encrypt shielded accounts, so we set the 
   // AES key to be the same as the secret. 
@@ -207,7 +207,7 @@ pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits) {
 *                     uint8 threshold                 = 
 *                     uint8 available_shares;         = 
 *                     uint8 next_entry;               = 
-*                     bool is_bootstrapped;               = 
+*                     bool is_normal_operation        = 
 *                     uint8 *AES_key;                 = needs freeing      
 *                     uint8 *secret;                  = needs freeing
 *                     uint8 isolated_check_bits;            = 
@@ -427,7 +427,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
   }
 
   // check if we are able to get shares from the context vault
-  if(ctx->is_bootstrapped != true || ctx->AES_key == NULL) {
+  if(ctx->is_normal_operation != true || ctx->AES_key == NULL) {
    
     // we can create bootstrap accounts now... 
     if (shares != SHIELDED_ACCOUNT)
@@ -501,7 +501,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
  
     // generate the entry we generate bootstrap accounts when the 
     // context is bootstrapping
-    if (ctx->is_bootstrapped == false || ctx->AES_key == NULL) {
+    if (ctx->is_normal_operation == false || ctx->AES_key == NULL) {
       entry_node = create_bootstrap_entry(password, password_length,
               salt_buffer, MAX_SALT_LENGTH);
 
@@ -706,7 +706,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
   // do not have enough isolated-check-bits (at least one), we cannot do isolated
   // validation. We can also check bootstrap accounts, so let's verify that also.
   if (current_entry ->share_number != BOOTSTRAP_ACCOUNT) {
-      if(ctx->is_bootstrapped != true && ctx->isolated_check_bits == 0){
+      if(ctx->is_normal_operation != true && ctx->isolated_check_bits == 0){
         
         return PPH_CONTEXT_IS_LOCKED;
         
@@ -746,7 +746,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     return PPH_ERROR_OK;
   }
 
-  if(ctx->is_bootstrapped != true){
+  if(ctx->is_normal_operation != true){
 
     // we should store this login for verification after bootstrapping;
     this_login = malloc(sizeof(*this_login));
@@ -1048,7 +1048,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
   // we have an initialized share context, we set the recombined secret to the
   // context's secret and set the flag to one so it is ready to use.
   gfshare_ctx_enc_setsecret(ctx->share_context, ctx->secret);
-  ctx->is_bootstrapped = true;
+  ctx->is_normal_operation = true;
   ctx->AES_key = ctx->secret;
 
   /* update the bootstrap accounts */
@@ -1195,8 +1195,8 @@ PPH_ERROR pph_store_context(pph_context *ctx, const unsigned char *filename){
   context_to_store.account_data = NULL;
   context_to_store.bootstrap_entries = NULL;
 
-  // set this context's information to locked.
-  context_to_store.is_bootstrapped = false; 
+  // set this context's information to botstrapping.
+  context_to_store.is_normal_operation = false; 
 
 
   // 2) open selected file

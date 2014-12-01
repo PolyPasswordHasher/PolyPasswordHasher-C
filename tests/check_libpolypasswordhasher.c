@@ -350,7 +350,7 @@ START_TEST(test_create_account_entry_consistency) {
 
   // finally, check it returns the proper error code if the vault is locked
   // still, we will simulate account locking by unsetting the flag. 
-  context->is_bootstrapped = false; 
+  context->is_normal_operation = false; 
                            
   
   // we will check for the locked context error now...
@@ -437,7 +437,7 @@ START_TEST(test_check_login_input_sanity) {
   // finally, check it returns the proper error code if the vault is locked
   // still. We set the bootstrapped flag to false to lock the context, and we also
   // know that isolated bytes is 0 and won't provide any login functionality. 
-  context->is_bootstrapped = false; 
+  context->is_normal_operation = false; 
 
   error=pph_check_login(context,username,strlen(username), password,
       strlen(password));
@@ -720,7 +720,7 @@ START_TEST(test_pph_unlock_password_data_input_sanity) {
       "this was a good initialization, go tell someone");
   
   // let's imagine it's all broken
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   
   // now give a wrong username count, below the threshold.
   error = pph_unlock_password_data(context, 0, usernames, username_lengths,
@@ -820,7 +820,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
 
 
   // let's imagine it's all broken
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   strcpy(context->secret,"thiswasnotthesecretstring");
 
   // now give a correct full account information, we expect to have our secret
@@ -832,7 +832,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   }
 
   // let's imagine it's all broken (Again)
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   strcpy(context->secret,"thiswasnotthesecretstring");
 
   // now give a correct full account information, we expect to have our secret
@@ -857,7 +857,7 @@ START_TEST(test_pph_unlock_password_data_correct_thresholds) {
   
   // attempt to bootstrap the store with wrong passwords
   free(context->secret);
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
 
   error = pph_unlock_password_data(context, 2, usernames_subset,
      username_lengths_subset, bad_passwords);
@@ -931,7 +931,7 @@ START_TEST(test_pph_reload_context_input_sanity) {
   ck_assert_msg(context->threshold == 2, " threshold didn't match the one set");
   ck_assert_msg(context->isolated_check_bits == 0, "isolated bytes don't match");
   ck_assert_msg(context->secret == NULL, " didn't store null for secret");
-  ck_assert_msg(context->is_bootstrapped == false, " loaded a bootstrapped context");
+  ck_assert_msg(context->is_normal_operation == false, " loaded a bootstrapped context");
   
   pph_destroy_context(context);
 
@@ -1087,7 +1087,7 @@ START_TEST(test_pph_unlock_password_data_full_range) {
   }
 
   // lock the context
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   
   // unlock (bootstrap) the context
   error = pph_unlock_password_data( context, MAX_USERNAME_LENGTH -1, usernames,
@@ -1104,7 +1104,7 @@ START_TEST(test_pph_unlock_password_data_full_range) {
   }
 
   // now, fail to bootstrap the context, 
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   passwords[0][0] = ~passwords[0][0];
 
   error = pph_unlock_password_data( context, MAX_USERNAME_LENGTH -1, usernames,

@@ -103,7 +103,7 @@ START_TEST(test_pph_create_accounts)
   
   // finally, check it returns the proper error code if the vault is locked
   // still
-  context->is_bootstrapped = false; 
+  context->is_normal_operation = false; 
   context->AES_key = NULL;
   
   // This will create a bootstrap account...
@@ -236,7 +236,7 @@ START_TEST(test_check_login_shielded) {
   // 5) create a bootstrap account and log in.
   free(context->secret);
   context->secret = NULL;
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   error = pph_create_account(context, "specialusername", strlen("specialusername"),
           "specialpassword", strlen("specialpassword"), 0);
   ck_assert(error == PPH_ERROR_OK);
@@ -314,7 +314,7 @@ START_TEST(test_pph_unlock_password_data) {
   }
 
   // let's pretend all is broken
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context= NULL;
@@ -353,7 +353,7 @@ START_TEST(test_pph_unlock_password_data) {
 
 
   // let's imagine it's all broken (Again)
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context = NULL;

@@ -103,7 +103,7 @@ START_TEST(test_pph_create_accounts)
   // finally, check it returns the proper error code if the vault is locked
   // still, we will set the key to null and the locked flag to 0 to simulate
   // this.
-  context->is_bootstrapped = false; 
+  context->is_normal_operation = false; 
   context->AES_key = NULL;
 
   // we will check for bootstrap account creation.
@@ -297,7 +297,7 @@ START_TEST(test_pph_isolated_validation_and_bootstrapping) {
   }
   
   // let's pretend all is broken
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context= NULL;
@@ -346,7 +346,7 @@ START_TEST(test_pph_isolated_validation_and_bootstrapping) {
   ck_assert(context->AES_key != NULL);
 
   // let's imagine it's all broken (Again).
-  context->is_bootstrapped = false;
+  context->is_normal_operation = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context = NULL;
