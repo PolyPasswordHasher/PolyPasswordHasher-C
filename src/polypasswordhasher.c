@@ -33,7 +33,7 @@ int main(void)
   
   // when creating a user with no shares, we get a *shielded* account. 
   // Shielded accounts have their hash encrypted and are unable to 
-  // bootstrap a context
+  // recover shares and thus cannot help to transition to normal operation. 
   pph_create_account(context,"Eve", strlen("Eve"),
                                    "i'm.all.ears", strlen("i'm.all.ears"), 0);
   
