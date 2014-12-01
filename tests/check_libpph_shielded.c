@@ -487,6 +487,112 @@ START_TEST(test_pph_shielded_full_lifecycle){
 }END_TEST
 
 
+// create a context and set it to bootstrapping. Create bootstrap accounts.
+// transition to normal operation and verify that the accounts are updated.
+START_TEST(test_pph_bootstrap_accounts)
+{
+
+  PPH_ERROR error;
+  pph_context *context;
+  uint8 threshold = 2; 
+  uint8 isolated_check_bits = 0;
+  pph_account_node *account_nodes;
+  unsigned int i;
+  unsigned int username_count=5;
+  const uint8 *usernames[] = {"username1",
+                              "username12",
+                              "username1231",
+                              "username26",
+                              "username5",
+                            };
+  const uint8 *passwords[] = {"password1",
+                              "password12",
+                              "password1231",
+                              "password26",
+                              "password5"
+                              };
+  
+    unsigned int username_lengths[] = { strlen("username1"),
+                                      strlen("username12"),
+                                      strlen("username1231"),
+                                      strlen("username26"),
+                                      strlen("username5"),
+                                  };
+  const uint8 *usernames_subset[] = { "username12",
+                                      "username26"};
+  unsigned int username_lengths_subset[] = { strlen("username12"),
+                                            strlen("username26"),
+                                            };
+  const uint8 *password_subset[] = { "password12",
+                                     "password26"};
+  uint8 key_backup[DIGEST_LENGTH];
+
+  // setup the context 
+  context = pph_init_context(threshold, isolated_check_bits);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  // backup the key...
+  memcpy(key_backup,context->AES_key,DIGEST_LENGTH);
+   
+  // create some protector accounts...
+  for(i=0;i<username_count;i++) {
+    error = pph_create_account(context, usernames[i], strlen(usernames[i]),
+        passwords[i], strlen(passwords[i]),1);
+    ck_assert(error == PPH_ERROR_OK);
+  }
+
+  // store the context
+  error = pph_store_context( context, "pph.db");
+  ck_assert( error == PPH_ERROR_OK);
+  pph_destroy_context(context);
+
+  // reload the context (should be bootstrapping by now)...
+  context = pph_reload_context("pph.db");
+  ck_assert( context != NULL);
+
+  // create a boostrap account
+  error = pph_create_account(context, "bootstrapacc", strlen("bootstrapacc"),
+      "bootstrappw", strlen("bootstrappw"), 0);
+  ck_assert(error == PPH_ERROR_OK);
+
+  // try to overwrite the account....
+  error = pph_create_account(context, "bootstrapacc", strlen("bootstrapacc"),
+      "bootstrappw", strlen("bootstrappw"), 0);
+  ck_assert(error == PPH_ACCOUNT_EXISTS);
+
+
+  // login to such account...
+  error = pph_check_login(context, "bootstrapacc", strlen("bootstrapacc"),
+      "bootstrappw", strlen("bootstrappw"));
+  ck_assert(error == PPH_ERROR_OK);
+  
+  // verify that a wrong account is detected...
+  error = pph_check_login(context, "bootstrapacc", strlen("bootstrapacc"),
+      "wrongpass", strlen("wrongpass"));
+  ck_assert(error == PPH_ACCOUNT_IS_INVALID);
+
+  // unlock the store...
+  error = pph_unlock_password_data(context, username_count, usernames, 
+      username_lengths, passwords);
+  ck_assert_msg(error == PPH_ERROR_OK," EXPECTED PPH_ERROR_OK");
+
+  // verify that we can log in with the new account...
+  error = pph_check_login(context, "bootstrapacc", strlen("bootstrapacc"),
+      "bootstrappw", strlen("bootstrappw"));
+  ck_assert(error == PPH_ERROR_OK);
+
+  // verify that the status of the entry changed to boostrapping.
+  account_nodes = context->account_data;
+  while(account_nodes != NULL){
+    ck_assert(account_nodes->account.entries->share_number != BOOTSTRAP_ACCOUNT);
+    account_nodes = account_nodes->next;
+  }
+
+  // cleanup, we're done...
+  pph_destroy_context(context);
+
+}END_TEST
 
 
 // test suite definition
@@ -506,6 +612,7 @@ Suite * polypasswordhasher_thl_suite(void)
   tcase_add_test (tc_non_isolated, test_check_login_shielded);
   tcase_add_test (tc_non_isolated, test_pph_unlock_password_data);
   tcase_add_test (tc_non_isolated, test_pph_shielded_full_lifecycle);
+  tcase_add_test (tc_non_isolated, test_pph_bootstrap_accounts);
   suite_add_tcase (s, tc_non_isolated);
 
   return s;
