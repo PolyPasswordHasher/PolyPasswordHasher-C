@@ -1,6 +1,6 @@
-/* Check libpolypasswordhasher with the thresholdless extension
+/* Check libpolypasswordhasher with the shielded extension
  *
- * The thresholdless extension is tested in this suite
+ * The shielded extension is tested in this suite
  *
  * @author  Santiago Torres
  * @date    10/03/2014
@@ -27,10 +27,10 @@ START_TEST(test_pph_init_context_AES_key)
 
   pph_context *context; 
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
 
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
 
   ck_assert_msg( context != NULL, " couldn't initialize the pph context" );
   ck_assert_msg( context->AES_key != NULL, "the key wansn't generated properly");
@@ -51,10 +51,10 @@ START_TEST(test_pph_destroy_context_AES_key)
   pph_context *context;
   PPH_ERROR error;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
 
   ck_assert_msg(context != NULL, " shouldn't break here");
   ck_assert_msg(context->AES_key != NULL, " the key wasn't generated properly");
@@ -69,7 +69,7 @@ END_TEST
 
 
 
-// We will test some account creation, with only thresholdless accounts. 
+// We will test some account creation, with only shielded accounts. 
 START_TEST(test_pph_create_accounts)
 {
 
@@ -77,16 +77,16 @@ START_TEST(test_pph_create_accounts)
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
   
   
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
  
-  // attempt to create a thresholdless account now. 
+  // attempt to create a shielded account now. 
   error = pph_create_account(context, username, strlen(username),
       password, strlen(password), 0);  
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -94,7 +94,7 @@ START_TEST(test_pph_create_accounts)
   context->account_data->account.username[strlen(username)]='\0';
   ck_assert_str_eq(username,context->account_data->account.username);
 
-  // now lets check there are collisions between threshold and thresholdless
+  // now lets check there are collisions between threshold and shielded
   // accounts
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 1);
@@ -103,15 +103,15 @@ START_TEST(test_pph_create_accounts)
   
   // finally, check it returns the proper error code if the vault is locked
   // still
-  context->is_unlocked = false; 
+  context->is_normal_operation = false; 
   context->AES_key = NULL;
   
-  // we will check for the existing account error handler now...
+  // This will create a bootstrap account...
   error = pph_create_account(context, "someotherguy", strlen("someotherguy"),
     "came-here-asking-the-same-thing",strlen("came-here-asking-the-same-thing"),
     0);
-  ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED, 
-      "We should have gotten an error now that the vault is locked");
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should have gotten an error ok, since we created a bootstrap account");
  
   error = pph_destroy_context(context);
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -123,7 +123,7 @@ END_TEST
 
 
 
-// this test is intended to check that we can have both, thresholdless accounts
+// this test is intended to check that we can have both, shielded accounts
 // and threshold accounts in a same context and working properly.
 START_TEST(test_create_account_mixed_accounts) {
 
@@ -131,7 +131,7 @@ START_TEST(test_create_account_mixed_accounts) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
                           
   unsigned char password[] = "verysecure";
   unsigned char username[] = "atleastitry";
@@ -141,11 +141,11 @@ START_TEST(test_create_account_mixed_accounts) {
   uint8 share_result[SHARE_LENGTH];
 
 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  // Create a thresholdless account
+  // Create a shielded account
   error = pph_create_account(context, username, strlen(username), password,
       strlen(password), 0); 
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -174,13 +174,13 @@ END_TEST
 
 // This checks for a proper behavior when providing an existing username, 
 // first, as the first and only username, then after having many on the list
-START_TEST(test_check_login_thresholdless) {
+START_TEST(test_check_login_shielded) {
 
 
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned char password[] = "i'mnothere";
   unsigned char username[] = "nonexistentpassword";
   unsigned char anotheruser[] = "0anotheruser";
@@ -188,7 +188,7 @@ START_TEST(test_check_login_thresholdless) {
 
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -227,11 +227,23 @@ START_TEST(test_check_login_thresholdless) {
       strlen("i'mnotthere"));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, " how did we get in!?");
 
-  // 4) check if thresholdfull accounts can login (they should)
+  // 4) check if protector accounts can login (they should)
   error = pph_check_login(context, "0anotheruser", strlen("0anotheruser"), 
     "anotherpassword", strlen("anotherpassword"));
   ck_assert_msg(error == PPH_ERROR_OK,
       " we should have been able to login as a threshold account");
+
+  // 5) create a bootstrap account and log in.
+  free(context->secret);
+  context->secret = NULL;
+  context->is_normal_operation = false;
+  error = pph_create_account(context, "specialusername", strlen("specialusername"),
+          "specialpassword", strlen("specialpassword"), 0);
+  ck_assert(error == PPH_ERROR_OK);
+  error = pph_check_login(context, "specialusername", strlen("specialusername"),
+          "specialpassword", strlen("specialpassword"));
+  ck_assert(error == PPH_ERROR_OK);
+
 
   // clean up our mess.
   pph_destroy_context(context);
@@ -249,7 +261,7 @@ START_TEST(test_pph_unlock_password_data) {
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned int i;
   unsigned int username_count=5;
   const uint8 *usernames[] = {"username1",
@@ -287,7 +299,7 @@ START_TEST(test_pph_unlock_password_data) {
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -302,7 +314,7 @@ START_TEST(test_pph_unlock_password_data) {
   }
 
   // let's pretend all is broken
-  context->is_unlocked = false;
+  context->is_normal_operation = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context= NULL;
@@ -341,7 +353,7 @@ START_TEST(test_pph_unlock_password_data) {
 
 
   // let's imagine it's all broken (Again)
-  context->is_unlocked = false;
+  context->is_normal_operation = false;
   context->AES_key = NULL;
   context->secret = NULL;
   context->share_context = NULL;
@@ -357,7 +369,7 @@ START_TEST(test_pph_unlock_password_data) {
     ck_assert(key_backup[i] == context->AES_key[i]);
   } 
 
-  // check that we can login with an unlocked context.
+  // check that we can login with a bootstrapped context.
   error = pph_check_login(context, usernames_subset[0], 
     strlen(usernames_subset[0]),password_subset[0], strlen(password_subset[0]));
   ck_assert(error == PPH_ERROR_OK);
@@ -370,17 +382,17 @@ END_TEST
 
 
 
-// We are going to test the full application lifecycle with a thresholdless
+// We are going to test the full application lifecycle with a shielded
 // account, by generating a new context, creating threshold accounts, creating
-// a thresholdless account, saving the context, reloading the context, unlocking
-// the context and logging as a thresholdless account
-START_TEST(test_pph_thresholdless_full_lifecycle){
+// a shielded account, saving the context, reloading the context, bootstrapping 
+// the context and logging as a shielded account
+START_TEST(test_pph_shielded_full_lifecycle){
 
 
   PPH_ERROR error;
   pph_context *context;
   uint8 threshold = 2; 
-  uint8 partial_bytes = 0;
+  uint8 isolated_check_bits = 0;
   unsigned int i;
   unsigned int username_count=5;
   const uint8 *usernames[] = {"username1",
@@ -418,7 +430,7 @@ START_TEST(test_pph_thresholdless_full_lifecycle){
   ck_assert_msg(error == PPH_BAD_PTR," EXPECTED BAD_PTR");
 
   // setup the context 
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
@@ -433,14 +445,14 @@ START_TEST(test_pph_thresholdless_full_lifecycle){
   }
 
 
-  // create a thresholdless account
-  error = pph_create_account( context, "thresholdless", strlen("thresholdless"),
-      "thresholdlesspw", strlen("thresholdlesspw"), 0);
+  // create a shielded account
+  error = pph_create_account( context, "shielded", strlen("shielded"),
+      "shieldedpw", strlen("shieldedpw"), 0);
   ck_assert( error == PPH_ERROR_OK);
 
-  // check that we can login with the thresholdless account
-  error = pph_check_login(context, "thresholdless", strlen("thresholdless"),
-      "thresholdlesspw", strlen("thresholdlesspw"));
+  // check that we can login with the shielded account
+  error = pph_check_login(context, "shielded", strlen("shielded"),
+      "shieldedpw", strlen("shieldedpw"));
   ck_assert( error == PPH_ERROR_OK);
 
 
@@ -459,14 +471,14 @@ START_TEST(test_pph_thresholdless_full_lifecycle){
   ck_assert_msg(error == PPH_ERROR_OK," EXPECTED PPH_ERROR_OK");
 
 
-  // check that we can login with an unlocked context.
+  // check that we can login with a bootstrapped context.
   error = pph_check_login(context, usernames_subset[0], 
     strlen(usernames_subset[0]),password_subset[0], strlen(password_subset[0]));
   ck_assert(error == PPH_ERROR_OK);
 
-  // check that we can login with the thresholdless account
-  error = pph_check_login(context, "thresholdless", strlen("thresholdless"),
-      "thresholdlesspw", strlen("thresholdlesspw"));
+  // check that we can login with the shielded account
+  error = pph_check_login(context, "shielded", strlen("shielded"),
+      "shieldedpw", strlen("shieldedpw"));
   ck_assert( error == PPH_ERROR_OK);
 
   pph_destroy_context(context);
@@ -475,6 +487,112 @@ START_TEST(test_pph_thresholdless_full_lifecycle){
 }END_TEST
 
 
+// create a context and set it to bootstrapping. Create bootstrap accounts.
+// transition to normal operation and verify that the accounts are updated.
+START_TEST(test_pph_bootstrap_accounts)
+{
+
+  PPH_ERROR error;
+  pph_context *context;
+  uint8 threshold = 2; 
+  uint8 isolated_check_bits = 0;
+  pph_account_node *account_nodes;
+  unsigned int i;
+  unsigned int username_count=5;
+  const uint8 *usernames[] = {"username1",
+                              "username12",
+                              "username1231",
+                              "username26",
+                              "username5",
+                            };
+  const uint8 *passwords[] = {"password1",
+                              "password12",
+                              "password1231",
+                              "password26",
+                              "password5"
+                              };
+  
+    unsigned int username_lengths[] = { strlen("username1"),
+                                      strlen("username12"),
+                                      strlen("username1231"),
+                                      strlen("username26"),
+                                      strlen("username5"),
+                                  };
+  const uint8 *usernames_subset[] = { "username12",
+                                      "username26"};
+  unsigned int username_lengths_subset[] = { strlen("username12"),
+                                            strlen("username26"),
+                                            };
+  const uint8 *password_subset[] = { "password12",
+                                     "password26"};
+  uint8 key_backup[DIGEST_LENGTH];
+
+  // setup the context 
+  context = pph_init_context(threshold, isolated_check_bits);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  // backup the key...
+  memcpy(key_backup,context->AES_key,DIGEST_LENGTH);
+   
+  // create some protector accounts...
+  for(i=0;i<username_count;i++) {
+    error = pph_create_account(context, usernames[i], strlen(usernames[i]),
+        passwords[i], strlen(passwords[i]),1);
+    ck_assert(error == PPH_ERROR_OK);
+  }
+
+  // store the context
+  error = pph_store_context( context, "pph.db");
+  ck_assert( error == PPH_ERROR_OK);
+  pph_destroy_context(context);
+
+  // reload the context (should be bootstrapping by now)...
+  context = pph_reload_context("pph.db");
+  ck_assert( context != NULL);
+
+  // create a boostrap account
+  error = pph_create_account(context, "bootstrapacc", strlen("bootstrapacc"),
+      "bootstrappw", strlen("bootstrappw"), 0);
+  ck_assert(error == PPH_ERROR_OK);
+
+  // try to overwrite the account....
+  error = pph_create_account(context, "bootstrapacc", strlen("bootstrapacc"),
+      "bootstrappw", strlen("bootstrappw"), 0);
+  ck_assert(error == PPH_ACCOUNT_EXISTS);
+
+
+  // login to such account...
+  error = pph_check_login(context, "bootstrapacc", strlen("bootstrapacc"),
+      "bootstrappw", strlen("bootstrappw"));
+  ck_assert(error == PPH_ERROR_OK);
+  
+  // verify that a wrong account is detected...
+  error = pph_check_login(context, "bootstrapacc", strlen("bootstrapacc"),
+      "wrongpass", strlen("wrongpass"));
+  ck_assert(error == PPH_ACCOUNT_IS_INVALID);
+
+  // unlock the store...
+  error = pph_unlock_password_data(context, username_count, usernames, 
+      username_lengths, passwords);
+  ck_assert_msg(error == PPH_ERROR_OK," EXPECTED PPH_ERROR_OK");
+
+  // verify that we can log in with the new account...
+  error = pph_check_login(context, "bootstrapacc", strlen("bootstrapacc"),
+      "bootstrappw", strlen("bootstrappw"));
+  ck_assert(error == PPH_ERROR_OK);
+
+  // verify that the status of the entry changed to boostrapping.
+  account_nodes = context->account_data;
+  while(account_nodes != NULL){
+    ck_assert(account_nodes->account.entries->share_number != BOOTSTRAP_ACCOUNT);
+    account_nodes = account_nodes->next;
+  }
+
+  // cleanup, we're done...
+  pph_destroy_context(context);
+
+}END_TEST
 
 
 // test suite definition
@@ -482,19 +600,20 @@ Suite * polypasswordhasher_thl_suite(void)
 {
 
 
-  Suite *s = suite_create ("thresholdless");
+  Suite *s = suite_create ("shielded");
 
 
-  /* no partial bytes with thresholdless accounts case */
-  TCase *tc_non_partial = tcase_create ("non-partial");
-  tcase_add_test (tc_non_partial, test_pph_init_context_AES_key);
-  tcase_add_test (tc_non_partial, test_pph_destroy_context_AES_key);
-  tcase_add_test (tc_non_partial, test_pph_create_accounts);
-  tcase_add_test (tc_non_partial, test_create_account_mixed_accounts);
-  tcase_add_test (tc_non_partial, test_check_login_thresholdless);
-  tcase_add_test (tc_non_partial, test_pph_unlock_password_data);
-  tcase_add_test (tc_non_partial, test_pph_thresholdless_full_lifecycle);
-  suite_add_tcase (s, tc_non_partial);
+  /* no isolated validation with shielded accounts case */
+  TCase *tc_non_isolated = tcase_create ("non-isolated");
+  tcase_add_test (tc_non_isolated, test_pph_init_context_AES_key);
+  tcase_add_test (tc_non_isolated, test_pph_destroy_context_AES_key);
+  tcase_add_test (tc_non_isolated, test_pph_create_accounts);
+  tcase_add_test (tc_non_isolated, test_create_account_mixed_accounts);
+  tcase_add_test (tc_non_isolated, test_check_login_shielded);
+  tcase_add_test (tc_non_isolated, test_pph_unlock_password_data);
+  tcase_add_test (tc_non_isolated, test_pph_shielded_full_lifecycle);
+  tcase_add_test (tc_non_isolated, test_pph_bootstrap_accounts);
+  suite_add_tcase (s, tc_non_isolated);
 
   return s;
 }

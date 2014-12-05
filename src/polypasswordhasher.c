@@ -9,18 +9,18 @@ int main(void)
   pph_context *context;
 
   // Setting a theshold of two means that we are going to need two accounts 
-  // to attempt unlocking. 
+  // to attempt bootstrapping. 
   uint8 threshold = 2;    
                           
-  // partial bytes will be set to two, so users can login after any reboot
+  // isolated-check-bits will be set to two, so users can login after any reboot
   // event.
-  uint8 partial_bytes = 2;
+  uint8 isolated_check_bits = 2;
                          
 
 
   // setup the context, this will generate us the shares, setup information 
   // needed to operate and initialize all of the data structures.
-  context = pph_init_context(threshold, partial_bytes);
+  context = pph_init_context(threshold, isolated_check_bits);
   
   
   // add some users, we send the context, a username, a password and a number
@@ -31,14 +31,14 @@ int main(void)
   pph_create_account(context, "Bob", strlen("Bob"),
                        "i.secretly.love.eve",strlen("i.secretly.love.eve"),1);
   
-  // when creating a user with no shares, we get a *thresholdless* account. 
-  // Thresholdless accounts have their hash encrypted and are unable to 
-  // unlock a context
+  // when creating a user with no shares, we get a *shielded* account. 
+  // Shielded accounts have their hash encrypted and are unable to 
+  // recover shares and thus cannot help to transition to normal operation. 
   pph_create_account(context,"Eve", strlen("Eve"),
                                    "i'm.all.ears", strlen("i'm.all.ears"), 0);
   
-  // to check a login we must have an unlocked context, we send the credentials and 
-  // receive an error in return
+  // to fully check a login we must have a bootstrapped context, we send the
+  // credentials and receive an error in return
   if(pph_check_login(context, "Alice", strlen("Alice"), "I.love.bob",
          strlen("I.love.bob")) == PPH_ERROR_OK){
     printf("welcome alice\n");
@@ -48,7 +48,7 @@ int main(void)
 
   // We can, then store a context to work with it later, have in mind the 
   // context will be stored in a locked state and alice and bob will have 
-  // to unlock it. 
+  // to bootstrap it. 
   pph_store_context(context,"securepasswords");
   
   // We should destroy a context when we finish to free sensible data, such as
@@ -64,9 +64,9 @@ int main(void)
   // context is locked after loading from disk.
   context = pph_reload_context("securepasswords");
   
-  // at this point we can still provide a login service, thanks to the partial 
-  // bytes extension. But in order to create accounts and to provide full login
-  // functionality, we should unlock the store.
+  // at this point we can still provide a login service, thanks to the isolated 
+  // validation extension. But in order to create accounts and to provide full login
+  // functionality, we should bootstrap the store.
   if(pph_check_login(context, "Alice",strlen("alice"), "i'm.trudy", 
                                           strlen("i'm.trudy")) == PPH_ERROR_OK){
     printf("welcome alice!\n"); // this won't happen
@@ -82,14 +82,14 @@ int main(void)
     printf("!!! This shouldn't happen\n");
   }
   
-  // In order to be able to create accounts, we must unlock the vault.
+  // In order to be able to create protector accounts, we must bootstrap the.
   // for this, we setup an array of username strings and an array of password 
   // strings.
-  char **usernames = malloc(sizeof(*usernames)*2);
+  const uint8 **usernames = malloc(sizeof(*usernames)*2);
   usernames[0] = strdup("Alice");
   usernames[1] = strdup("Bob");
   
-  char **passwords = malloc(sizeof(*passwords)*2);
+  const uint8  **passwords = malloc(sizeof(*passwords)*2);
   passwords[0] = strdup("I.love.bob");
   passwords[1] = strdup("i.secretly.love.eve");
 
@@ -99,14 +99,14 @@ int main(void)
   
   
   // if the information provided was correct, the pph_unlock_password_data
-  // returns PPH_ERROR_OK, unlocks the vault and recovers the secrets.
+  // returns PPH_ERROR_OK, bootstraps the vault and recovers the shares.
   pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
 
-  // now the data us unlocked. We can create accounts now.
+  // now the data is available. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
                                                         strlen("verysafe"),0);
   
-  // we can now check accounts using the full feature also (non-partial bytes)
+  // we can now check accounts using the full feature also (non-isolated-check-bits)
   if(pph_check_login(context, "carl", strlen("carl"), "verysafe",
                                           strlen("verysafe")) == PPH_ERROR_OK){
     printf("welcome back carl\n"); 

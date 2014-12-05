@@ -32,6 +32,7 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <openssl/aes.h>
+#include <openssl/rand.h>
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -58,6 +59,13 @@
 // the first and two sections of the secret.
 #define SIGNATURE_HASH_BYTE_LENGTH 4
 #define SIGNATURE_RANDOM_BYTE_LENGTH DIGEST_LENGTH-SIGNATURE_HASH_BYTE_LENGTH
+#define SIGNATURE_HASH_ITERATIONS 10000 /* The number of iterations should be set higher */
+#define ICB_HASH_ITERATIONS 10000
+
+// Account type defines, for readability
+#define SHIELDED_ACCOUNT 0
+#define BOOTSTRAP_ACCOUNT -1
+
 
 
 /* Custom types */ 
@@ -95,12 +103,12 @@ typedef enum{
 
 /* structure definitions */
 
-// this will help us keeping the code tidier, a pph_entry is a polyhashed 
+// this will help us keeping the code tidier, a pph_entry is a protector 
 // value, it's associated sharenumber, the salt length and the salt for it. 
 typedef struct _pph_entry{
   
   // the share number that belongs to this entry
-  uint8 share_number;
+  short share_number;
 
   // information about the salt  
   uint8 salt[MAX_SALT_LENGTH];      
@@ -109,7 +117,8 @@ typedef struct _pph_entry{
   // information about the password, this is either the xored hash of the 
   // password or the encrypted hash of the password.
   unsigned int password_length;
-  uint8 polyhashed_value[DIGEST_LENGTH];
+  uint8 sharexorhash[DIGEST_LENGTH];
+  uint8 isolated_check_bits[DIGEST_LENGTH];
 
   struct _pph_entry *next;
 
@@ -139,6 +148,22 @@ typedef struct _pph_account_node{
 
 } pph_account_node;
 
+// we will have a data structure for previous logins
+typedef struct _pph_previous_login{
+  
+  pph_entry *entry;
+  uint8 digest[DIGEST_LENGTH];
+  struct _pph_previous_login *next;
+
+} pph_previous_login;
+
+// we will have a data structure for bootstrap entries to update them
+// after bootstrapping.
+typedef struct _pph_bootstrap_entry {
+
+    pph_entry *entry;
+    struct _pph_bootstrap_entry *next;
+} pph_bootstrap_entry;
 
 
 // The context structure defines all of what's needed to handle a polypasswordhasher
@@ -155,19 +180,27 @@ typedef struct _pph_context{
   uint8 next_entry;             
  
   // this is a boolean flag to indicate if the secret is available.  
-  bool is_unlocked;             
+  bool is_normal_operation;             
   
-  // if the context is unlocked, these will point to the secret and the AES
-  // key
+  // if the context is under normal operation, these will point to the secret
+  // and the AES key
   uint8 *AES_key;                
-  uint8 *secret;                 
+  uint8 *secret;
+  uint8 secret_integrity[DIGEST_LENGTH]; /* we will store the whole integrity check now */
 
-  // This is the number of partial bytes associated with the context.
-  // If partial bytes is 0, partial verification is disabled. 
-  uint8 partial_bytes;           
+  // This is the number of isolated-check-bits associated with the context.
+  // If isolated-check-bits is 0, isolated validation is disabled. 
+  uint8 isolated_check_bits;           
   
   // this points to the account nodes currently available.  
   pph_account_node* account_data;
+
+  // we will populate a list of previous logins to fully verify after 
+  // bootstrapping
+  pph_previous_login *previous_logins;
+
+  // this will contain entries to be updated after bootstrapping.
+  pph_bootstrap_entry *bootstrap_entries;
 
 } pph_context;
 
@@ -189,10 +222,10 @@ typedef struct _pph_context{
 *                     uint8 threshold                 = threshold
 *                     uint8 available_shares;         = MAX_NUMBER_OF_SHARES
 *                     uint8 next_entry;               = 1
-*                     bool is_unlocked;               = true   
+*                     bool is_normal_operation;       = true   
 *                     uint8 *AES_key;                 = will point to secret       
 *                     uint8 *secret;                  = generated secret
-*                     uint8 partial_bytes;            = partial_bytes
+*                     uint8 isolated_check_bits;            = isolated_check_bits
 *                     pph_account_node* account_data; = NULL
 *                   } pph_context;
 *                
@@ -201,16 +234,18 @@ typedef struct _pph_context{
 *   PARAMETERS:
 *     uint8 threshold:            The threshold for this 
 *                                 password storage. This is, the minimum
-*                                 number of shares needed to unlock the 
-*                                 upon reloading. The valid ranges for the
-*                                 threshold go from 1 to MAX_NUMBER_OF_SHARES;
+*                                 number of shares needed to transition to
+*                                 normal operation upon reloading. The valid
+*                                 ranges for the threshold go from 1 to
+*                                 MAX_NUMBER_OF_SHARES;
 *                                 however, a value of 1 is a bad idea.
 *
-*     uint8 partial_bytes:        The number of hashed-bytes to leak in order 
-*                                 to perform partial verification. If 
-*                                 partial_bytes = 0, partial verification is 
-*                                 disabled. Partial bytes should range from 0
-*                                 to DIGEST_LENGTH. 
+*     uint8 isolated_check_bits:  The number of hashed-bytes to leak in order 
+*                                 to perform isolated validation. If 
+*                                 isolated_check_bits = 0, isolated validation
+*                                 is disabled. isolated-check-bits should range
+*                                 from 0 to DIGEST_LENGTH, but a value from 0 to
+*                                 4 is recommended.
 * OUTPUTS :
 *   PARAMETERS:
 *     None
@@ -234,7 +269,7 @@ typedef struct _pph_context{
 *     21/04/2014: secret is no longer a parameter
 */
 
-pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes);
+pph_context* pph_init_context(uint8 threshold, uint8 isolated_check_bits);
 
 
 
@@ -254,10 +289,10 @@ pph_context* pph_init_context(uint8 threshold, uint8 partial_bytes);
 *                     uint8 threshold                 = 
 *                     uint8 available_shares;         = 
 *                     uint8 next_entry;               = 
-*                     bool is_unlocked;               = 
+*                     bool is_normal_operation;       = 
 *                     uint8 *AES_key;                 = needs freeing      
 *                     uint8 *secret;                  = needs freeing
-*                     uint8 partial_bytes;            = 
+*                     uint8 isolated_check_bits;            = 
 *                     pph_account_node* account_data; = needs freeing
 *                   } pph_context;
 
@@ -307,16 +342,16 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 *     pph_context *ctx:                   This is the context in which the
 *                                         account will be created
 *     
-*     const uint8 *username:              This is the desired username for the
+*     uint8 *username:                    This is the desired username for the
 *                                         new entry
 *
-*     const unsigned int username_length: the length of the username field,
+*     unsigned int username_length:       The length of the username field,
 *                                         this value should not exceed 
 *                                         MAX_USERNAME_LENGTH.
 *
-*     const uint8 *password:              This is the password for the new entry
+*     uint8 *password:                    This is the password for the new entry
 *
-*     const unsgned int password_length:  The length of the password field, this
+*     unsgned int password_length:        The length of the password field, this
 *                                         value should not exceed 
 *                                         MAX_PASSWORD_LENGTH
 *
@@ -365,9 +400,9 @@ PPH_ERROR pph_destroy_context(pph_context *context);
 */
 
 PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
-                        const unsigned int username_length, 
-                        const uint8 *password, 
-                        const unsigned int password_length, uint8 shares);
+                        unsigned int username_length, uint8 *password, 
+                        unsigned int password_length, uint8 shares);
+
 
 
 
@@ -418,7 +453,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
 *     1) Sanitize data and return errors
 *     2) try to find username in the context
 *     3) if found, decide how to verify his information based on the status
-*         of the context (thresholdless, partial verif, etc.)
+*         of the context (shielded, isolated validation, etc.)
 *     4) Do the corresponding check and return the proper error
 *
 * CHANGES :
@@ -485,17 +520,16 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 *     4) give shares to the recombination context
 *     5) attempt recombination
 *     6) verify correct recombination.
-*     7) if successful, unlock the store
+*     7) if successful, transition from bootstrapping to normal operation.
 *     8) return error code
 *
 * CHANGES :
 *     (03/25/14): Secret consistency check was added. 
 */
 
-PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
-                          const uint8 *usernames[],
-                          unsigned int username_lengths[],
-                          const uint8 *passwords[]);
+PPH_ERROR pph_unlock_password_data(pph_context *ctx,
+        unsigned int username_count, const uint8 *usernames[], 
+        unsigned int username_lengths[], const uint8 *passwords[]);
                                   
 
 
@@ -647,8 +681,8 @@ pph_context *pph_reload_context(const unsigned char *filename);
 * PROCESS 
 *     1) verify the input. 
 *     2) Generate a pph_context if there is none in memory
-*     3) Generate a polyhashed entry
-*     4) Copy the polyhashed value to the output buffer
+*     3) Generate a protector entry
+*     4) Copy the protector value to the output buffer
 *     5) Return.
 *
 * CHANGES :
@@ -664,47 +698,34 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 
 
 
-// this generates a random secret of the form [stream][streamhash], the 
-// parameters are the length of each section of the secret
-
-uint8 *generate_pph_secret(unsigned int stream_length,
-    unsigned int hash_length);
+// used to generate a random secret and add its hash
+uint8 *generate_pph_secret( uint8 *integrity_check);
 
 
 
-// this checks whether a given secret complies with the pph_secret prototype
-// ([stream][streamhash])
-
-PPH_ERROR check_pph_secret(uint8 *secret, unsigned int stream_length, 
-    unsigned int hash_bytes);
+// this checks whether a given secret matches the given integrity check (stored
+// in the context) at certain number of iterations
+PPH_ERROR check_pph_secret(uint8 *secret, uint8 *secret_integrity);
 
 
-
-
-// this function provides a polyhashed entry given the input
-
-pph_entry *create_polyhashed_entry(uint8 *password, unsigned int
-    password_length, uint8 *salt, unsigned int salt_length, uint8 *share,
-    unsigned int share_length, unsigned int partial_bytes);
+// this function provides a protector entry given the input
+pph_entry *create_protector_entry(uint8 *password, unsigned int
+    password_length, uint8 *salt, unsigned int salt_length, const void *share,
+    unsigned int share_length, unsigned int isolated_check_bits);
 
 
 
 
 // this other function is the equivalent to the one in the top, but for
-// thresholdless accounts.
-
-pph_entry *create_thresholdless_entry(uint8 *password, unsigned int
+// shielded accounts.
+pph_entry *create_shielded_entry(uint8 *password, unsigned int
     password_length, uint8* salt, unsigned int salt_length, uint8* AES_key,
-    unsigned int key_length, unsigned int partial_bytes);
+    unsigned int key_length, unsigned int isolated_check_bits);
 
-
-
-
-// This produces a salt string, warning, this only generates a 
-// PRINTABLE salt
-
-void get_random_bytes(unsigned int length, uint8 *dest);
-
+// Finally, this function, creates an entry for an account that was created during
+// bootstrapping.
+pph_entry *create_bootstrap_entry(uint8 *password, unsigned int password_length, 
+        uint8 *salt, unsigned int salt_length);
 
 
 
@@ -762,6 +783,25 @@ inline void _calculate_digest(uint8 *digest, const uint8 *password,
   EVP_MD_CTX_cleanup(&mctx);
 
   return;
+
+}
+
+// we will use an inline to encrypt a digest to make everything cleaner also
+inline void _encrypt_digest(uint8 *result, uint8 *digest, uint8 *AES_key) {
+
+  EVP_CIPHER_CTX en_ctx;
+  int c_len,f_len;
+
+  // encrypt the generated digest
+  EVP_CIPHER_CTX_init(&en_ctx);
+  EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, NULL);
+  EVP_EncryptUpdate(&en_ctx, result, &c_len,
+      digest, DIGEST_LENGTH);
+  EVP_EncryptFinal_ex(&en_ctx, result+c_len, &f_len);
+  EVP_CIPHER_CTX_cleanup(&en_ctx);
+
+  return;
+
 
 }
 
