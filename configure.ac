@@ -7,6 +7,7 @@ AC_INIT([polypasswordhasher], [1.1], [torresariass@gmail.com])
 
 # place to put some extra build scripts installed
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
 
 # fairly severe build strictness
 # change foreign to gnu or gnits to comply with gnu standards
