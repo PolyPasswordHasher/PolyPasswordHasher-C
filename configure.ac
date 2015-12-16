@@ -24,7 +24,7 @@ AC_PROG_LIBTOOL
 # This macro is defined in check.m4 and tests if check.h and
 # libcheck.a are installed in your system. It sets CHECK_CFLAGS and
 # CHECK_LIBS accordingly.  
-AM_PATH_CHECK()
+PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 
 # Checks for header files.
 AC_HEADER_STDC
