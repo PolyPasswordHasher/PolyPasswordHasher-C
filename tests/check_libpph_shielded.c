@@ -606,67 +606,30 @@ START_TEST(test_pph_AES_encryption_with_non_null_iv)
   uint8 isolated_check_bits = 0;
   unsigned int i;
   
-  // for protector accounts
-  unsigned int protector_username_count = 3;
-  const uint8 *protector_usernames[] = {"username1",
-                              "username20",
-                              "username300"
-                            };
-  const uint8 *protector_passwords[] = {"password1",
-                              "password20",
-                              "password300"
-                              };
-                              
   // for shielded accounts
-  unsigned int shielded_username_count = 2;
-  const uint8 *shielded_usernames[] = {"username_s1",
-                              "username_s20"
-                            };
-  const uint8 *shielded_passwords[] = {"password_s1",
-                              "password_s20"
-                              };
-  
+  const uint8 shielded_username[] = "username_s1";
+  const uint8 shielded_password[] = "password_s1";
   
   // setup the context 
   context = pph_init_context(threshold, isolated_check_bits);
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  
-  // create protector accounts
-  for(i = 0; i < protector_username_count; i++) {
-    error = pph_create_account(context, protector_usernames[i], strlen(protector_usernames[i]),
-        protector_passwords[i], strlen(protector_passwords[i]), 1);
-    ck_assert(error == PPH_ERROR_OK);
-  }
-  
-  // create shielded accounts
-  for(i = 0; i < shielded_username_count; i++) {
-    error = pph_create_account(context, shielded_usernames[i], strlen(shielded_usernames[i]),
-        shielded_passwords[i], strlen(shielded_passwords[i]), 0);
-    ck_assert(error == PPH_ERROR_OK);
-  }
+  // create shielded account  
+  error = pph_create_account(context, shielded_username, strlen(shielded_username),
+        shielded_password, strlen(shielded_password), 0);
+  ck_assert(error == PPH_ERROR_OK);
   
   // start playing with the _encrypt_digest function using the accounts
   // info we have in the current context
-  // iterate over the stored accounts and use their data in our test 
+  // we have one account only which is the solo shileded account we 
+  // have created earlier 
   pph_account_node *search;
-  pph_account_node *target = NULL; 
   pph_entry *current_entry;
   search = context->account_data;
   
-  // iterate till we find a shielded account
-  while(search != NULL){
-    // check if we found a shielded account, break when you find any 
-    if(search->account.entries != NULL && search->account.entries->share_number == 0){
-      break; 
-    }     
-    search = search->next;
-  } 
-  
-  // we should have an account (the first account stored earlier)
-  // check that before going ahead
-  // overcheck
+
+  // check that we have a valid account before going ahead
   ck_assert(search != NULL && search->account.entries != NULL);
   
   // we have an account
@@ -684,20 +647,10 @@ START_TEST(test_pph_AES_encryption_with_non_null_iv)
   
   // compute the salted hash first
   memcpy(salted_password, current_entry->salt, current_entry->salt_length);
-  
-  // find the password that corresponds to the account username
-  int current_index;
-  for(i = 0; i < shielded_username_count; i++) {
-    if(!memcmp(search->account.username, shielded_usernames[i], strlen(search->account.username))){
-      current_index = i;
-      break;
-    }
-  }
-  
-  memcpy(salted_password + current_entry->salt_length, shielded_passwords[current_index], 
-      strlen(shielded_passwords[current_index])); 
+  memcpy(salted_password + current_entry->salt_length, shielded_password, 
+      strlen(shielded_password)); 
   _calculate_digest(resulting_hash, salted_password, 
-       current_entry->salt_length + strlen(shielded_passwords[current_index]));
+       current_entry->salt_length + strlen(shielded_password));
   
   
   // encrypt the salted hash using the AES_key stored in the context
@@ -731,7 +684,7 @@ START_TEST(test_pph_AES_encryption_with_non_null_iv)
   ck_assert_msg(memcmp(xored_hash, xored_hash_2, DIGEST_LENGTH),
       "Invalid encryption behavior, plaintext is different and so ciphertext should be!");
       
-      
+
   // destroy the context
   pph_destroy_context(context);
 	
@@ -756,8 +709,6 @@ Suite * polypasswordhasher_thl_suite(void)
   tcase_add_test (tc_non_isolated, test_pph_unlock_password_data);
   tcase_add_test (tc_non_isolated, test_pph_shielded_full_lifecycle);
   tcase_add_test (tc_non_isolated, test_pph_bootstrap_accounts);
-  
-  // newly added tests ~GA
   tcase_add_test (tc_non_isolated, test_pph_AES_encryption_with_non_null_iv);
   
   suite_add_tcase (s, tc_non_isolated);
