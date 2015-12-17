@@ -794,7 +794,7 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
     if(sharenumber == 0){ /* Shielded account */
       
       // now we should calculate the expected hash by encrypting it
-      _encrypt_digest(xored_hash, resulting_hash, ctx->AES_key);
+      _encrypt_digest(xored_hash, resulting_hash, ctx->AES_key, current_entry->salt); // add the IV ~GA
 
       // 3) compare both, and they should match.
       if(memcmp(xored_hash, current_entry->sharexorhash, DIGEST_LENGTH)){
@@ -1066,7 +1066,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
     memcpy(entry->isolated_check_bits, icb_digest_buffer, ctx->isolated_check_bits);
 
     /* encrypt the original entry */
-    _encrypt_digest(entry->sharexorhash, entry->sharexorhash, ctx->AES_key);
+    _encrypt_digest(entry->sharexorhash, entry->sharexorhash, ctx->AES_key, entry->salt);// add the IV ~GA
 
     /* update sharenumbers */
     entry->share_number = SHIELDED_ACCOUNT;
@@ -1087,7 +1087,7 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
 
     if (this_login->entry->share_number == SHIELDED_ACCOUNT) {
 
-      _encrypt_digest(estimated_digest, this_login->digest, ctx->AES_key);
+      _encrypt_digest(estimated_digest, this_login->digest, ctx->AES_key, this_login->entry->salt);// add the IV ~GA
 
     } else {
 
@@ -1733,7 +1733,7 @@ pph_entry *create_shielded_entry(uint8 *password, unsigned int
 
   // encrypt the generated digest
   _encrypt_digest(entry_node->sharexorhash, entry_node->sharexorhash,
-          AES_key);
+          AES_key, entry_node->salt); // add the IV ~GA
 
   // shielded accounts have this value defaulted to 0;
   entry_node->share_number = SHIELDED_ACCOUNT;

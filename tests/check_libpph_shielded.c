@@ -595,6 +595,149 @@ START_TEST(test_pph_bootstrap_accounts)
 }END_TEST
 
 
+// simple test case for having the IV used by the AES_CTR mode as the salt value
+// instead of NULL ~GA
+START_TEST(test_pph_AES_encryption_with_non_null_iv)
+{
+  // create a context with various shielded accounts
+  PPH_ERROR error;
+  pph_context *context;
+  uint8 threshold = 2; 
+  uint8 isolated_check_bits = 0;
+  unsigned int i;
+  
+  // for protector accounts
+  unsigned int protector_username_count = 3;
+  const uint8 *protector_usernames[] = {"username1",
+                              "username20",
+                              "username300"
+                            };
+  const uint8 *protector_passwords[] = {"password1",
+                              "password20",
+                              "password300"
+                              };
+                              
+  // for shielded accounts
+  unsigned int shielded_username_count = 2;
+  const uint8 *shielded_usernames[] = {"username_s1",
+                              "username_s20"
+                            };
+  const uint8 *shielded_passwords[] = {"password_s1",
+                              "password_s20"
+                              };
+  
+  
+  // setup the context 
+  context = pph_init_context(threshold, isolated_check_bits);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+  
+  
+  // create protector accounts
+  for(i = 0; i < protector_username_count; i++) {
+    error = pph_create_account(context, protector_usernames[i], strlen(protector_usernames[i]),
+        protector_passwords[i], strlen(protector_passwords[i]), 1);
+    ck_assert(error == PPH_ERROR_OK);
+  }
+  
+  // create shielded accounts
+  for(i = 0; i < shielded_username_count; i++) {
+    error = pph_create_account(context, shielded_usernames[i], strlen(shielded_usernames[i]),
+        shielded_passwords[i], strlen(shielded_passwords[i]), 0);
+    ck_assert(error == PPH_ERROR_OK);
+  }
+  
+  // start playing with the _encrypt_digest function using the accounts
+  // info we have in the current context
+  // iterate over the stored accounts and use their data in our test 
+  pph_account_node *search;
+  pph_account_node *target = NULL; 
+  pph_entry *current_entry;
+  search = context->account_data;
+  
+  // iterate till we find a shielded account
+  while(search != NULL){
+    // check if we found a shielded account, break when you find any 
+    if(search->account.entries != NULL && search->account.entries->share_number == 0){
+      break; 
+    }     
+    search = search->next;
+  } 
+  
+  // we should have an account (the first account stored earlier)
+  // check that before going ahead
+  // overcheck
+  ck_assert(search != NULL && search->account.entries != NULL);
+  
+  // we have an account
+  // retreive the login entry
+  current_entry = search->account.entries;
+    
+  // let us do the following:
+  // 1. compute the sharexorhash and compare it with what is stored inside the account
+  
+  // buffers to compute the salted hash of the current account password  
+  uint8 resulting_hash[DIGEST_LENGTH], resulting_hash_2[DIGEST_LENGTH];
+  uint8 salted_password[MAX_SALT_LENGTH + MAX_PASSWORD_LENGTH]; 
+  uint8 xored_hash[DIGEST_LENGTH], xored_hash_2[DIGEST_LENGTH];
+  
+  
+  // compute the salted hash first
+  memcpy(salted_password, current_entry->salt, current_entry->salt_length);
+  
+  // find the password that corresponds to the account username
+  int current_index;
+  for(i = 0; i < shielded_username_count; i++) {
+    if(!memcmp(search->account.username, shielded_usernames[i], strlen(search->account.username))){
+      current_index = i;
+      break;
+    }
+  }
+  
+  memcpy(salted_password + current_entry->salt_length, shielded_passwords[current_index], 
+      strlen(shielded_passwords[current_index])); 
+  _calculate_digest(resulting_hash, salted_password, 
+       current_entry->salt_length + strlen(shielded_passwords[current_index]));
+  
+  
+  // encrypt the salted hash using the AES_key stored in the context
+  _encrypt_digest(xored_hash, resulting_hash, context->AES_key, current_entry->salt);
+  
+  // now compare the encrypted hash with the one stored in the user account entry
+  ck_assert_msg(!memcmp(xored_hash, current_entry->sharexorhash, DIGEST_LENGTH),
+      "Invalid stored encrypted salted password hash!");
+       
+ 
+  // 2. check that with different IV values the ciphtext for the same
+  // plaintext will be different
+  // we will work on the same shielded account we have retrieved earlier
+  // create any dummy IV for testing
+  uint8 dummy_iv[] = "1234567890123456";
+  _encrypt_digest(xored_hash_2, resulting_hash, context->AES_key, dummy_iv);   
+
+  // now compare the two encrypted salted hashes
+  ck_assert_msg(memcmp(xored_hash, xored_hash_2, DIGEST_LENGTH),
+      "Invalid encryption behavior, IV is different and so ciphertext should be!");
+  
+  
+  // 3. check that with the same IV for different plaintexts the ciphertext 
+  // should be different
+  // we will work on the same shielded account we have retrieved earlier
+  _calculate_digest(resulting_hash_2, "CodeTestingIsFun", 
+       strlen("CodeTestingIsFun"));
+  _encrypt_digest(xored_hash_2, resulting_hash_2, context->AES_key, current_entry->salt);   
+
+  // now compare the two encrypted salted hashes
+  ck_assert_msg(memcmp(xored_hash, xored_hash_2, DIGEST_LENGTH),
+      "Invalid encryption behavior, plaintext is different and so ciphertext should be!");
+      
+      
+  // destroy the context
+  pph_destroy_context(context);
+	
+}END_TEST
+
+
 // test suite definition
 Suite * polypasswordhasher_thl_suite(void)
 {
@@ -613,6 +756,10 @@ Suite * polypasswordhasher_thl_suite(void)
   tcase_add_test (tc_non_isolated, test_pph_unlock_password_data);
   tcase_add_test (tc_non_isolated, test_pph_shielded_full_lifecycle);
   tcase_add_test (tc_non_isolated, test_pph_bootstrap_accounts);
+  
+  // newly added tests ~GA
+  tcase_add_test (tc_non_isolated, test_pph_AES_encryption_with_non_null_iv);
+  
   suite_add_tcase (s, tc_non_isolated);
 
   return s;
