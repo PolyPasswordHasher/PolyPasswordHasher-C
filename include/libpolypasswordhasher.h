@@ -787,14 +787,15 @@ inline void _calculate_digest(uint8 *digest, const uint8 *password,
 }
 
 // we will use an inline to encrypt a digest to make everything cleaner also
-inline void _encrypt_digest(uint8 *result, uint8 *digest, uint8 *AES_key) {
+//Add an additional input which is the IV that will be used by the CTR mode ~GA
+inline void _encrypt_digest(uint8 *result, uint8 *digest, uint8 *AES_key, uint8* iv) {
 
   EVP_CIPHER_CTX en_ctx;
   int c_len,f_len;
 
   // encrypt the generated digest
   EVP_CIPHER_CTX_init(&en_ctx);
-  EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, NULL);
+  EVP_EncryptInit_ex(&en_ctx, EVP_aes_256_ctr(), NULL, AES_key, iv);
   EVP_EncryptUpdate(&en_ctx, result, &c_len,
       digest, DIGEST_LENGTH);
   EVP_EncryptFinal_ex(&en_ctx, result+c_len, &f_len);
