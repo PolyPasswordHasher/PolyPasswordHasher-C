@@ -116,7 +116,6 @@ typedef struct _pph_entry{
 
   // information about the password, this is either the xored hash of the 
   // password or the encrypted hash of the password.
-  unsigned int password_length;
   uint8 sharexorhash[DIGEST_LENGTH];
   uint8 isolated_check_bits[DIGEST_LENGTH];
 
