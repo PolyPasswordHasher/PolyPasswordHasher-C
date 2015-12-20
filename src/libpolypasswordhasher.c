@@ -926,7 +926,8 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
                           const uint8 *usernames[], 
                           unsigned int username_lengths[],
-                          const uint8 *passwords[]){
+                          const uint8 *passwords[],
+                          unsigned int password_lengths[]){
   
   
   uint8 share_numbers[MAX_NUMBER_OF_SHARES];
@@ -992,9 +993,9 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
             // calculate the digest given the password.
             memcpy(salted_password,entry->salt,entry->salt_length);
             memcpy(salted_password+entry->salt_length, passwords[i],
-                strlen(passwords[i]));
+                password_lengths[i]);
             _calculate_digest(estimated_digest,salted_password,
-             entry->salt_length + strlen(passwords[i]));
+             entry->salt_length + password_lengths[i]);
 
             // xor the obtained digest with the protector value to obtain
             // our share.

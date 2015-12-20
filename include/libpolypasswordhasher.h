@@ -528,7 +528,8 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 
 PPH_ERROR pph_unlock_password_data(pph_context *ctx,
         unsigned int username_count, const uint8 *usernames[], 
-        unsigned int username_lengths[], const uint8 *passwords[]);
+        unsigned int username_lengths[], const uint8 *passwords[],
+        unsigned int password_lengths[]);
                                   
 
 
