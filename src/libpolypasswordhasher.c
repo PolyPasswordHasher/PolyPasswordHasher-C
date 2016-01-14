@@ -468,7 +468,7 @@ PPH_ERROR pph_create_account(pph_context *ctx, const uint8 *username,
     RAND_bytes(salt_buffer, MAX_SALT_LENGTH); 
 
     // Try to get a new entry.
-    entry_node=create_protector_entry(password, password_length, salt_buffer,
+    entry_node = create_protector_entry(password, password_length, salt_buffer,
         MAX_SALT_LENGTH, share_data, SHARE_LENGTH, ctx->isolated_check_bits);
 
     if(entry_node == NULL){
@@ -926,14 +926,15 @@ PPH_ERROR pph_check_login(pph_context *ctx, const char *username,
 PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
                           const uint8 *usernames[], 
                           unsigned int username_lengths[],
-                          const uint8 *passwords[]){
+                          const uint8 *passwords[],
+                          unsigned int password_lengths[]){
   
   
   uint8 share_numbers[MAX_NUMBER_OF_SHARES];
   gfshare_ctx *G;
   unsigned int i;
   uint8 secret[SHARE_LENGTH];
-  uint8 salted_password[MAX_USERNAME_LENGTH+MAX_SALT_LENGTH];
+  uint8 salted_password[MAX_PASSWORD_LENGTH+MAX_SALT_LENGTH];
   uint8 estimated_digest[DIGEST_LENGTH], icb_digest_buffer[DIGEST_LENGTH];
   uint8 estimated_share[SHARE_LENGTH];
   pph_entry *entry; 
@@ -989,12 +990,12 @@ PPH_ERROR pph_unlock_password_data(pph_context *ctx,unsigned int username_count,
           // shares using their information, traverse his entries
           while(entry!=NULL){
 
-            // calulate the digest given the password.
+            // calculate the digest given the password.
             memcpy(salted_password,entry->salt,entry->salt_length);
             memcpy(salted_password+entry->salt_length, passwords[i],
-                entry->password_length);
+                password_lengths[i]);
             _calculate_digest(estimated_digest,salted_password,
-             MAX_SALT_LENGTH + current_user->account.entries->password_length);
+             entry->salt_length + password_lengths[i]);
 
             // xor the obtained digest with the protector value to obtain
             // our share.
@@ -1587,9 +1588,6 @@ PPH_ERROR check_pph_secret(uint8 *secret, uint8 *secret_integrity)
 }
 
 
-
-
-
 // this function provides a protector entry given the input
 
 pph_entry *create_protector_entry(uint8 *password, unsigned int
@@ -1635,8 +1633,7 @@ pph_entry *create_protector_entry(uint8 *password, unsigned int
   // update the salt value in the entry
   memcpy(entry_node->salt,salt, salt_length);
   entry_node->salt_length = salt_length;
-  entry_node->password_length = password_length;
-
+  
   // prepend the salt to the password
   memcpy(salted_password,salt,salt_length);
   memcpy(salted_password+salt_length, password, password_length);

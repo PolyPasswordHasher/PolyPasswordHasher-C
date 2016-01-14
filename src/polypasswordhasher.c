@@ -97,10 +97,14 @@ int main(void)
   username_lengths[0] = strlen("Alice");
   username_lengths[1] = strlen("bob");
   
+  unsigned int *password_lengths = malloc(sizeof(*password_lengths)*2);
+  password_lengths[0] = strlen("I.love.bob");
+  password_lengths[1] = strlen("i.secretly.love.eve");
+  
   
   // if the information provided was correct, the pph_unlock_password_data
   // returns PPH_ERROR_OK, bootstraps the vault and recovers the shares.
-  pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
+  pph_unlock_password_data(context, 2, usernames, username_lengths, passwords, password_lengths);
 
   // now the data is available. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe", 
