@@ -732,6 +732,57 @@ START_TEST(test_pph_AES_encryption_with_non_null_iv)
 	
 }END_TEST
 
+START_TEST(test_pph_delete_account)
+{
+  PPH_ERROR error;
+  pph_context *context;
+  uint8 threshold = 2; 
+  uint8 isolated_check_bits = 0;
+  
+  context = pph_init_context(threshold, isolated_check_bits);
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+ 
+  //create some test account to work with
+  error = pph_create_account(context, "lolaly", strlen("lolaly"),
+                                       "I.love.bob", strlen("I.love.bob"), 1);
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should've gotten PPH_ERROR_OK in the return value");
+  error = pph_create_account(context, "santiago", strlen("santiago"),
+                       "i.secretly.love.eve",strlen("i.secretly.love.eve"), 2);
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should've gotten PPH_ERROR_OK in the return value");
+  error = pph_create_account(context,"eve", strlen("eve"),
+                                   "i'm.all.ears", strlen("i'm.all.ears"), 0);
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should've gotten PPH_ERROR_OK in the return value");
+
+  ck_assert_msg(context != NULL,
+      "this was a good initialization, go tell someone");
+
+  //ck_assert_str_eq(username,context->account_data->account.username); ?
+  //now try to delete defferent account, we should get different outcomes
+  error = pph_delete_account(context, "eve", strlen("eve"));
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should've gotten PPH_ERROR_OK because it is deleting a sheild account %d", error );
+  
+  error = pph_delete_account(context, "lolaly", strlen("lolaly"));
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "We should've gotten PPH_ERROR_OK because there is still enough shares after deleting");
+
+  error = pph_delete_account(context, "santiago", strlen("santiago"));
+  ck_assert_msg(error == PPH_CANT_DELETE, 
+      "We should've gotten PPH_CANT_DELETE, because there won't be enough shares");
+  pph_store_context(context, "/home/lolaly/PolyPasswordHasher/PolyPasswordHasher-c/src/outcome.o");
+  error = pph_delete_account(context, "justin", strlen("justin"));
+  ck_assert_msg(error == PPH_CANT_FIND_USER, 
+      "We should've gotten PPH_CANT_FIND_USER, because the user is never created");   
+
+  //destroy the contest before leave 
+  error = pph_destroy_context(context);
+  ck_assert_msg(error == PPH_ERROR_OK, 
+      "the free function didn't work properly");
+}END_TEST
 
 // test suite definition
 Suite * polypasswordhasher_thl_suite(void)
@@ -752,7 +803,8 @@ Suite * polypasswordhasher_thl_suite(void)
   tcase_add_test (tc_non_isolated, test_pph_shielded_full_lifecycle);
   tcase_add_test (tc_non_isolated, test_pph_bootstrap_accounts);
   tcase_add_test (tc_non_isolated, test_pph_AES_encryption_with_non_null_iv);
-  
+  tcase_add_test (tc_non_isolated, test_pph_delete_account);
+
   suite_add_tcase (s, tc_non_isolated);
 
   return s;

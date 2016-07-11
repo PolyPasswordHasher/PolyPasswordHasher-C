@@ -1506,7 +1506,143 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 }
 
 
+/*******************************************************************
+* NAME :          pph_delete_account 
+*
+* DESCRIPTION :   Gaven the context and a username, the fuction will look into the
+*		  context and delete the user data permanently. If threshold equals 
+*		  shares distributed, it will return an error and delete nothing. 
+*		  If the given user doesn't exist, it will return an erro
+*
+* INPUTS :
+*   PARAMETERS:
+*     pph_context *ctxt:   This is the context in which the account will be deleted
+*     
+*     const unit8 *username:    This is the desirerd user to be deleted
+*
+*     unsigned int username_length:   The length of the username
+*
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type: int PPH_ERROR
+*
+*           Values:                         When:
+*            PPH_ERROR_OK			The desired user has been deleted
+*
+*            PPH_BAD_PTR			One of the fields is unallocated
+*
+*	     PPH_CANT_FIND_USER			The username doesn't exist 
+*
+*	     PPH_USERNAME_IS_TOO_LONG		The username won't fit in the buffer
+*
+*	     PPH_CANT_DELETE      		Due to inefficient amount of shares available 
+*						after deletion, or other reasons, PPH can't 
+*						delete account currently.
+* 
+* PROCESS :
+*     1) Sanitize data and report errors.
+*     2) Go through the list to try to find the user, meanwhile, counting the shares.
+*     3) If didn't find the user, or run into a situation we can't delete the account, report error.
+*     4) If not, delete the user.
+*     5) Return.
+*
+* CHANGES :
+*     This function is added in July 2016
+*/
 
+PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username, 
+			unsigned int username_length){
+  //this will be used to iterate all the users
+  pph_account_node *search;
+  pph_account_node *before_search;
+  pph_account_node *target = NULL;
+  
+  //this is used to count total shares
+  uint8 share_count = 0;
+  //the number of shares that the target account has
+  uint8 target_shares;
+  //variables needed in order to delete the account
+  pph_account_node *temp;
+  pph_entry *deleting_entry;
+  pph_entry *temp_next_entry;
+
+  // 1) Sanitize data and return errors.
+  //check for any improper pointers
+  if(ctx == NULL || username == NULL) {
+    return PPH_BAD_PTR;
+  }
+
+  //check the length of the input username
+  if(username_length > MAX_USERNAME_LENGTH-1){
+    return PPH_USERNAME_IS_TOO_LONG;
+  }
+
+  //2) Go through the list to try to find the user, meanwhile, counting the shares.
+  //iterate through the context, count all the shares available, and find the node before the target. 
+  search = ctx->account_data;
+  before_search = ctx->account_data;
+     while(search != NULL ){
+        if (search->account.entries != NULL){
+          if (search->account.entries->share_number != SHIELDED_ACCOUNT){
+            share_count = share_count + search->account.number_of_entries;   
+          }
+        }
+        if (username_length == search->account.username_length &&
+               !memcmp(search->account.username, username, username_length)){
+          target = search;
+        }
+        if (search != ctx->account_data && target == NULL){
+          before_search = before_search->next;
+        }
+        search = search->next;
+     }
+  
+  // 3) If didn't find the user, or run into a situation we can't delete the account, report error.
+  //if we can't find the user, return  PPH_CANT_FIND_USER
+  if (target == NULL){
+    return  PPH_CANT_FIND_USER;
+  }
+  //find out the number of shares the target account has,
+  //if deleting the target account would let shares be smaller than threshold, the we can't delete the account.
+  if (target->account.entries != NULL){
+    if (target->account.entries->share_number != SHIELDED_ACCOUNT) {
+      target_shares = target->account.number_of_entries;
+    } else {
+      target_shares = 0;
+    }
+  }
+  if ((share_count - target_shares) < ctx->threshold){
+    return PPH_CANT_DELETE;
+  }
+  
+  //4) If not, delete the user.
+  //if we reach to this point, we can delete the account safely
+  temp = target;
+  if (target == ctx->account_data){
+      ctx->account_data = temp->next;
+  } else {
+    before_search->next = temp->next;
+  }
+  deleting_entry = temp->account.entries;
+  while (deleting_entry != NULL){
+    temp_next_entry = deleting_entry->next;
+    free(deleting_entry);
+    deleting_entry = temp_next_entry;
+  }
+  
+  free(temp);
+  temp = NULL;
+  
+  //now we finished deleting the account 
+  //5) Return.
+  return PPH_ERROR_OK;
+}
 
 
 
