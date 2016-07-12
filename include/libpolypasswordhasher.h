@@ -695,7 +695,7 @@ pph_context *pph_reload_context(const unsigned char *filename);
 int PHS(void *out, size_t outlen, const void *in, size_t inlen,
    const void* salt, size_t saltlen, int tcost, int mcost); 
 
-									 /*******************************************************************
+/*******************************************************************
 * NAME :          pph_delete_account 
 *
 * DESCRIPTION :   Gaven the context and a username, the fuction will look into the
@@ -749,7 +749,60 @@ PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username,
 			unsigned int username_length);
 
 										 
+/*******************************************************************
+* NAME :          pph_change_password
+*
+* DESCRIPTION :   Gaven the context a username and the new password, the fuction will look
+*		  into the context and change the user's password. The application is responsible 
+*		  to make sure that the user is authenticated before having the ability to 
+*		  change password.
+*
+* INPUTS :
+*   PARAMETERS:
+*     pph_context *ctxt:   This is the context in which the account will change password 
+*     
+*     const unit8 *username:    This is the desirerd user to be deleted
+*
+*     unsigned int username_length:   The length of the username
+*
+*     const unit8 *new_password:    The new password as 
+*
+*     unsigned int new_password_length:   The length of the new password
+*
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type: int PPH_ERROR
+*
+*           Values:                         When:
+*            PPH_ERROR_OK			The password is changed for user successfully
+*
+*            PPH_BAD_PTR			One of the fields is unallocated
+*            
+*            PPH_ERROR_UNKNOWN                  something unexpected happens
+*
+*	     PPH_CANT_FIND_USER			The username doesn't exist 
+*
+*	     PPH_USERNAME_IS_TOO_LONG		The username_length is larger than MAX_USERNAME_LENGTH
+*
+*	     PPH_PASSWORD_IS_TOO_LONG 		The new_password_length is larger than MAX_PASSWORD_LENGTH
+* PROCESS :
+*     1) Sanitize data and report errors.
+*     2) Go through the list to find the user, if not, report an error.
+*     3) Change the password for diffrent type of users: protector, sheilded and bootstrap
+*     4) Return
+*
+* CHANGES :
+*     This function is added in July 2016
+*/
 
+PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned int username_length,
+			uint8 *new_password, unsigned int new_password_length);
 // helper functions //////////////////////////
 
 
