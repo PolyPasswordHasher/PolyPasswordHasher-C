@@ -1510,9 +1510,10 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 * NAME :          pph_delete_account 
 *
 * DESCRIPTION :   Gaven the context and a username, the fuction will look into the
-*		  context and delete the user data permanently. If threshold equals 
-*		  shares distributed, it will return an error and delete nothing. 
-*		  If the given user doesn't exist, it will return an erro
+*		  context and delete the user data permanently. If deleting an
+*                 account will cause the share distributed be less than threshold,
+*                 then the function will return an error and won't delete.  
+*		  If the given user doesn't exist, it will return an error.
 *
 * INPUTS :
 *   PARAMETERS:
@@ -1558,7 +1559,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 
 PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username, 
 			unsigned int username_length){
-  //this will be used to iterate all the users
+  //these will be used to iterate all the users
   pph_account_node *search;
   pph_account_node *before_search;
   pph_account_node *target = NULL;
@@ -1624,7 +1625,6 @@ PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username,
   }
   
   //4) If not, delete the user.
-  //if we reach to this point, we can delete the account safely
   temp = target;
   if (target == ctx->account_data){
       ctx->account_data = temp->next;
@@ -1632,6 +1632,7 @@ PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username,
     before_search->next = temp->next;
   }
   deleting_entry = temp->account.entries;
+  //delete all the entries within the account as well
   while (deleting_entry != NULL){
     temp_next_entry = deleting_entry->next;
     free(deleting_entry);
@@ -1695,7 +1696,7 @@ PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username,
 * PROCESS :
 *     1) Sanitize data and report errors.
 *     2) Go through the list to find the user, if not, report an error.
-*     3) Change the password for diffrent type of users: protector, sheilded and bootstrap
+*     3) Change the password for diffrent type of users: protector, shielded and bootstrap
 *     4) Return
 *
 * CHANGES :
@@ -1704,10 +1705,14 @@ PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username,
 
 PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned int username_length,
 			uint8 *new_password, unsigned int new_password_length){
+   
+  //these are used to find the user
   pph_account_node *search;
   pph_account_node *target = NULL;
+  //these will be used to update entries
   pph_entry *entry_node, *old_entry_node, *last_entry, *temp_entry, *new_entry;
   pph_bootstrap_entry *bootstrap_entry_target, *bootstrap_entry_search;
+  //variable needed to update  the password
   uint8 salt_buffer[MAX_SALT_LENGTH];
   uint8 share_data[SHARE_LENGTH];
   short sharenumber;
@@ -1729,7 +1734,6 @@ PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned
   }
 
   // 2) Go through the list to find the user, if not, report an error
-  //iterate through the context and find the node before the target. 
   search = ctx->account_data;
   while(search != NULL){
     if (username_length == search->account.username_length &&
@@ -1744,9 +1748,9 @@ PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned
   if (target == NULL){
     return  PPH_CANT_FIND_USER;
   }
-  // 3) Change the password for diffrent type of users: protector, sheilded and bootstrap
+  // 3) Change the password for diffrent type of users: protector, shielded and bootstrap
   // for BOOTSTRAP_ACCOUNT
-  // it is ok to change password without the secret recoverd
+  // password of bootstrap account can always be changed 
   if (target->account.entries->share_number == BOOTSTRAP_ACCOUNT) {
     RAND_bytes(salt_buffer, MAX_SALT_LENGTH);
     entry_node = create_bootstrap_entry(new_password, new_password_length, 
@@ -1771,16 +1775,18 @@ PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned
     free(old_entry_node);  
     return PPH_ERROR_OK;
   
-  //for SHEILED_ACCOUNT
-  //if the secret is not available, we will change it into a BOOTSTRAP_ACCOUNT, then change password
+  //for SHIELED_ACCOUNT
   }else if(target->account.entries->share_number == SHIELDED_ACCOUNT) {
     RAND_bytes(salt_buffer, MAX_SALT_LENGTH);
+    //if the secret is not available, we will change it into a BOOTSTRAP_ACCOUNT, then change password
     if (ctx->is_normal_operation == false || ctx->AES_key == NULL){
       entry_node = create_bootstrap_entry(new_password, new_password_length, 
                     salt_buffer, MAX_SALT_LENGTH);
       old_entry_node = target->account.entries;
       target->account.entries = entry_node;
       free(old_entry_node);
+      //the password has been changed 
+      //now, add the new bootstrap account entry in context
       bootstrap_entry_target = malloc(sizeof(*bootstrap_entry_target));
       bootstrap_entry_target->entry = entry_node;
       if (ctx->bootstrap_entries == NULL) {
@@ -1800,9 +1806,9 @@ PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned
     free(old_entry_node);
     return PPH_ERROR_OK;
     }
-  //for protector account
-  //if the secret is not available, we can't change the secret at this time*/
+  //for PROTCTOR ACCOUNT
   }else {
+    //if the secret is not available, we can't change the secret at this time*/
     if (ctx->is_normal_operation == false || ctx->AES_key == NULL){
       return PPH_CONTEXT_IS_LOCKED;
     //if the secret is available, we will reuse the shares and change password 
@@ -1815,6 +1821,7 @@ PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned
         RAND_bytes(salt_buffer, MAX_SALT_LENGTH);
         new_entry = create_protector_entry(new_password, new_password_length, salt_buffer,
         		MAX_SALT_LENGTH, share_data, SHARE_LENGTH, ctx->isolated_check_bits);
+        new_entry->share_number = old_entry_node->share_number;
         if (entry_node == NULL){
           entry_node = new_entry;
           last_entry = new_entry;

@@ -757,14 +757,10 @@ START_TEST(test_pph_delete_account)
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
 
-  ck_assert_msg(context != NULL,
-      "this was a good initialization, go tell someone");
-
-  //ck_assert_str_eq(username,context->account_data->account.username); ?
   //now try to delete defferent account, we should get different outcomes
   error = pph_delete_account(context, "eve", strlen("eve"));
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK because it is deleting a sheild account %d", error );
+      "We should've gotten PPH_ERROR_OK because it is deleting a shield account" );
   
   error = pph_delete_account(context, "lolaly", strlen("lolaly"));
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -773,7 +769,6 @@ START_TEST(test_pph_delete_account)
   error = pph_delete_account(context, "santiago", strlen("santiago"));
   ck_assert_msg(error == PPH_CANT_DELETE, 
       "We should've gotten PPH_CANT_DELETE, because there won't be enough shares");
-  pph_store_context(context, "/home/lolaly/PolyPasswordHasher/PolyPasswordHasher-c/src/outcome.o");
   error = pph_delete_account(context, "justin", strlen("justin"));
   ck_assert_msg(error == PPH_CANT_FIND_USER, 
       "We should've gotten PPH_CANT_FIND_USER, because the user is never created");   
@@ -796,9 +791,9 @@ PPH_ERROR error;
   ck_assert_msg(context != NULL,
       "this was a good initialization, go tell someone");
   
-  //test pph_change_password with bootstrap account 
+  //test pph_change_password with BOOTSTRP_ACCOUNT 
   //create a bootstrap account 
-/*  context->is_normal_operation = false;
+  context->is_normal_operation = false;
   error = pph_create_account(context, "lolaly", strlen("lolaly"),
                                        "123", strlen("123"), 0);
   ck_assert_msg(error == PPH_ERROR_OK, 
@@ -807,55 +802,55 @@ PPH_ERROR error;
   error = pph_change_password(context, "lolaly", strlen("lolaly"),
                                        "abc", strlen("abc"));
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK because it is a bootstrap account %d", error );
+      "We should've gotten PPH_ERROR_OK because it is a bootstrap account");
   //now, try to login with new password
   error = pph_check_login(context, "lolaly", strlen("lolaly"),
                                        "abc", strlen("abc"));
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK because password has been changed %d", error );
+      "We should've gotten PPH_ERROR_OK because password has been changed");
   
-  //test pph_change_password with sheilded account and protector account when the secret is unavailable.
-  //create a sheilded account 
-  context->is_normal_operation = true;                                                   */
+  //test pph_change_password with SHIELDED_ACCOUNT and pPROTECTOR ACCOUNT when the secret is unavailable.
+  //create a shielded account 
+  context->is_normal_operation = true;                                                   
   error = pph_create_account(context, "santiago", strlen("santiago"),
                        "123",strlen("123"), 0);
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
   //create two protector account 
   error = pph_create_account(context, "justin", strlen("justin"),
-                       "123",strlen("123"), 1);
+                       "123",strlen("123"), 2);
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
   error = pph_create_account(context, "marry", strlen("marry"),
                        "123",strlen("123"), 1);
   ck_assert_msg(error == PPH_ERROR_OK, 
       "We should've gotten PPH_ERROR_OK in the return value");
-  //if the secret is unavailable, the sheilded account will 
+  //if the secret is unavailable, the shielded account will 
   //become a bootstrap account with new password
   //first, make the secret unavailable
-//  context->AES_key = NULL;
-/*  error = pph_change_password(context, "santiago", strlen("santiago"),
+  context->AES_key = NULL;
+  error = pph_change_password(context, "santiago", strlen("santiago"),
                                        "123abc", strlen("123abc"));
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK because it is a sheild account %d", error );
+      "We should've gotten PPH_ERROR_OK because it is a shield account");
   //try to login with new password
   error = pph_check_login(context, "santiago", strlen("santiago"),
                                        "123abc", strlen("123abc"));
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK because password has been changed %d", error );
+      "We should've gotten PPH_ERROR_OK because password has been changed");
   // for a protector account, we can't change password without the secret
   error = pph_change_password(context, "justin", strlen("justin"),
                                        "123abc", strlen("123abc"));
   ck_assert_msg(error == PPH_CONTEXT_IS_LOCKED,
-      "We should've gotten PPH_CONTEXT_IS_LOCKED, because it is a protector account, and secret is not available %d", error );
+      "We should've gotten PPH_CONTEXT_IS_LOCKED, because it is a protector account, and secret is not available");
   //try to login with new password
   error = pph_check_login(context, "justin", strlen("justin"),
                                        "123abc", strlen("123abc"));
   ck_assert_msg(error == PPH_ACCOUNT_IS_INVALID, 
-      "We should've gotten PPH_ACCOUNT_IS_INVALID because password has never been changed %d", error );      */
+      "We should've gotten PPH_ACCOUNT_IS_INVALID because password has never been changed");      
   
 
-  //test pph_change_password with sheilded account and protector account when the secret is available.
+  //test pph_change_password with shielded account and protector account when the secret is available.
   //first, unlock the secret
   const uint8 **usernames = malloc(sizeof(*usernames)*2);
   usernames[0] = strdup("justin");
@@ -875,42 +870,43 @@ PPH_ERROR error;
 
   error = pph_unlock_password_data(context, 2, usernames, username_lengths, passwords, password_lengths);
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK, now the secret is still locked %d", error );
+      "We should've gotten PPH_ERROR_OK, now the secret is still locked");
   // now we should be able to change password for shielded account
-/*  error = pph_change_password(context, "santiago", strlen("santiago"),
+  error = pph_change_password(context, "santiago", strlen("santiago"),
                                        "abc", strlen("abc"));
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK because it is a sheild account %d", error );
+      "We should've gotten PPH_ERROR_OK because it is a shield account");
   //try to login with new password
   error = pph_check_login(context, "santiago", strlen("santiago"),
                                        "abc", strlen("abc"));
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK because password has been changed %d", error );           */
+      "We should've gotten PPH_ERROR_OK because password has been changed");           
 
-  // for a protector account, we are able to change password
-
+  // for a protector account, we are able to change password 
   error = pph_change_password(context, "justin", strlen("justin"),
                                        "123abc", strlen("123abc"));
   ck_assert_msg(error == PPH_ERROR_OK,
-      "We should've gotten PPH_ERROR_OK, because secret is available now%d", error );
+      "We should've gotten PPH_ERROR_OK, because secret is available now");
   //try to login with new password
   error = pph_check_login(context, "justin", strlen("justin"),
                                        "123abc", strlen("123abc"));
   ck_assert_msg(error == PPH_ERROR_OK, 
-      "We should've gotten PPH_ERROR_OK, NO CHANGE YET!!!! %d", error );
+      "We should've gotten PPH_ERROR_OK, because we can change password for protector account with the secret");
 
-/*  //testing if the user doesn't exist
+
+  //testing if the user doesn't exist
   error = pph_change_password(context, "taylor", strlen("taylor"),
                                        "abc", strlen("abc"));
   ck_assert_msg(error == PPH_CANT_FIND_USER, 
-      "We should've gotten PPH_CANT_FIND_USER because the user is never created %d", error );  */
+      "We should've gotten PPH_CANT_FIND_USER because the user is never created");  
 
   //destroy the contest before leave 
   error = pph_destroy_context(context);
   ck_assert_msg(error == PPH_ERROR_OK, 
       "the free function didn't work properly");
-
 }END_TEST
+
+
 // test suite definition
 Suite * polypasswordhasher_thl_suite(void)
 {

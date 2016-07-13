@@ -699,9 +699,10 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 * NAME :          pph_delete_account 
 *
 * DESCRIPTION :   Gaven the context and a username, the fuction will look into the
-*		  context and delete the user data permanently. If threshold equals 
-*		  shares distributed, it will return an error and delete nothing. 
-*		  If the given user doesn't exist, it will return an erro
+*		  context and delete the user data permanently. If deleting an
+*                 account will cause the share distributed be less than threshold,
+*                 then the function will return an error and won't delete.  
+*		  If the given user doesn't exist, it will return an error.
 *
 * INPUTS :
 *   PARAMETERS:
@@ -748,7 +749,7 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username, 
 			unsigned int username_length);
 
-										 
+
 /*******************************************************************
 * NAME :          pph_change_password
 *
@@ -791,10 +792,13 @@ PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username,
 *	     PPH_USERNAME_IS_TOO_LONG		The username_length is larger than MAX_USERNAME_LENGTH
 *
 *	     PPH_PASSWORD_IS_TOO_LONG 		The new_password_length is larger than MAX_PASSWORD_LENGTH
+*
+*            PPH_CONTEXT_IS_LOCKED              Can't change password for protector account 
+*						when the secret is unavailable
 * PROCESS :
 *     1) Sanitize data and report errors.
 *     2) Go through the list to find the user, if not, report an error.
-*     3) Change the password for diffrent type of users: protector, sheilded and bootstrap
+*     3) Change the password for diffrent type of users: protector, shielded and bootstrap
 *     4) Return
 *
 * CHANGES :
@@ -803,10 +807,9 @@ PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username,
 
 PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned int username_length,
 			uint8 *new_password, unsigned int new_password_length);
+
+
 // helper functions //////////////////////////
-
-
-
 // used to generate a random secret and add its hash
 uint8 *generate_pph_secret( uint8 *integrity_check);
 
