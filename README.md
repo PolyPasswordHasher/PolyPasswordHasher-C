@@ -236,17 +236,13 @@ in disk.
     printf("you are not carl\n");
   }
 
-
   // we should now store the context and free the data before leaving
   pph_store_context(context,"securepasswords");
   pph_destroy_context(context);
-
   free(password_lengths);
   free(usernames);
   free(passwords);
   free(username_lengths);
-
-
 ```
 <a name="api">
 API reference
