@@ -185,10 +185,18 @@ in disk.
     printf("go away trudy!\n");
   }
 
-  // during the locked phase, we are unable to create accounts
+  // during the locked phase, we are unable to create **protector** account
   if(pph_create_account(context, "trudy", strlen("trudy"), "I'm.trudy",
-                           strlen("I'm.trudy"), 0) == PPH_CONTEXT_IS_LOCKED){
+                           strlen("I'm.trudy"), 1) == PPH_CONTEXT_IS_LOCKED){
     printf("Sorry, we cannot create accounts at this time\n");
+  }else{
+    printf("This shouldn't happen\n");
+  }
+
+  // But Nevertheless we can create *shielded* account
+  if(pph_create_account(context, "trudy", strlen("trudy"), "I'm.trudy",
+                           strlen("I'm.trudy"), 0) == PPH_ERROR_OK){
+    printf("Trudy shielded account created\n");
   }else{
     printf("This shouldn't happen\n");
   }
@@ -208,10 +216,13 @@ in disk.
   username_lengths[0] = strlen("Alice");
   username_lengths[1] = strlen("bob");
 
+  unsigned int *password_lengths = malloc(sizeof(*password_lengths)*2);
+  password_lengths[0] = strlen("I.love.bob");
+  password_lengths[1] = strlen("i.secretly.love.eve");
 
   // if the information provided was correct, the pph_unlock_password_data
   // returns PPH_ERROR_OK, transitions to normal operation and recovers the shares.
-  pph_unlock_password_data(context, 2, usernames, username_lengths, passwords);
+  pph_unlock_password_data(context, 2, usernames, username_lengths, passwords, password_lengths);
 
   // now the data is unlocked. We can create accounts now.
   pph_create_account(context, "carl", strlen("carl"), "verysafe",
