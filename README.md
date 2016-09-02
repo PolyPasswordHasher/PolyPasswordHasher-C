@@ -241,6 +241,12 @@ in disk.
   pph_store_context(context,"securepasswords");
   pph_destroy_context(context);
 
+  free(password_lengths);
+  free(usernames);
+  free(passwords);
+  free(username_lengths);
+
+
 ```
 <a name="api">
 API reference
