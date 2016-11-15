@@ -1506,8 +1506,338 @@ int PHS(void *out, size_t outlen, const void *in, size_t inlen,
 }
 
 
+/*******************************************************************
+* NAME :          pph_delete_account 
+*
+* DESCRIPTION :   Gaven the context and a username, the fuction will look into the
+*		  context and delete the user data permanently. If deleting an
+*                 account will cause the share distributed be less than threshold,
+*                 then the function will return an error and won't delete.  
+*		  If the given user doesn't exist, it will return an error.
+*
+* INPUTS :
+*   PARAMETERS:
+*     pph_context *ctxt:   This is the context in which the account will be deleted
+*     
+*     const unit8 *username:    This is the desirerd user to be deleted
+*
+*     unsigned int username_length:   The length of the username
+*
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type: int PPH_ERROR
+*
+*           Values:                         When:
+*            PPH_ERROR_OK			The desired user has been deleted
+*
+*            PPH_BAD_PTR			One of the fields is unallocated
+*
+*	     PPH_CANT_FIND_USER			The username doesn't exist 
+*
+*	     PPH_USERNAME_IS_TOO_LONG		The username won't fit in the buffer
+*
+*	     PPH_CANT_DELETE      		Due to inefficient amount of shares available 
+*						after deletion, or other reasons, PPH can't 
+*						delete account currently.
+* 
+* PROCESS :
+*     1) Sanitize data and report errors.
+*     2) Go through the list to try to find the user, meanwhile, counting the shares.
+*     3) If didn't find the user, or run into a situation we can't delete the account, report error.
+*     4) If not, delete the user.
+*     5) Return.
+*
+* CHANGES :
+*     This function is added in July 2016
+*/
+
+PPH_ERROR pph_delete_account(pph_context *ctx, const uint8 *username, 
+			unsigned int username_length){
+  //these will be used to iterate all the users
+  pph_account_node *search;
+  pph_account_node *before_search;
+  pph_account_node *target = NULL;
+  
+  //this is used to count total shares
+  uint8 share_count = 0;
+  //the number of shares that the target account has
+  uint8 target_shares;
+  //variables needed in order to delete the account
+  pph_account_node *temp;
+  pph_entry *deleting_entry;
+  pph_entry *temp_next_entry;
+
+  // 1) Sanitize data and return errors.
+  //check for any improper pointers
+  if(ctx == NULL || username == NULL) {
+    return PPH_BAD_PTR;
+  }
+
+  //check the length of the input username
+  if(username_length > MAX_USERNAME_LENGTH-1){
+    return PPH_USERNAME_IS_TOO_LONG;
+  }
+
+  //2) Go through the list to try to find the user, meanwhile, counting the shares.
+  //iterate through the context, count all the shares available, and find the node before the target. 
+  search = ctx->account_data;
+  before_search = ctx->account_data;
+     while(search != NULL ){
+        if (search->account.entries != NULL){
+          if (search->account.entries->share_number != SHIELDED_ACCOUNT &&
+                  search->account.entries->share_number != BOOTSTRAP_ACCOUNT){
+            share_count = share_count + search->account.number_of_entries;   
+          }
+        }
+        if (username_length == search->account.username_length &&
+               !memcmp(search->account.username, username, username_length)){
+          target = search;
+        }
+        if (search != ctx->account_data && target == NULL){
+          before_search = before_search->next;
+        }
+        search = search->next;
+     }
+  
+  // 3) If didn't find the user, or run into a situation we can't delete the account, report error.
+  //if we can't find the user, return  PPH_CANT_FIND_USER
+  if (target == NULL){
+    return  PPH_CANT_FIND_USER;
+  }
+  //find out the number of shares the target account has,
+  //if deleting the target account would let shares be smaller than threshold, the we can't delete the account.
+  if (target->account.entries != NULL){
+    if (target->account.entries->share_number != SHIELDED_ACCOUNT &&
+            target->account.entries->share_number != BOOTSTRAP_ACCOUNT ) {
+      target_shares = target->account.number_of_entries;
+    } else {
+      target_shares = 0;
+    }
+  }
+  if ((share_count - target_shares) < ctx->threshold){
+    return PPH_CANT_DELETE;
+  }
+  
+  //4) If not, delete the user.
+  temp = target;
+  if (target == ctx->account_data){
+      ctx->account_data = temp->next;
+  } else {
+    before_search->next = temp->next;
+  }
+  deleting_entry = temp->account.entries;
+  //delete all the entries within the account as well
+  while (deleting_entry != NULL){
+    temp_next_entry = deleting_entry->next;
+    free(deleting_entry);
+    deleting_entry = temp_next_entry;
+  }
+  
+  free(temp);
+  temp = NULL;
+  
+  //now we finished deleting the account 
+  //5) Return.
+  return PPH_ERROR_OK;
+}
 
 
+/*******************************************************************
+* NAME :          pph_change_password
+*
+* DESCRIPTION :   Gaven the context a username and the new password, the fuction will look
+*		  into the context and change the user's password. The application is responsible 
+*		  to make sure that the user is authenticated before having the ability to 
+*		  change password.
+*
+* INPUTS :
+*   PARAMETERS:
+*     pph_context *ctxt:   This is the context in which the account will change password 
+*     
+*     const unit8 *username:    This is the desirerd user to be deleted
+*
+*     unsigned int username_length:   The length of the username
+*
+*     const unit8 *new_password:    The new password as 
+*
+*     unsigned int new_password_length:   The length of the new password
+*
+* OUTPUTS :
+*   PARAMETERS:
+*     None
+*     
+*   GLOBALS :
+*     None
+*   
+*   RETURN :
+*     Type: int PPH_ERROR
+*
+*           Values:                         When:
+*            PPH_ERROR_OK			The password is changed for user successfully
+*
+*            PPH_BAD_PTR			One of the fields is unallocated
+*            
+*            PPH_ERROR_UNKNOWN                  something unexpected happens
+*
+*	     PPH_CANT_FIND_USER			The username doesn't exist 
+*
+*	     PPH_USERNAME_IS_TOO_LONG		The username_length is larger than MAX_USERNAME_LENGTH
+*
+*	     PPH_PASSWORD_IS_TOO_LONG 		The new_password_length is larger than MAX_PASSWORD_LENGTH
+*
+*            PPH_CONTEXT_IS_LOCKED              Can't change password for protector account 
+*						when the secret is unavailable
+* PROCESS :
+*     1) Sanitize data and report errors.
+*     2) Go through the list to find the user, if not, report an error.
+*     3) Change the password for diffrent type of users: protector, shielded and bootstrap
+*     4) Return
+*
+* CHANGES :
+*     This function is added in July 2016
+*/
+
+PPH_ERROR pph_change_password (pph_context *ctx, const uint8 *username, unsigned int username_length,
+			uint8 *new_password, unsigned int new_password_length){
+   
+  //these are used to find the user
+  pph_account_node *search;
+  pph_account_node *target = NULL;
+  //these will be used to update entries
+  pph_entry *entry_node, *old_entry_node, *last_entry, *temp_entry, *new_entry;
+  pph_bootstrap_entry *bootstrap_entry_target, *bootstrap_entry_search;
+  //variable needed to update  the password
+  uint8 salt_buffer[MAX_SALT_LENGTH];
+  uint8 share_data[SHARE_LENGTH];
+  short sharenumber;
+  unsigned int i;
+  // 1) Sanitize data and report errors
+  //check for correct context pointer
+  if(ctx == NULL || username == NULL){
+    return PPH_BAD_PTR;
+  }
+
+  //check username length
+  if (username_length > MAX_USERNAME_LENGTH-1) {
+    return PPH_USERNAME_IS_TOO_LONG;
+  }
+  
+  //check password length
+  if (new_password_length > MAX_PASSWORD_LENGTH-1) {
+    return PPH_PASSWORD_IS_TOO_LONG;
+  }
+
+  // 2) Go through the list to find the user, if not, report an error
+  search = ctx->account_data;
+  while(search != NULL){
+    if (username_length == search->account.username_length &&
+          !memcmp(search->account.username, username, username_length)){
+      target = search;
+      break;
+    }
+    search = search->next;
+  }
+
+  //if we can't find the user, return  PPH_CANT_FIND_USER
+  if (target == NULL){
+    return  PPH_CANT_FIND_USER;
+  }
+  // 3) Change the password for diffrent type of users: protector, shielded and bootstrap
+  // for BOOTSTRAP_ACCOUNT
+  // password of bootstrap account can always be changed 
+  if (target->account.entries->share_number == BOOTSTRAP_ACCOUNT) {
+    RAND_bytes(salt_buffer, MAX_SALT_LENGTH);
+    entry_node = create_bootstrap_entry(new_password, new_password_length, 
+                    salt_buffer, MAX_SALT_LENGTH);
+    old_entry_node = target->account.entries;
+    target->account.entries = entry_node;
+    //up to here, the password is already changed
+    //but we need to take care of bootstrap_entries in context
+    bootstrap_entry_target = NULL;
+    bootstrap_entry_search = ctx->bootstrap_entries;
+    while (bootstrap_entry_search != NULL){
+      if (bootstrap_entry_search->entry == old_entry_node) {
+        bootstrap_entry_target = bootstrap_entry_search;
+        break;
+      }
+      bootstrap_entry_search = bootstrap_entry_search->next;
+    }
+    if (bootstrap_entry_target == NULL){
+      return PPH_ERROR_UNKNOWN;
+    }
+    bootstrap_entry_target->entry = entry_node;
+    free(old_entry_node);  
+    return PPH_ERROR_OK;
+  
+  //for SHIELED_ACCOUNT
+  }else if(target->account.entries->share_number == SHIELDED_ACCOUNT) {
+    RAND_bytes(salt_buffer, MAX_SALT_LENGTH);
+    //if the secret is not available, we will change it into a BOOTSTRAP_ACCOUNT, then change password
+    if (ctx->is_normal_operation == false || ctx->AES_key == NULL){
+      entry_node = create_bootstrap_entry(new_password, new_password_length, 
+                    salt_buffer, MAX_SALT_LENGTH);
+      old_entry_node = target->account.entries;
+      target->account.entries = entry_node;
+      free(old_entry_node);
+      //the password has been changed 
+      //now, add the new bootstrap account entry in context
+      bootstrap_entry_target = malloc(sizeof(*bootstrap_entry_target));
+      bootstrap_entry_target->entry = entry_node;
+      if (ctx->bootstrap_entries == NULL) {
+        ctx->bootstrap_entries = bootstrap_entry_target;
+        bootstrap_entry_target->next = NULL;
+      } else {
+        bootstrap_entry_target->next = ctx->bootstrap_entries; 
+        ctx->bootstrap_entries = bootstrap_entry_target;
+      }
+      return PPH_ERROR_OK;
+    //if the secret is available, it is ok to change the password
+    } else{
+    entry_node = create_shielded_entry(new_password, new_password_length, salt_buffer,
+                        MAX_SALT_LENGTH, ctx->AES_key, DIGEST_LENGTH, ctx->isolated_check_bits);
+    old_entry_node = target->account.entries;
+    target->account.entries = entry_node;
+    free(old_entry_node);
+    return PPH_ERROR_OK;
+    }
+  //for PROTCTOR ACCOUNT
+  }else {
+    //if the secret is not available, we can't change the secret at this time*/
+    if (ctx->is_normal_operation == false || ctx->AES_key == NULL){
+      return PPH_CONTEXT_IS_LOCKED;
+    //if the secret is available, we will reuse the shares and change password 
+    } else{
+      old_entry_node = target->account.entries;
+      temp_entry = target->account.entries;
+      entry_node = NULL;
+      while (old_entry_node != NULL) {
+        gfshare_ctx_enc_getshare(ctx->share_context, old_entry_node->share_number, share_data);
+        RAND_bytes(salt_buffer, MAX_SALT_LENGTH);
+        new_entry = create_protector_entry(new_password, new_password_length, salt_buffer,
+        		MAX_SALT_LENGTH, share_data, SHARE_LENGTH, ctx->isolated_check_bits);
+        new_entry->share_number = old_entry_node->share_number;
+        if (entry_node == NULL){
+          entry_node = new_entry;
+          last_entry = new_entry;
+        }else {
+          last_entry->next = new_entry;
+          last_entry = last_entry->next;
+        }
+        old_entry_node = old_entry_node->next;
+        free(temp_entry);
+        temp_entry = old_entry_node;
+      }
+      target->account.entries = entry_node;
+      return PPH_ERROR_OK;
+    }
+  }
+}
 
 
 
